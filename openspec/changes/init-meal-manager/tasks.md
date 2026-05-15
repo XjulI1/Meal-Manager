@@ -171,10 +171,10 @@ Checklist d'implémentation du change `init-meal-manager`. Ordonnée pour permet
 
 ## 13. Documentation
 
-- [ ] 13.1 README projet : présentation, stack, installation locale, lancement
-- [ ] 13.2 Documenter l'architecture hexagonale et la convention de répertoires dans `docs/ARCHITECTURE.md`
-- [ ] 13.3 Documenter les conventions de commit (Conventional Commits)
-- [ ] 13.4 Lister les variables d'environnement dans le README
+- [x] 13.1 README projet : présentation, stack, installation locale, lancement
+- [x] 13.2 Documenter l'architecture hexagonale et la convention de répertoires dans `docs/ARCHITECTURE.md`
+- [x] 13.3 Documenter les conventions de commit (Conventional Commits) — `docs/COMMITS.md`, lié depuis README et ARCHITECTURE
+- [x] 13.4 Lister les variables d'environnement dans le README
 
 ## 14. Validation finale
 

@@ -2,7 +2,7 @@
 
 Application web de gestion de repas familiaux : inventaire (placard + frigo), recettes, menus hebdomadaires et liste de courses générée automatiquement.
 
-> Statut : **bootstrap initial** du change OpenSpec `init-meal-manager` — sections 1 à 3 (projet Nuxt 4, schéma BDD, Value Objects partagés). Les contextes métier (`platform`, `family`, `inventory`, `catalog`, `meal-planning`, `shopping`) sont scaffoldés mais leur logique sera implémentée dans des changes ultérieurs.
+> Statut : change OpenSpec [`init-meal-manager`](./openspec/changes/init-meal-manager/) — sections 1 à 12 implémentées (plateforme, auth, foyers, inventaire, catalogue, menus, liste de courses, front Nuxt UI, Docker). Reste la validation finale (tests, lint, build, parcours manuel) avant archivage du change.
 
 ## Stack
 
@@ -145,7 +145,7 @@ meal-manager/
 └── openspec/                # Spécifications (source de vérité fonctionnelle)
 ```
 
-Pour les détails d'architecture, voir [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) et le change [`openspec/changes/init-meal-manager/`](./openspec/changes/init-meal-manager/).
+Pour les détails d'architecture, voir [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md). Les conventions de commit (Conventional Commits) sont décrites dans [`docs/COMMITS.md`](./docs/COMMITS.md). La source de vérité fonctionnelle vit dans [`openspec/`](./openspec/) (change actif : [`init-meal-manager`](./openspec/changes/init-meal-manager/)).
 
 ## Variables d'environnement
 
