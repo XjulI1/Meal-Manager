@@ -41,7 +41,7 @@ export function lookupUnit(symbol: string): UnitDefinition {
 }
 
 export class UnknownUnitError extends Error {
-  readonly name = 'UnknownUnitError'
+  override readonly name = 'UnknownUnitError'
   constructor(symbol: string) {
     super(`Unknown unit: "${symbol}"`)
   }

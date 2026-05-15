@@ -44,41 +44,41 @@ Checklist d'implémentation du change `init-meal-manager`. Ordonnée pour permet
 
 ## 4. Bounded context : Platform (auth)
 
-- [ ] 4.1 Configurer `nuxt-auth-utils` avec `NUXT_SESSION_PASSWORD`
-- [ ] 4.2 Créer l'entité `User` dans `server/contexts/platform/domain/entities/`
-- [ ] 4.3 Créer le port `IUserRepository`
-- [ ] 4.4 Créer le port `IPasswordHasher` (implémentation argon2)
-- [ ] 4.5 Use case `RegisterUserUseCase`
-- [ ] 4.6 Use case `LoginUserUseCase`
-- [ ] 4.7 Implémenter `DrizzleUserRepository` + mapper
-- [ ] 4.8 Implémenter `Argon2PasswordHasher`
-- [ ] 4.9 Route `POST /api/auth/register`
-- [ ] 4.10 Route `POST /api/auth/login`
-- [ ] 4.11 Route `POST /api/auth/logout`
-- [ ] 4.12 Middleware `server/middleware/auth.ts` qui hydrate `event.context.user`
-- [ ] 4.13 Tests d'intégration des use cases (avec `InMemoryUserRepository`)
+- [x] 4.1 Configurer `nuxt-auth-utils` avec `NUXT_SESSION_PASSWORD` (module activé dans `nuxt.config.ts`, secret exposé via `runtimeConfig.session.password`)
+- [x] 4.2 Créer l'entité `User` dans `server/contexts/platform/domain/entities/`
+- [x] 4.3 Créer le port `IUserRepository`
+- [x] 4.4 Créer le port `IPasswordHasher` (implémentation argon2)
+- [x] 4.5 Use case `RegisterUserUseCase`
+- [x] 4.6 Use case `LoginUserUseCase` (avec dummy hash pour neutraliser le timing attack quand l'email est inconnu)
+- [x] 4.7 Implémenter `DrizzleUserRepository` + mapper
+- [x] 4.8 Implémenter `Argon2PasswordHasher` (argon2id, m=19456 KiB, t=2, p=1 — OWASP 2024)
+- [x] 4.9 Route `POST /api/auth/register`
+- [x] 4.10 Route `POST /api/auth/login`
+- [x] 4.11 Route `POST /api/auth/logout`
+- [x] 4.12 Middleware `server/middleware/auth.ts` qui hydrate `event.context.user`
+- [x] 4.13 Tests d'intégration des use cases (avec `InMemoryUserRepository`) + smoke tests HTTP
 
 ## 5. Bounded context : Family (foyer + membres)
 
-- [ ] 5.1 Entité `Household` + Value Object `InviteCode`
-- [ ] 5.2 Entité `HouseholdMember`
-- [ ] 5.3 Port `IHouseholdRepository`
-- [ ] 5.4 Use case `CreateHouseholdUseCase`
-- [ ] 5.5 Use case `JoinHouseholdUseCase` (via code d'invitation)
-- [ ] 5.6 Use case `LeaveHouseholdUseCase`
-- [ ] 5.7 Use case `GetCurrentHouseholdUseCase`
-- [ ] 5.8 Implémenter `DrizzleHouseholdRepository`
-- [ ] 5.9 Route `POST /api/households` (créer)
-- [ ] 5.10 Route `POST /api/households/join`
-- [ ] 5.11 Route `GET /api/households/me`
-- [ ] 5.12 Middleware vérifiant que l'utilisateur appartient à un foyer
-- [ ] 5.13 Tests d'intégration
+- [x] 5.1 Entité `Household` + Value Object `InviteCode` (8 caractères, alphabet sans ambiguïté `O/0/1/I`)
+- [x] 5.2 Entité `HouseholdMember`
+- [x] 5.3 Port `IHouseholdRepository`
+- [x] 5.4 Use case `CreateHouseholdUseCase`
+- [x] 5.5 Use case `JoinHouseholdUseCase` (via code d'invitation)
+- [x] 5.6 Use case `LeaveHouseholdUseCase` (supprime le foyer + ses données si dernier membre)
+- [x] 5.7 Use case `GetCurrentHouseholdUseCase`
+- [x] 5.8 Implémenter `DrizzleHouseholdRepository`
+- [x] 5.9 Route `POST /api/households` (créer)
+- [x] 5.10 Route `POST /api/households/join`
+- [x] 5.11 Route `GET /api/households/me` + `POST /api/households/leave`
+- [x] 5.12 Helper `requireHouseholdMember` (`server/utils/require-household.ts`) que les routes scoped-foyer appelleront en section 7+
+- [x] 5.13 Tests d'intégration (CRUD + scénarios des specs) + smoke tests HTTP
 
 ## 6. Composition root (DI)
 
-- [ ] 6.1 Créer `server/plugins/container.ts` qui instancie tous les repositories et use cases
-- [ ] 6.2 Étendre `H3EventContext` avec le type `Container`
-- [ ] 6.3 Vérifier qu'aucune route HTTP n'instancie de use case directement (revue manuelle)
+- [x] 6.1 Créer `server/plugins/container.ts` qui instancie tous les repositories et use cases
+- [x] 6.2 Étendre `H3EventContext` avec le type `Container` (`server/types/container.ts`)
+- [x] 6.3 Vérifier qu'aucune route HTTP n'instancie de use case directement (revue manuelle)
 
 ## 7. Bounded context : Inventory
 
