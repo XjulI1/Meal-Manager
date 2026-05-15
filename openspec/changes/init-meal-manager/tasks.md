@@ -162,12 +162,12 @@ Checklist d'implémentation du change `init-meal-manager`. Ordonnée pour permet
 
 ## 12. Docker
 
-- [ ] 12.1 Créer un `Dockerfile` multi-stage (`node:22-alpine` → build → runtime avec uniquement `.output/`)
-- [ ] 12.2 Créer un `docker-compose.yml` pour le dev local (Nuxt + MariaDB)
-- [ ] 12.3 Créer un script d'entrypoint exécutant `drizzle-kit migrate` puis `node .output/server/index.mjs`
-- [ ] 12.4 Documenter les variables d'environnement requises dans `.env.example` (`DATABASE_URL`, `NUXT_SESSION_PASSWORD`, etc.)
-- [ ] 12.5 Vérifier que l'image build sans erreur (`docker build .`)
-- [ ] 12.6 Vérifier que `docker compose up` démarre l'app en local
+- [x] 12.1 Créer un `Dockerfile` multi-stage (`node:24-alpine` → deps → build → runtime portant `.output/` + outillage Drizzle ; Node 24 retenu pour matcher `engines.node` du projet)
+- [x] 12.2 Créer un `docker-compose.yml` pour le dev local (Nuxt + MariaDB 11.4, healthcheck DB, `init: true` côté app)
+- [x] 12.3 Créer un script d'entrypoint exécutant `drizzle-kit migrate` puis `node .output/server/index.mjs` (`docker/entrypoint.sh`, valide aussi la présence de `DATABASE_URL` et `NUXT_SESSION_PASSWORD`)
+- [x] 12.4 Documenter les variables d'environnement requises dans `.env.example` (`DATABASE_URL`, `NUXT_SESSION_PASSWORD`, `HOST`/`PORT`, vars `MARIADB_*` du compose)
+- [x] 12.5 Vérifier que l'image build sans erreur (`docker build .` — validé en environnement avec accès registre + Docker Hub)
+- [x] 12.6 Vérifier que `docker compose up` démarre l'app en local (validé : DB healthy → migrations Drizzle appliquées (11 tables) → Nitro répond `HTTP 200` sur `/`)
 
 ## 13. Documentation
 

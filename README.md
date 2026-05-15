@@ -56,6 +56,46 @@ pnpm db:migrate    # applique les migrations
 pnpm dev   # http://localhost:3000
 ```
 
+## Lancer via Docker
+
+L'image embarque le bundle Nitro standalone (`.output/`) + l'outillage Drizzle.
+L'entrypoint applique les migrations puis démarre le serveur.
+
+### Stack complète (app + MariaDB) via Compose
+
+```bash
+cp .env.example .env       # remplir NUXT_SESSION_PASSWORD (≥ 32 caractères)
+docker compose up --build  # http://localhost:3000
+```
+
+Le service `db` (MariaDB 11.4) expose le port `3306` et est partagé entre `pnpm dev`
+sur l'hôte (via `DATABASE_URL=...@localhost:3306/...`) et le service `app` du compose
+(via `DATABASE_URL=...@db:3306/...`). `docker compose down -v` purge le volume MariaDB.
+
+### Image seule
+
+```bash
+docker build -t meal-manager .
+docker run --rm -p 3000:3000 \
+  -e DATABASE_URL="mysql://meal:meal@host.docker.internal:3306/meal_manager" \
+  -e NUXT_SESSION_PASSWORD="$(openssl rand -base64 48)" \
+  meal-manager
+```
+
+### Builder distant (Synology / registry privée)
+
+`deploy/` contient un compose autonome qui clone une branche GitHub, build
+l'image et la pousse dans une registry, sans nécessiter de checkout préalable
+sur la machine hôte (utile depuis un NAS) :
+
+```bash
+cd deploy
+docker compose run --rm builder                                    # main → localhost:5050/meal-planning:latest
+GIT_BRANCH=feat/something docker compose run --rm builder          # branche custom
+REGISTRY=dockregistry.xju.fr/meal-planning IMAGE_TAG=v0.2.0 \
+  docker compose run --rm builder                                  # registry + tag explicites
+```
+
 ## Scripts utiles
 
 | Script             | Effet                                                        |
@@ -114,6 +154,8 @@ Pour les détails d'architecture, voir [`docs/ARCHITECTURE.md`](./docs/ARCHITECT
 | `DATABASE_URL` | oui | URL MariaDB au format `mysql://user:pass@host:port/db` |
 | `NUXT_SESSION_PASSWORD` | oui | Secret de signature des cookies de session (≥ 32 caractères) |
 | `NODE_ENV` | non | `development` / `production` |
+| `HOST` / `PORT` | non | Bind du serveur Nitro (défaut image Docker : `0.0.0.0:3000`) |
+| `MARIADB_USER` / `MARIADB_PASSWORD` / `MARIADB_DATABASE` / `MARIADB_ROOT_PASSWORD` | compose uniquement | Initialisent le service `db` du `docker-compose.yml` |
 
 Voir `.env.example`.
 

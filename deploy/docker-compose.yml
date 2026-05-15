@@ -1,0 +1,28 @@
+# Compose file dedicated to the build & push workflow.
+# Lives next to its companion script in `deploy/` so it stays separate from
+# the application's `docker-compose.yml` at the repo root (which describes
+# the runtime stack: Nuxt + MariaDB).
+#
+# Typical usage on the NAS (defaults push to localhost:5050/meal-planning):
+#   cd deploy && docker compose run --rm builder
+#
+# Build a feature branch instead of main:
+#   GIT_BRANCH=feat/whatever docker compose run --rm builder
+#
+# Publish to the external registry:
+#   REGISTRY=dockregistry.xju.fr/meal-planning IMAGE_TAG=v0.2.0 \
+#     docker compose run --rm builder
+
+services:
+  builder:
+    image: docker:cli
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./build-and-push.sh:/build-and-push.sh:ro
+    environment:
+      DOCKER_API_VERSION: ${DOCKER_API_VERSION:-1.43}
+      GIT_REPO: ${GIT_REPO:-https://github.com/XjulI1/Meal-Planning.git}
+      GIT_BRANCH: ${GIT_BRANCH:-main}
+      REGISTRY: ${REGISTRY:-localhost:5050/meal-planning}
+      IMAGE_TAG: ${IMAGE_TAG:-latest}
+    entrypoint: ["sh", "/build-and-push.sh"]
