@@ -82,67 +82,67 @@ Checklist d'implémentation du change `init-meal-manager`. Ordonnée pour permet
 
 ## 7. Bounded context : Inventory
 
-- [ ] 7.1 Entité `InventoryItem` + Value Object `StorageLocation` (`pantry` | `fridge`)
-- [ ] 7.2 Port `IInventoryItemRepository`
-- [ ] 7.3 Port `IBarcodeResolver` (interface seule, pas d'implémentation v1)
-- [ ] 7.4 Erreurs : `ItemNotFoundError`, `InvalidQuantityError`
-- [ ] 7.5 Use case `AddInventoryItemUseCase`
-- [ ] 7.6 Use case `UpdateInventoryItemUseCase`
-- [ ] 7.7 Use case `RemoveInventoryItemUseCase`
-- [ ] 7.8 Use case `ListInventoryItemsUseCase` (filtrage par location)
-- [ ] 7.9 Use case `AdjustQuantityUseCase` (incrément/décrément)
-- [ ] 7.10 Implémenter `DrizzleInventoryItemRepository` + mapper
-- [ ] 7.11 Route `GET /api/inventory` (avec query `?location=pantry|fridge`)
-- [ ] 7.12 Route `POST /api/inventory`
-- [ ] 7.13 Route `PATCH /api/inventory/:id`
-- [ ] 7.14 Route `DELETE /api/inventory/:id`
-- [ ] 7.15 Tests d'intégration
+- [x] 7.1 Entité `InventoryItem` + Value Object `StorageLocation` (`pantry` | `fridge`)
+- [x] 7.2 Port `IInventoryItemRepository`
+- [x] 7.3 Port `IBarcodeResolver` (interface seule, pas d'implémentation v1)
+- [x] 7.4 Erreurs : `ItemNotFoundError`, `InvalidQuantityError`
+- [x] 7.5 Use case `AddInventoryItemUseCase`
+- [x] 7.6 Use case `UpdateInventoryItemUseCase`
+- [x] 7.7 Use case `RemoveInventoryItemUseCase`
+- [x] 7.8 Use case `ListInventoryItemsUseCase` (filtrage par location)
+- [x] 7.9 Use case `AdjustQuantityUseCase` (incrément/décrément, clamp à zéro avec suppression — v1)
+- [x] 7.10 Implémenter `DrizzleInventoryItemRepository` + mapper
+- [x] 7.11 Route `GET /api/inventory` (avec query `?location=pantry|fridge`)
+- [x] 7.12 Route `POST /api/inventory`
+- [x] 7.13 Route `PATCH /api/inventory/:id`
+- [x] 7.14 Route `DELETE /api/inventory/:id`
+- [x] 7.15 Tests d'intégration
 
 ## 8. Bounded context : Catalog (recettes)
 
-- [ ] 8.1 Entité `Recipe`
-- [ ] 8.2 Entité/Value Object `RecipeIngredient` (nom, quantité normalisée)
-- [ ] 8.3 Port `IRecipeRepository`
-- [ ] 8.4 Port `IRecipeImporter` (interface, pas d'implémentation v1)
-- [ ] 8.5 Use case `CreateRecipeUseCase`
-- [ ] 8.6 Use case `UpdateRecipeUseCase`
-- [ ] 8.7 Use case `DeleteRecipeUseCase`
-- [ ] 8.8 Use case `ListRecipesUseCase`
-- [ ] 8.9 Use case `GetRecipeByIdUseCase`
-- [ ] 8.10 Implémenter `DrizzleRecipeRepository` + mapper
-- [ ] 8.11 Routes CRUD `/api/recipes`
-- [ ] 8.12 Tests d'intégration
+- [x] 8.1 Entité `Recipe`
+- [x] 8.2 Entité/Value Object `RecipeIngredient` (nom, quantité normalisée)
+- [x] 8.3 Port `IRecipeRepository`
+- [x] 8.4 Port `IRecipeImporter` (interface, pas d'implémentation v1) + `IRecipeGenerator` (interface seule, requis par la spec)
+- [x] 8.5 Use case `CreateRecipeUseCase`
+- [x] 8.6 Use case `UpdateRecipeUseCase`
+- [x] 8.7 Use case `DeleteRecipeUseCase` (supprime aussi les `menu_slots` qui référencent la recette — la FK est `ON DELETE SET NULL`, donc cascade explicite)
+- [x] 8.8 Use case `ListRecipesUseCase` (résumés sans ingrédients, recherche `?q=`)
+- [x] 8.9 Use case `GetRecipeByIdUseCase`
+- [x] 8.10 Implémenter `DrizzleRecipeRepository` + mapper
+- [x] 8.11 Routes CRUD `/api/recipes` (GET liste, POST, GET id, PATCH, DELETE)
+- [x] 8.12 Tests d'intégration
 
 ## 9. Bounded context : Meal Planning (menus)
 
-- [ ] 9.1 Entité `Menu` (lié à une `weekStart` — lundi)
-- [ ] 9.2 Entité `MenuSlot` (jour × repas × recette × portions)
-- [ ] 9.3 Value Object `MealType` (`breakfast` | `lunch` | `dinner`)
-- [ ] 9.4 Value Object `DayOfWeek`
-- [ ] 9.5 Port `IMenuRepository`
-- [ ] 9.6 Port `IMenuSuggester` (interface, pas d'implémentation v1)
-- [ ] 9.7 Use case `CreateMenuUseCase`
-- [ ] 9.8 Use case `AssignRecipeToSlotUseCase`
-- [ ] 9.9 Use case `ClearSlotUseCase`
-- [ ] 9.10 Use case `GetMenuByWeekUseCase`
-- [ ] 9.11 Implémenter `DrizzleMenuRepository`
-- [ ] 9.12 Routes `/api/menus` (GET par semaine, POST slots, DELETE slot)
-- [ ] 9.13 Tests d'intégration
+- [x] 9.1 Entité `Menu` (lié à une `weekStart` — lundi, VO `WeekStart` qui enforce l'invariant)
+- [x] 9.2 Entité `MenuSlot` (jour × repas × recette × portions)
+- [x] 9.3 Value Object `MealType` (`breakfast` | `lunch` | `dinner`)
+- [x] 9.4 Value Object `DayOfWeek`
+- [x] 9.5 Port `IMenuRepository` (+ port étroit `IRecipeFinder` pour vérifier l'appartenance d'une recette)
+- [x] 9.6 Port `IMenuSuggester` (interface, pas d'implémentation v1)
+- [x] 9.7 Use case `CreateMenuUseCase`
+- [x] 9.8 Use case `AssignRecipeToSlotUseCase` (remplace si déjà assigné, vérifie l'appartenance de la recette)
+- [x] 9.9 Use case `ClearSlotUseCase` (idempotent)
+- [x] 9.10 Use case `GetMenuByWeekUseCase` (lazy creation conforme à la spec)
+- [x] 9.11 Implémenter `DrizzleMenuRepository` (+ adaptateur `CatalogRecipeFinder`)
+- [x] 9.12 Routes `/api/menus` (GET par semaine, POST slots, DELETE slot)
+- [x] 9.13 Tests d'intégration + tests unitaires de `WeekStart`
 
 ## 10. Bounded context : Shopping
 
-- [ ] 10.1 Entité `ShoppingListSnapshot`
-- [ ] 10.2 Entité `ShoppingListItem` (ingrédient, quantité agrégée, cochable)
-- [ ] 10.3 Port `IShoppingListRepository`
-- [ ] 10.4 Service de domaine `ShoppingListBuilder` (agrégation des ingrédients par nom, normalisation des unités)
-- [ ] 10.5 Use case `GenerateShoppingListFromMenuUseCase` (depuis `MenuId`, agrège les ingrédients × portions, soustrait `InventoryItem`s)
-- [ ] 10.6 Use case `ToggleShoppingListItemUseCase` (coché/non coché)
-- [ ] 10.7 Use case `RegenerateShoppingListUseCase`
-- [ ] 10.8 Implémenter `DrizzleShoppingListRepository`
-- [ ] 10.9 Route `POST /api/shopping-lists` (génération depuis `{ menuId }`)
-- [ ] 10.10 Route `GET /api/shopping-lists/current`
-- [ ] 10.11 Route `PATCH /api/shopping-lists/:id/items/:itemId` (toggle)
-- [ ] 10.12 Tests d'intégration (cas clé : ingrédient présent en stock partiellement)
+- [x] 10.1 Entité `ShoppingListSnapshot`
+- [x] 10.2 Entité `ShoppingListItem` (ingrédient, quantité agrégée, cochable)
+- [x] 10.3 Port `IShoppingListRepository` (+ ports étroits `IMenuSnapshotFinder`, `IRecipeSnapshotFinder`, `IInventorySnapshotFinder` pour découpler les contextes)
+- [x] 10.4 Service de domaine `ShoppingListBuilder` (agrégation par nom trim/lowercase + unité canonique, soustraction du stock, drop des entrées ≤ 0)
+- [x] 10.5 Use case `GenerateShoppingListUseCase` (depuis `MenuId`, agrège les ingrédients × portions, soustrait `InventoryItem`s ; gère `reuse=true`)
+- [x] 10.6 Use case `ToggleShoppingListItemUseCase` (coché/non coché)
+- [x] 10.7 Use case `RegenerateShoppingListUseCase` (wrapper qui force `reuse=false`)
+- [x] 10.8 Implémenter `DrizzleShoppingListRepository` (+ adaptateurs catalog/meal-planning/inventory)
+- [x] 10.9 Route `POST /api/shopping-lists` (génération depuis `{ menuId, reuse? }`)
+- [x] 10.10 Route `GET /api/shopping-lists?menuId=…` (récupération du snapshot courant pour le menu, alignée sur la spec)
+- [x] 10.11 Route `PATCH /api/shopping-lists/:id/items/:itemId` (toggle)
+- [x] 10.12 Tests d'intégration (cas clé : ingrédient présent en stock partiellement, agrégation, reuse, isolation foyer)
 
 ## 11. Front (Nuxt UI)
 
