@@ -7,6 +7,10 @@ import type { CreateHouseholdUseCase } from '../contexts/family/application/use-
 import type { GetCurrentHouseholdUseCase } from '../contexts/family/application/use-cases/get-current-household.use-case'
 import type { JoinHouseholdUseCase } from '../contexts/family/application/use-cases/join-household.use-case'
 import type { LeaveHouseholdUseCase } from '../contexts/family/application/use-cases/leave-household.use-case'
+import type { AssignRecipeToSlotUseCase } from '../contexts/meal-planning/application/use-cases/assign-recipe-to-slot.use-case'
+import type { ClearSlotUseCase } from '../contexts/meal-planning/application/use-cases/clear-slot.use-case'
+import type { CreateMenuUseCase } from '../contexts/meal-planning/application/use-cases/create-menu.use-case'
+import type { GetMenuByWeekUseCase } from '../contexts/meal-planning/application/use-cases/get-menu-by-week.use-case'
 import type { AddInventoryItemUseCase } from '../contexts/inventory/application/use-cases/add-inventory-item.use-case'
 import type { AdjustQuantityUseCase } from '../contexts/inventory/application/use-cases/adjust-quantity.use-case'
 import type { ListInventoryItemsUseCase } from '../contexts/inventory/application/use-cases/list-inventory-items.use-case'
@@ -36,6 +40,11 @@ export interface Container {
   deleteRecipe: DeleteRecipeUseCase
   listRecipes: ListRecipesUseCase
   getRecipeById: GetRecipeByIdUseCase
+  // meal-planning
+  createMenu: CreateMenuUseCase
+  getMenuByWeek: GetMenuByWeekUseCase
+  assignRecipeToSlot: AssignRecipeToSlotUseCase
+  clearSlot: ClearSlotUseCase
 }
 
 declare module 'h3' {

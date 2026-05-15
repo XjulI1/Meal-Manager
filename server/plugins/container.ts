@@ -17,6 +17,12 @@ import { ListInventoryItemsUseCase } from '../contexts/inventory/application/use
 import { RemoveInventoryItemUseCase } from '../contexts/inventory/application/use-cases/remove-inventory-item.use-case'
 import { UpdateInventoryItemUseCase } from '../contexts/inventory/application/use-cases/update-inventory-item.use-case'
 import { DrizzleInventoryItemRepository } from '../contexts/inventory/infrastructure/repositories/drizzle-inventory-item.repository'
+import { AssignRecipeToSlotUseCase } from '../contexts/meal-planning/application/use-cases/assign-recipe-to-slot.use-case'
+import { ClearSlotUseCase } from '../contexts/meal-planning/application/use-cases/clear-slot.use-case'
+import { CreateMenuUseCase } from '../contexts/meal-planning/application/use-cases/create-menu.use-case'
+import { GetMenuByWeekUseCase } from '../contexts/meal-planning/application/use-cases/get-menu-by-week.use-case'
+import { CatalogRecipeFinder } from '../contexts/meal-planning/infrastructure/adapters/recipe-finder.adapter'
+import { DrizzleMenuRepository } from '../contexts/meal-planning/infrastructure/repositories/drizzle-menu.repository'
 import { LoginUserUseCase } from '../contexts/platform/application/use-cases/login-user.use-case'
 import { RegisterUserUseCase } from '../contexts/platform/application/use-cases/register-user.use-case'
 import { Argon2PasswordHasher } from '../contexts/platform/infrastructure/hashers/argon2-password-hasher'
@@ -51,6 +57,10 @@ function buildContainer(): Container {
   // catalog
   const recipeRepo = new DrizzleRecipeRepository(db)
 
+  // meal-planning
+  const menuRepo = new DrizzleMenuRepository(db)
+  const recipeFinder = new CatalogRecipeFinder(recipeRepo)
+
   return {
     registerUser: new RegisterUserUseCase(userRepo, hasher),
     loginUser: new LoginUserUseCase(userRepo, hasher),
@@ -68,5 +78,9 @@ function buildContainer(): Container {
     deleteRecipe: new DeleteRecipeUseCase(recipeRepo),
     listRecipes: new ListRecipesUseCase(recipeRepo),
     getRecipeById: new GetRecipeByIdUseCase(recipeRepo),
+    createMenu: new CreateMenuUseCase(menuRepo),
+    getMenuByWeek: new GetMenuByWeekUseCase(menuRepo),
+    assignRecipeToSlot: new AssignRecipeToSlotUseCase(menuRepo, recipeFinder),
+    clearSlot: new ClearSlotUseCase(menuRepo),
   }
 }

@@ -115,19 +115,19 @@ Checklist d'implémentation du change `init-meal-manager`. Ordonnée pour permet
 
 ## 9. Bounded context : Meal Planning (menus)
 
-- [ ] 9.1 Entité `Menu` (lié à une `weekStart` — lundi)
-- [ ] 9.2 Entité `MenuSlot` (jour × repas × recette × portions)
-- [ ] 9.3 Value Object `MealType` (`breakfast` | `lunch` | `dinner`)
-- [ ] 9.4 Value Object `DayOfWeek`
-- [ ] 9.5 Port `IMenuRepository`
-- [ ] 9.6 Port `IMenuSuggester` (interface, pas d'implémentation v1)
-- [ ] 9.7 Use case `CreateMenuUseCase`
-- [ ] 9.8 Use case `AssignRecipeToSlotUseCase`
-- [ ] 9.9 Use case `ClearSlotUseCase`
-- [ ] 9.10 Use case `GetMenuByWeekUseCase`
-- [ ] 9.11 Implémenter `DrizzleMenuRepository`
-- [ ] 9.12 Routes `/api/menus` (GET par semaine, POST slots, DELETE slot)
-- [ ] 9.13 Tests d'intégration
+- [x] 9.1 Entité `Menu` (lié à une `weekStart` — lundi, VO `WeekStart` qui enforce l'invariant)
+- [x] 9.2 Entité `MenuSlot` (jour × repas × recette × portions)
+- [x] 9.3 Value Object `MealType` (`breakfast` | `lunch` | `dinner`)
+- [x] 9.4 Value Object `DayOfWeek`
+- [x] 9.5 Port `IMenuRepository` (+ port étroit `IRecipeFinder` pour vérifier l'appartenance d'une recette)
+- [x] 9.6 Port `IMenuSuggester` (interface, pas d'implémentation v1)
+- [x] 9.7 Use case `CreateMenuUseCase`
+- [x] 9.8 Use case `AssignRecipeToSlotUseCase` (remplace si déjà assigné, vérifie l'appartenance de la recette)
+- [x] 9.9 Use case `ClearSlotUseCase` (idempotent)
+- [x] 9.10 Use case `GetMenuByWeekUseCase` (lazy creation conforme à la spec)
+- [x] 9.11 Implémenter `DrizzleMenuRepository` (+ adaptateur `CatalogRecipeFinder`)
+- [x] 9.12 Routes `/api/menus` (GET par semaine, POST slots, DELETE slot)
+- [x] 9.13 Tests d'intégration + tests unitaires de `WeekStart`
 
 ## 10. Bounded context : Shopping
 
