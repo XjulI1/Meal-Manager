@@ -16,6 +16,8 @@ export default defineNuxtConfig({
     'nuxt-auth-utils',
   ],
 
+  css: ['~/assets/css/main.css'],
+
   typescript: {
     strict: true,
     typeCheck: false,
