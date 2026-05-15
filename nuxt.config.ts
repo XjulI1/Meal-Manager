@@ -3,6 +3,8 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-01-01',
   devtools: { enabled: true },
 
+  ssr: false,
+
   future: {
     compatibilityVersion: 4,
   },
@@ -13,6 +15,8 @@ export default defineNuxtConfig({
     '@pinia/nuxt',
     'nuxt-auth-utils',
   ],
+
+  css: ['~/assets/css/main.css'],
 
   typescript: {
     strict: true,
