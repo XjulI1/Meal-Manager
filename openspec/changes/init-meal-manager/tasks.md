@@ -71,14 +71,14 @@ Checklist d'implémentation du change `init-meal-manager`. Ordonnée pour permet
 - [x] 5.9 Route `POST /api/households` (créer)
 - [x] 5.10 Route `POST /api/households/join`
 - [x] 5.11 Route `GET /api/households/me` + `POST /api/households/leave`
-- [ ] 5.12 Middleware vérifiant que l'utilisateur appartient à un foyer
+- [x] 5.12 Helper `requireHouseholdMember` (`server/utils/require-household.ts`) que les routes scoped-foyer appelleront en section 7+
 - [x] 5.13 Tests d'intégration (CRUD + scénarios des specs) + smoke tests HTTP
 
 ## 6. Composition root (DI)
 
-- [ ] 6.1 Créer `server/plugins/container.ts` qui instancie tous les repositories et use cases
-- [ ] 6.2 Étendre `H3EventContext` avec le type `Container`
-- [ ] 6.3 Vérifier qu'aucune route HTTP n'instancie de use case directement (revue manuelle)
+- [x] 6.1 Créer `server/plugins/container.ts` qui instancie tous les repositories et use cases
+- [x] 6.2 Étendre `H3EventContext` avec le type `Container` (`server/types/container.ts`)
+- [x] 6.3 Vérifier qu'aucune route HTTP n'instancie de use case directement (revue manuelle)
 
 ## 7. Bounded context : Inventory
 
