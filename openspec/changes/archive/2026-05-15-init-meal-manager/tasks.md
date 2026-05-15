@@ -178,10 +178,10 @@ Checklist d'implémentation du change `init-meal-manager`. Ordonnée pour permet
 
 ## 14. Validation finale
 
-- [ ] 14.1 Exécuter `npm run test` — tous les tests passent
-- [ ] 14.2 Exécuter `npm run lint` — pas d'erreur
-- [ ] 14.3 Exécuter `npm run build` — build sans erreur
-- [ ] 14.4 Parcours manuel : inscription → création foyer → 5 articles inventaire → 2 recettes → menu pour la semaine → génération liste de courses → cocher un item
-- [ ] 14.5 Construire l'image Docker et la lancer
+- [x] 14.1 Exécuter `npm run test` — tous les tests passent
+- [x] 14.2 Exécuter `npm run lint` — pas d'erreur
+- [x] 14.3 Exécuter `npm run build` — build sans erreur
+- [x] 14.4 Parcours manuel : inscription → création foyer → 5 articles inventaire → 2 recettes → menu pour la semaine → génération liste de courses → cocher un item
+- [x] 14.5 Construire l'image Docker et la lancer
 - [x] 14.6 Demander à un agent IA d'exécuter `/opsx:verify` pour vérifier la cohérence avec les specs — verdict OK, aucune divergence majeure (3 points mineurs hors scope v1 : `IExpirationTracker` non créé par design, `menuSlots.recipeId` en `set null` équivalent fonctionnel, pas de tests E2E Playwright optionnels v1)
-- [ ] 14.7 Archiver le change : `/opsx:archive init-meal-manager`
+- [x] 14.7 Archiver le change : `openspec archive init-meal-manager` → `openspec/changes/archive/2026-05-15-init-meal-manager/`, deltas mergés dans `openspec/specs/`
