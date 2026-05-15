@@ -4,43 +4,43 @@ Checklist d'implémentation du change `init-meal-manager`. Ordonnée pour permet
 
 ## 1. Bootstrap du projet
 
-- [ ] 1.1 Initialiser un projet Nuxt 4 (`npx nuxi init meal-manager`)
-- [ ] 1.2 Activer le mode TypeScript strict (`strict: true`, `noUncheckedIndexedAccess: true`) dans `tsconfig.json`
-- [ ] 1.3 Installer et configurer Nuxt UI (`@nuxt/ui`)
-- [ ] 1.4 Installer Pinia (`@pinia/nuxt`)
-- [ ] 1.5 Installer Drizzle ORM (`drizzle-orm`, `drizzle-kit`, `mysql2`)
-- [ ] 1.6 Installer Zod
-- [ ] 1.7 Installer `nuxt-auth-utils`
-- [ ] 1.8 Installer Vitest et configurer `vitest.config.ts`
-- [ ] 1.9 Configurer ESLint + Prettier avec la config Nuxt officielle
-- [ ] 1.10 Ajouter une règle ESLint interdisant les imports `drizzle-orm` dans `server/contexts/*/domain/**`
-- [ ] 1.11 Créer la structure de répertoires (`app/`, `server/contexts/`, `server/database/`, `shared/`)
-- [ ] 1.12 Créer un `README.md` à la racine documentant l'installation locale et la stack
+- [x] 1.1 Initialiser un projet Nuxt 4 (`npx nuxi init meal-manager`)
+- [x] 1.2 Activer le mode TypeScript strict (`strict: true`, `noUncheckedIndexedAccess: true`) dans `tsconfig.json`
+- [x] 1.3 Installer et configurer Nuxt UI (`@nuxt/ui`)
+- [x] 1.4 Installer Pinia (`@pinia/nuxt`)
+- [x] 1.5 Installer Drizzle ORM (`drizzle-orm`, `drizzle-kit`, `mysql2`)
+- [x] 1.6 Installer Zod
+- [x] 1.7 Installer `nuxt-auth-utils`
+- [x] 1.8 Installer Vitest et configurer `vitest.config.ts`
+- [x] 1.9 Configurer ESLint + Prettier avec la config Nuxt officielle
+- [x] 1.10 Ajouter une règle ESLint interdisant les imports `drizzle-orm` dans `server/contexts/*/domain/**`
+- [x] 1.11 Créer la structure de répertoires (`app/`, `server/contexts/`, `server/database/`, `shared/`)
+- [x] 1.12 Créer un `README.md` à la racine documentant l'installation locale et la stack
 
 ## 2. Infrastructure de base de données
 
-- [ ] 2.1 Créer `drizzle.config.ts` pointant vers `server/database/schema/`
-- [ ] 2.2 Créer `server/database/client.ts` (pool mysql2 + instance Drizzle)
-- [ ] 2.3 Définir le schéma `users` (`server/database/schema/users.ts`)
-- [ ] 2.4 Définir le schéma `households` et `household_members`
-- [ ] 2.5 Définir le schéma `inventory_items`
-- [ ] 2.6 Définir le schéma `recipes` et `recipe_ingredients`
-- [ ] 2.7 Définir le schéma `menus` et `menu_slots`
-- [ ] 2.8 Définir le schéma `shopping_list_snapshots` et `shopping_list_items`
-- [ ] 2.9 Générer la première migration (`drizzle-kit generate`)
-- [ ] 2.10 Créer un script `npm run db:migrate` qui exécute les migrations
-- [ ] 2.11 Documenter la création de la base MariaDB locale dans le README
+- [x] 2.1 Créer `drizzle.config.ts` pointant vers `server/database/schema/`
+- [x] 2.2 Créer `server/database/client.ts` (pool mysql2 + instance Drizzle)
+- [x] 2.3 Définir le schéma `users` (`server/database/schema/users.ts`)
+- [x] 2.4 Définir le schéma `households` et `household_members`
+- [x] 2.5 Définir le schéma `inventory_items`
+- [x] 2.6 Définir le schéma `recipes` et `recipe_ingredients`
+- [x] 2.7 Définir le schéma `menus` et `menu_slots`
+- [x] 2.8 Définir le schéma `shopping_list_snapshots` et `shopping_list_items`
+- [x] 2.9 Générer la première migration (`drizzle-kit generate`)
+- [x] 2.10 Créer un script `npm run db:migrate` qui exécute les migrations
+- [x] 2.11 Documenter la création de la base MariaDB locale dans le README
 
 ## 3. Shared — DTO, Value Objects, unités
 
-- [ ] 3.1 Créer le Value Object `Quantity` (`shared/units/quantity.ts`)
-- [ ] 3.2 Créer la table de conversions `shared/units/conversions.ts` (kg↔g, L↔ml, cl↔ml, mg↔g)
-- [ ] 3.3 Écrire les tests unitaires de `Quantity` (création, conversion, addition, soustraction, erreurs de dimension)
-- [ ] 3.4 Créer les DTO Zod pour l'authentification (`shared/dto/auth.ts`)
-- [ ] 3.5 Créer les DTO Zod pour l'inventaire
-- [ ] 3.6 Créer les DTO Zod pour les recettes
-- [ ] 3.7 Créer les DTO Zod pour les menus
-- [ ] 3.8 Créer les DTO Zod pour la liste de courses
+- [x] 3.1 Créer le Value Object `Quantity` (`shared/units/quantity.ts`)
+- [x] 3.2 Créer la table de conversions `shared/units/conversions.ts` (kg↔g, L↔ml, cl↔ml, mg↔g)
+- [x] 3.3 Écrire les tests unitaires de `Quantity` (création, conversion, addition, soustraction, erreurs de dimension)
+- [x] 3.4 Créer les DTO Zod pour l'authentification (`shared/dto/auth.ts`)
+- [x] 3.5 Créer les DTO Zod pour l'inventaire
+- [x] 3.6 Créer les DTO Zod pour les recettes
+- [x] 3.7 Créer les DTO Zod pour les menus
+- [x] 3.8 Créer les DTO Zod pour la liste de courses
 
 ## 4. Bounded context : Platform (auth)
 
