@@ -5,7 +5,7 @@ Bounded context gérant le **menu hebdomadaire** : une grille de 7 jours × 3 re
 ## ADDED Requirements
 
 ### Requirement: Weekly Menu Identity
-A menu is uniquely identified by its household and the start date of the week (the Monday).
+A menu MUST be uniquely identified by its household and the start date of the week (the Monday).
 
 The system MUST identify the start of a week as the Monday of that ISO week (week starts on Monday in `fr-FR` locale).
 
@@ -37,13 +37,20 @@ If no menu exists for the requested week, the system MUST create an empty menu (
 - AND the response indicates that `weekStart` MUST be a Monday in `YYYY-MM-DD` format
 
 ### Requirement: Menu Slot Structure
-A menu has up to 21 slots: 7 days × 3 meal types (`breakfast`, `lunch`, `dinner`).
+A menu MUST support up to 21 slots: 7 days × 3 meal types (`breakfast`, `lunch`, `dinner`).
 
-Each slot is identified by `(menuId, dayOfWeek, mealType)` and contains:
+Each slot MUST be identified by `(menuId, dayOfWeek, mealType)` and contains:
 - A reference to a recipe (`recipeId`) OR is empty
 - A `servings` value (positive integer) — number of portions to prepare, which MAY differ from the recipe's default `servings`
 
-A slot exists only when a recipe is assigned to it. Empty slots are not persisted.
+A slot MUST exist only when a recipe is assigned to it. Empty slots MUST NOT be persisted.
+
+#### Scenario: Slot uniqueness per (day, meal)
+- GIVEN a menu for the week of `2026-05-18`
+- WHEN a member assigns a recipe to Monday dinner
+- AND attempts to create a second slot for the same Monday dinner
+- THEN the menu contains exactly one slot for `(menuId, "monday", "dinner")`
+- AND empty (day, meal) combinations have no row in the slots table
 
 ### Requirement: Assigning a Recipe to a Slot
 The system SHALL allow a household member to assign a recipe to a specific (day, meal type) slot of a menu.
