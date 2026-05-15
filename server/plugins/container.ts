@@ -27,6 +27,14 @@ import { LoginUserUseCase } from '../contexts/platform/application/use-cases/log
 import { RegisterUserUseCase } from '../contexts/platform/application/use-cases/register-user.use-case'
 import { Argon2PasswordHasher } from '../contexts/platform/infrastructure/hashers/argon2-password-hasher'
 import { DrizzleUserRepository } from '../contexts/platform/infrastructure/repositories/drizzle-user.repository'
+import { GenerateShoppingListUseCase } from '../contexts/shopping/application/use-cases/generate-shopping-list.use-case'
+import { GetShoppingListByMenuUseCase } from '../contexts/shopping/application/use-cases/get-shopping-list-by-menu.use-case'
+import { RegenerateShoppingListUseCase } from '../contexts/shopping/application/use-cases/regenerate-shopping-list.use-case'
+import { ToggleShoppingListItemUseCase } from '../contexts/shopping/application/use-cases/toggle-shopping-list-item.use-case'
+import { InventoryAdapter } from '../contexts/shopping/infrastructure/adapters/inventory-snapshot-finder.adapter'
+import { MealPlanningMenuSnapshotFinder } from '../contexts/shopping/infrastructure/adapters/menu-snapshot-finder.adapter'
+import { CatalogRecipeSnapshotFinder } from '../contexts/shopping/infrastructure/adapters/recipe-snapshot-finder.adapter'
+import { DrizzleShoppingListRepository } from '../contexts/shopping/infrastructure/repositories/drizzle-shopping-list.repository'
 import type { Container } from '../types/container'
 
 export default defineNitroPlugin((nitro) => {
@@ -61,6 +69,18 @@ function buildContainer(): Container {
   const menuRepo = new DrizzleMenuRepository(db)
   const recipeFinder = new CatalogRecipeFinder(recipeRepo)
 
+  // shopping
+  const shoppingRepo = new DrizzleShoppingListRepository(db)
+  const menuSnapshotFinder = new MealPlanningMenuSnapshotFinder(menuRepo)
+  const recipeSnapshotFinder = new CatalogRecipeSnapshotFinder(recipeRepo)
+  const inventorySnapshotFinder = new InventoryAdapter(inventoryRepo)
+  const generateShoppingList = new GenerateShoppingListUseCase(
+    shoppingRepo,
+    menuSnapshotFinder,
+    recipeSnapshotFinder,
+    inventorySnapshotFinder,
+  )
+
   return {
     registerUser: new RegisterUserUseCase(userRepo, hasher),
     loginUser: new LoginUserUseCase(userRepo, hasher),
@@ -82,5 +102,9 @@ function buildContainer(): Container {
     getMenuByWeek: new GetMenuByWeekUseCase(menuRepo),
     assignRecipeToSlot: new AssignRecipeToSlotUseCase(menuRepo, recipeFinder),
     clearSlot: new ClearSlotUseCase(menuRepo),
+    generateShoppingList,
+    regenerateShoppingList: new RegenerateShoppingListUseCase(generateShoppingList),
+    getShoppingListByMenu: new GetShoppingListByMenuUseCase(shoppingRepo),
+    toggleShoppingListItem: new ToggleShoppingListItemUseCase(shoppingRepo),
   }
 }

@@ -18,6 +18,10 @@ import type { RemoveInventoryItemUseCase } from '../contexts/inventory/applicati
 import type { UpdateInventoryItemUseCase } from '../contexts/inventory/application/use-cases/update-inventory-item.use-case'
 import type { LoginUserUseCase } from '../contexts/platform/application/use-cases/login-user.use-case'
 import type { RegisterUserUseCase } from '../contexts/platform/application/use-cases/register-user.use-case'
+import type { GenerateShoppingListUseCase } from '../contexts/shopping/application/use-cases/generate-shopping-list.use-case'
+import type { GetShoppingListByMenuUseCase } from '../contexts/shopping/application/use-cases/get-shopping-list-by-menu.use-case'
+import type { RegenerateShoppingListUseCase } from '../contexts/shopping/application/use-cases/regenerate-shopping-list.use-case'
+import type { ToggleShoppingListItemUseCase } from '../contexts/shopping/application/use-cases/toggle-shopping-list-item.use-case'
 
 export interface Container {
   // platform
@@ -45,6 +49,11 @@ export interface Container {
   getMenuByWeek: GetMenuByWeekUseCase
   assignRecipeToSlot: AssignRecipeToSlotUseCase
   clearSlot: ClearSlotUseCase
+  // shopping
+  generateShoppingList: GenerateShoppingListUseCase
+  regenerateShoppingList: RegenerateShoppingListUseCase
+  getShoppingListByMenu: GetShoppingListByMenuUseCase
+  toggleShoppingListItem: ToggleShoppingListItemUseCase
 }
 
 declare module 'h3' {

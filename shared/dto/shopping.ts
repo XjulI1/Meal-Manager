@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 export const GenerateShoppingListSchema = z.object({
   menuId: z.string().uuid(),
+  reuse: z.boolean().optional(),
 })
 export type GenerateShoppingListDto = z.infer<typeof GenerateShoppingListSchema>
 

@@ -131,18 +131,18 @@ Checklist d'implémentation du change `init-meal-manager`. Ordonnée pour permet
 
 ## 10. Bounded context : Shopping
 
-- [ ] 10.1 Entité `ShoppingListSnapshot`
-- [ ] 10.2 Entité `ShoppingListItem` (ingrédient, quantité agrégée, cochable)
-- [ ] 10.3 Port `IShoppingListRepository`
-- [ ] 10.4 Service de domaine `ShoppingListBuilder` (agrégation des ingrédients par nom, normalisation des unités)
-- [ ] 10.5 Use case `GenerateShoppingListFromMenuUseCase` (depuis `MenuId`, agrège les ingrédients × portions, soustrait `InventoryItem`s)
-- [ ] 10.6 Use case `ToggleShoppingListItemUseCase` (coché/non coché)
-- [ ] 10.7 Use case `RegenerateShoppingListUseCase`
-- [ ] 10.8 Implémenter `DrizzleShoppingListRepository`
-- [ ] 10.9 Route `POST /api/shopping-lists` (génération depuis `{ menuId }`)
-- [ ] 10.10 Route `GET /api/shopping-lists/current`
-- [ ] 10.11 Route `PATCH /api/shopping-lists/:id/items/:itemId` (toggle)
-- [ ] 10.12 Tests d'intégration (cas clé : ingrédient présent en stock partiellement)
+- [x] 10.1 Entité `ShoppingListSnapshot`
+- [x] 10.2 Entité `ShoppingListItem` (ingrédient, quantité agrégée, cochable)
+- [x] 10.3 Port `IShoppingListRepository` (+ ports étroits `IMenuSnapshotFinder`, `IRecipeSnapshotFinder`, `IInventorySnapshotFinder` pour découpler les contextes)
+- [x] 10.4 Service de domaine `ShoppingListBuilder` (agrégation par nom trim/lowercase + unité canonique, soustraction du stock, drop des entrées ≤ 0)
+- [x] 10.5 Use case `GenerateShoppingListUseCase` (depuis `MenuId`, agrège les ingrédients × portions, soustrait `InventoryItem`s ; gère `reuse=true`)
+- [x] 10.6 Use case `ToggleShoppingListItemUseCase` (coché/non coché)
+- [x] 10.7 Use case `RegenerateShoppingListUseCase` (wrapper qui force `reuse=false`)
+- [x] 10.8 Implémenter `DrizzleShoppingListRepository` (+ adaptateurs catalog/meal-planning/inventory)
+- [x] 10.9 Route `POST /api/shopping-lists` (génération depuis `{ menuId, reuse? }`)
+- [x] 10.10 Route `GET /api/shopping-lists?menuId=…` (récupération du snapshot courant pour le menu, alignée sur la spec)
+- [x] 10.11 Route `PATCH /api/shopping-lists/:id/items/:itemId` (toggle)
+- [x] 10.12 Tests d'intégration (cas clé : ingrédient présent en stock partiellement, agrégation, reuse, isolation foyer)
 
 ## 11. Front (Nuxt UI)
 
