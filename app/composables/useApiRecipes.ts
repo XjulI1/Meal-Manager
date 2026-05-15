@@ -9,8 +9,12 @@ export interface RecipeSummary {
 
 export function useApiRecipes() {
   function list(query?: Ref<string | undefined> | string) {
+    const q = computed(() => {
+      const value = toValue(query)
+      return value && value.trim() ? value.trim() : undefined
+    })
     return useFetch<RecipeSummary[]>('/api/recipes', {
-      query: { q: query },
+      query: { q },
       default: () => [],
     })
   }

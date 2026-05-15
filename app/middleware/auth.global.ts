@@ -1,5 +1,5 @@
 const PUBLIC_ROUTES = new Set(['/login', '/register'])
-const ONBOARDING_ROUTE = '/onboarding'
+const HOUSEHOLD_ROUTE = '/household'
 
 export default defineNuxtRouteMiddleware(async (to) => {
   const { loggedIn, fetch: refreshSession } = useUserSession()
@@ -22,11 +22,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const { ensureLoaded } = useCurrentHousehold()
   const household = await ensureLoaded()
 
-  if (!household && to.path !== ONBOARDING_ROUTE) {
-    return navigateTo(ONBOARDING_ROUTE)
-  }
-
-  if (household && to.path === ONBOARDING_ROUTE) {
-    return navigateTo('/menu')
+  if (!household && to.path !== HOUSEHOLD_ROUTE) {
+    return navigateTo(HOUSEHOLD_ROUTE)
   }
 })

@@ -25,7 +25,7 @@ async function onSubmit() {
     }
     await login(parsed.data)
     const household = await refreshHousehold()
-    const redirect = (route.query.redirect as string | undefined) ?? (household ? '/menu' : '/onboarding')
+    const redirect = (route.query.redirect as string | undefined) ?? (household ? '/menu' : '/household')
     await navigateTo(redirect)
   }
   catch (error) {

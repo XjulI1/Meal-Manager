@@ -28,7 +28,7 @@ async function onSubmit() {
     }
     await register(parsed.data)
     await refreshHousehold()
-    await navigateTo('/onboarding')
+    await navigateTo('/household')
   }
   catch (error) {
     const message = (error as { statusMessage?: string }).statusMessage ?? 'Inscription impossible'

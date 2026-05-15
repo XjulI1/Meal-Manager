@@ -16,7 +16,7 @@ const menuItems = computed(() => [
     {
       label: 'Mon foyer',
       icon: 'i-lucide-users',
-      to: '/onboarding',
+      to: '/household',
     },
   ],
   [

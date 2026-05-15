@@ -10,7 +10,7 @@ onMounted(async () => {
     return
   }
   await ensureLoaded()
-  await navigateTo(household.value ? '/menu' : '/onboarding')
+  await navigateTo(household.value ? '/menu' : '/household')
 })
 </script>
 

@@ -1,9 +1,13 @@
 <script setup lang="ts">
-definePageMeta({ layout: 'auth', title: 'Mon foyer' })
+definePageMeta({ title: 'Mon foyer' })
 
 const toast = useToast()
 const { create, join, leave } = useApiHousehold()
 const { state: household, refresh, reset } = useCurrentHousehold()
+
+watchEffect(() => {
+  setPageLayout(household.value ? 'default' : 'auth')
+})
 
 const tab = ref<'create' | 'join'>('create')
 
@@ -56,7 +60,7 @@ async function onLeave() {
     await leave()
     reset()
     toast.add({ title: 'Foyer quitté', color: 'success' })
-    await navigateTo('/onboarding')
+    await navigateTo('/household')
   }
   catch (error) {
     const message = (error as { statusMessage?: string }).statusMessage ?? 'Action impossible'
