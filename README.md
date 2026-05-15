@@ -82,6 +82,20 @@ docker run --rm -p 3000:3000 \
   meal-manager
 ```
 
+### Builder distant (Synology / registry privée)
+
+`deploy/` contient un compose autonome qui clone une branche GitHub, build
+l'image et la pousse dans une registry, sans nécessiter de checkout préalable
+sur la machine hôte (utile depuis un NAS) :
+
+```bash
+cd deploy
+docker compose run --rm builder                                    # main → localhost:5050/meal-planning:latest
+GIT_BRANCH=feat/something docker compose run --rm builder          # branche custom
+REGISTRY=dockregistry.xju.fr/meal-planning IMAGE_TAG=v0.2.0 \
+  docker compose run --rm builder                                  # registry + tag explicites
+```
+
 ## Scripts utiles
 
 | Script             | Effet                                                        |
