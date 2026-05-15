@@ -1,3 +1,8 @@
+import type { CreateRecipeUseCase } from '../contexts/catalog/application/use-cases/create-recipe.use-case'
+import type { DeleteRecipeUseCase } from '../contexts/catalog/application/use-cases/delete-recipe.use-case'
+import type { GetRecipeByIdUseCase } from '../contexts/catalog/application/use-cases/get-recipe-by-id.use-case'
+import type { ListRecipesUseCase } from '../contexts/catalog/application/use-cases/list-recipes.use-case'
+import type { UpdateRecipeUseCase } from '../contexts/catalog/application/use-cases/update-recipe.use-case'
 import type { CreateHouseholdUseCase } from '../contexts/family/application/use-cases/create-household.use-case'
 import type { GetCurrentHouseholdUseCase } from '../contexts/family/application/use-cases/get-current-household.use-case'
 import type { JoinHouseholdUseCase } from '../contexts/family/application/use-cases/join-household.use-case'
@@ -25,6 +30,12 @@ export interface Container {
   removeInventoryItem: RemoveInventoryItemUseCase
   listInventoryItems: ListInventoryItemsUseCase
   adjustInventoryQuantity: AdjustQuantityUseCase
+  // catalog
+  createRecipe: CreateRecipeUseCase
+  updateRecipe: UpdateRecipeUseCase
+  deleteRecipe: DeleteRecipeUseCase
+  listRecipes: ListRecipesUseCase
+  getRecipeById: GetRecipeByIdUseCase
 }
 
 declare module 'h3' {

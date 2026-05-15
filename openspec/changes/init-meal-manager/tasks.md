@@ -100,18 +100,18 @@ Checklist d'implémentation du change `init-meal-manager`. Ordonnée pour permet
 
 ## 8. Bounded context : Catalog (recettes)
 
-- [ ] 8.1 Entité `Recipe`
-- [ ] 8.2 Entité/Value Object `RecipeIngredient` (nom, quantité normalisée)
-- [ ] 8.3 Port `IRecipeRepository`
-- [ ] 8.4 Port `IRecipeImporter` (interface, pas d'implémentation v1)
-- [ ] 8.5 Use case `CreateRecipeUseCase`
-- [ ] 8.6 Use case `UpdateRecipeUseCase`
-- [ ] 8.7 Use case `DeleteRecipeUseCase`
-- [ ] 8.8 Use case `ListRecipesUseCase`
-- [ ] 8.9 Use case `GetRecipeByIdUseCase`
-- [ ] 8.10 Implémenter `DrizzleRecipeRepository` + mapper
-- [ ] 8.11 Routes CRUD `/api/recipes`
-- [ ] 8.12 Tests d'intégration
+- [x] 8.1 Entité `Recipe`
+- [x] 8.2 Entité/Value Object `RecipeIngredient` (nom, quantité normalisée)
+- [x] 8.3 Port `IRecipeRepository`
+- [x] 8.4 Port `IRecipeImporter` (interface, pas d'implémentation v1) + `IRecipeGenerator` (interface seule, requis par la spec)
+- [x] 8.5 Use case `CreateRecipeUseCase`
+- [x] 8.6 Use case `UpdateRecipeUseCase`
+- [x] 8.7 Use case `DeleteRecipeUseCase` (supprime aussi les `menu_slots` qui référencent la recette — la FK est `ON DELETE SET NULL`, donc cascade explicite)
+- [x] 8.8 Use case `ListRecipesUseCase` (résumés sans ingrédients, recherche `?q=`)
+- [x] 8.9 Use case `GetRecipeByIdUseCase`
+- [x] 8.10 Implémenter `DrizzleRecipeRepository` + mapper
+- [x] 8.11 Routes CRUD `/api/recipes` (GET liste, POST, GET id, PATCH, DELETE)
+- [x] 8.12 Tests d'intégration
 
 ## 9. Bounded context : Meal Planning (menus)
 

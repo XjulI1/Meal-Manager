@@ -1,4 +1,10 @@
 import { useDb } from '../database/client'
+import { CreateRecipeUseCase } from '../contexts/catalog/application/use-cases/create-recipe.use-case'
+import { DeleteRecipeUseCase } from '../contexts/catalog/application/use-cases/delete-recipe.use-case'
+import { GetRecipeByIdUseCase } from '../contexts/catalog/application/use-cases/get-recipe-by-id.use-case'
+import { ListRecipesUseCase } from '../contexts/catalog/application/use-cases/list-recipes.use-case'
+import { UpdateRecipeUseCase } from '../contexts/catalog/application/use-cases/update-recipe.use-case'
+import { DrizzleRecipeRepository } from '../contexts/catalog/infrastructure/repositories/drizzle-recipe.repository'
 import { CreateHouseholdUseCase } from '../contexts/family/application/use-cases/create-household.use-case'
 import { GetCurrentHouseholdUseCase } from '../contexts/family/application/use-cases/get-current-household.use-case'
 import { JoinHouseholdUseCase } from '../contexts/family/application/use-cases/join-household.use-case'
@@ -42,6 +48,9 @@ function buildContainer(): Container {
   // inventory
   const inventoryRepo = new DrizzleInventoryItemRepository(db)
 
+  // catalog
+  const recipeRepo = new DrizzleRecipeRepository(db)
+
   return {
     registerUser: new RegisterUserUseCase(userRepo, hasher),
     loginUser: new LoginUserUseCase(userRepo, hasher),
@@ -54,5 +63,10 @@ function buildContainer(): Container {
     removeInventoryItem: new RemoveInventoryItemUseCase(inventoryRepo),
     listInventoryItems: new ListInventoryItemsUseCase(inventoryRepo),
     adjustInventoryQuantity: new AdjustQuantityUseCase(inventoryRepo),
+    createRecipe: new CreateRecipeUseCase(recipeRepo),
+    updateRecipe: new UpdateRecipeUseCase(recipeRepo),
+    deleteRecipe: new DeleteRecipeUseCase(recipeRepo),
+    listRecipes: new ListRecipesUseCase(recipeRepo),
+    getRecipeById: new GetRecipeByIdUseCase(recipeRepo),
   }
 }
