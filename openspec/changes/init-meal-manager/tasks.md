@@ -60,19 +60,19 @@ Checklist d'implémentation du change `init-meal-manager`. Ordonnée pour permet
 
 ## 5. Bounded context : Family (foyer + membres)
 
-- [ ] 5.1 Entité `Household` + Value Object `InviteCode`
-- [ ] 5.2 Entité `HouseholdMember`
-- [ ] 5.3 Port `IHouseholdRepository`
-- [ ] 5.4 Use case `CreateHouseholdUseCase`
-- [ ] 5.5 Use case `JoinHouseholdUseCase` (via code d'invitation)
-- [ ] 5.6 Use case `LeaveHouseholdUseCase`
-- [ ] 5.7 Use case `GetCurrentHouseholdUseCase`
-- [ ] 5.8 Implémenter `DrizzleHouseholdRepository`
-- [ ] 5.9 Route `POST /api/households` (créer)
-- [ ] 5.10 Route `POST /api/households/join`
-- [ ] 5.11 Route `GET /api/households/me`
+- [x] 5.1 Entité `Household` + Value Object `InviteCode` (8 caractères, alphabet sans ambiguïté `O/0/1/I`)
+- [x] 5.2 Entité `HouseholdMember`
+- [x] 5.3 Port `IHouseholdRepository`
+- [x] 5.4 Use case `CreateHouseholdUseCase`
+- [x] 5.5 Use case `JoinHouseholdUseCase` (via code d'invitation)
+- [x] 5.6 Use case `LeaveHouseholdUseCase` (supprime le foyer + ses données si dernier membre)
+- [x] 5.7 Use case `GetCurrentHouseholdUseCase`
+- [x] 5.8 Implémenter `DrizzleHouseholdRepository`
+- [x] 5.9 Route `POST /api/households` (créer)
+- [x] 5.10 Route `POST /api/households/join`
+- [x] 5.11 Route `GET /api/households/me` + `POST /api/households/leave`
 - [ ] 5.12 Middleware vérifiant que l'utilisateur appartient à un foyer
-- [ ] 5.13 Tests d'intégration
+- [x] 5.13 Tests d'intégration (CRUD + scénarios des specs) + smoke tests HTTP
 
 ## 6. Composition root (DI)
 
