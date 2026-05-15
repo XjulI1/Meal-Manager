@@ -6,6 +6,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['tests/**/*.{test,spec}.ts'],
+    setupFiles: ['tests/integration/http/nuxt-runtime-stubs.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],

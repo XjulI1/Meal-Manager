@@ -44,19 +44,19 @@ Checklist d'implémentation du change `init-meal-manager`. Ordonnée pour permet
 
 ## 4. Bounded context : Platform (auth)
 
-- [ ] 4.1 Configurer `nuxt-auth-utils` avec `NUXT_SESSION_PASSWORD`
-- [ ] 4.2 Créer l'entité `User` dans `server/contexts/platform/domain/entities/`
-- [ ] 4.3 Créer le port `IUserRepository`
-- [ ] 4.4 Créer le port `IPasswordHasher` (implémentation argon2)
-- [ ] 4.5 Use case `RegisterUserUseCase`
-- [ ] 4.6 Use case `LoginUserUseCase`
-- [ ] 4.7 Implémenter `DrizzleUserRepository` + mapper
-- [ ] 4.8 Implémenter `Argon2PasswordHasher`
-- [ ] 4.9 Route `POST /api/auth/register`
-- [ ] 4.10 Route `POST /api/auth/login`
-- [ ] 4.11 Route `POST /api/auth/logout`
-- [ ] 4.12 Middleware `server/middleware/auth.ts` qui hydrate `event.context.user`
-- [ ] 4.13 Tests d'intégration des use cases (avec `InMemoryUserRepository`)
+- [x] 4.1 Configurer `nuxt-auth-utils` avec `NUXT_SESSION_PASSWORD` (module activé dans `nuxt.config.ts`, secret exposé via `runtimeConfig.session.password`)
+- [x] 4.2 Créer l'entité `User` dans `server/contexts/platform/domain/entities/`
+- [x] 4.3 Créer le port `IUserRepository`
+- [x] 4.4 Créer le port `IPasswordHasher` (implémentation argon2)
+- [x] 4.5 Use case `RegisterUserUseCase`
+- [x] 4.6 Use case `LoginUserUseCase` (avec dummy hash pour neutraliser le timing attack quand l'email est inconnu)
+- [x] 4.7 Implémenter `DrizzleUserRepository` + mapper
+- [x] 4.8 Implémenter `Argon2PasswordHasher` (argon2id, m=19456 KiB, t=2, p=1 — OWASP 2024)
+- [x] 4.9 Route `POST /api/auth/register`
+- [x] 4.10 Route `POST /api/auth/login`
+- [x] 4.11 Route `POST /api/auth/logout`
+- [x] 4.12 Middleware `server/middleware/auth.ts` qui hydrate `event.context.user`
+- [x] 4.13 Tests d'intégration des use cases (avec `InMemoryUserRepository`) + smoke tests HTTP
 
 ## 5. Bounded context : Family (foyer + membres)
 
