@@ -146,19 +146,19 @@ Checklist d'implémentation du change `init-meal-manager`. Ordonnée pour permet
 
 ## 11. Front (Nuxt UI)
 
-- [ ] 11.1 Layout principal avec navigation latérale (inventaire, recettes, menu, courses)
-- [ ] 11.2 Pages d'auth : `/register`, `/login`
-- [ ] 11.3 Page d'onboarding : créer ou rejoindre un foyer
-- [ ] 11.4 Page inventaire (`/inventory`) avec onglets placard/frigo
-- [ ] 11.5 Formulaire d'ajout/édition d'article (avec sélecteur d'unité)
-- [ ] 11.6 Page liste des recettes (`/recipes`)
-- [ ] 11.7 Page détail/édition de recette (`/recipes/[id]`)
-- [ ] 11.8 Page menu hebdomadaire (`/menu`) — grille 7 jours × 3 repas
-- [ ] 11.9 Sélecteur de recettes pour remplir un slot
-- [ ] 11.10 Page liste de courses (`/shopping`) avec bouton « Générer depuis le menu » et cases à cocher
-- [ ] 11.11 Stores Pinia minimaux (UI state uniquement, pas de logique métier)
-- [ ] 11.12 Middleware client `auth.ts` (redirige vers `/login` si pas de session)
-- [ ] 11.13 Composables `useApi*` typés via les DTO partagés
+- [x] 11.1 Layout principal avec navigation latérale (inventaire, recettes, menu, courses)
+- [x] 11.2 Pages d'auth : `/register`, `/login`
+- [x] 11.3 Page d'onboarding : créer ou rejoindre un foyer
+- [x] 11.4 Page inventaire (`/inventory`) avec onglets placard/frigo
+- [x] 11.5 Formulaire d'ajout/édition d'article (avec sélecteur d'unité)
+- [x] 11.6 Page liste des recettes (`/recipes`)
+- [x] 11.7 Page détail/édition de recette (`/recipes/[id]`)
+- [x] 11.8 Page menu hebdomadaire (`/menu`) — grille 7 jours × 3 repas
+- [x] 11.9 Sélecteur de recettes pour remplir un slot
+- [x] 11.10 Page liste de courses (`/shopping`) avec bouton « Générer depuis le menu » et cases à cocher
+- [x] 11.11 Stores Pinia minimaux (UI state uniquement, pas de logique métier)
+- [x] 11.12 Middleware client `auth.ts` (redirige vers `/login` si pas de session)
+- [x] 11.13 Composables `useApi*` typés via les DTO partagés
 
 ## 12. Docker
 
