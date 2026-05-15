@@ -95,5 +95,5 @@ Les repositories Drizzle ne sont pas testés en v1 (acceptable pour la taille du
 - TypeScript strict (`strict: true`, `noUncheckedIndexedAccess: true`, `noImplicitOverride: true`).
 - ESLint config officielle Nuxt + règle d'isolation du domaine.
 - Prettier (config dans `.prettierrc`).
-- Conventional Commits (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`).
+- Conventional Commits (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`) — détails et scopes dans [`COMMITS.md`](./COMMITS.md).
 - Une PR = un change OpenSpec ou un sous-ensemble cohérent de tasks.
