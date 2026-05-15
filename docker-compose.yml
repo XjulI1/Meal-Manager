@@ -1,0 +1,47 @@
+# Local development stack: MariaDB + the Meal Manager Nuxt app.
+# Usage:
+#   cp .env.example .env  # then fill NUXT_SESSION_PASSWORD with a strong secret
+#   docker compose up --build
+
+services:
+  db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-root}
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-meal_manager}
+      MARIADB_USER: ${MARIADB_USER:-meal}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:-meal}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    # Use Docker's built-in tini so SIGTERM is forwarded and zombies reaped.
+    init: true
+    environment:
+      # Inside the compose network the DB is reachable as `db`.
+      DATABASE_URL: mysql://${MARIADB_USER:-meal}:${MARIADB_PASSWORD:-meal}@db:3306/${MARIADB_DATABASE:-meal_manager}
+      NUXT_SESSION_PASSWORD: ${NUXT_SESSION_PASSWORD:?NUXT_SESSION_PASSWORD must be set in .env (>= 32 chars)}
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "3000"
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  mariadb-data:
