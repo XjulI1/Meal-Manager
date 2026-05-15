@@ -82,21 +82,21 @@ Checklist d'implémentation du change `init-meal-manager`. Ordonnée pour permet
 
 ## 7. Bounded context : Inventory
 
-- [ ] 7.1 Entité `InventoryItem` + Value Object `StorageLocation` (`pantry` | `fridge`)
-- [ ] 7.2 Port `IInventoryItemRepository`
-- [ ] 7.3 Port `IBarcodeResolver` (interface seule, pas d'implémentation v1)
-- [ ] 7.4 Erreurs : `ItemNotFoundError`, `InvalidQuantityError`
-- [ ] 7.5 Use case `AddInventoryItemUseCase`
-- [ ] 7.6 Use case `UpdateInventoryItemUseCase`
-- [ ] 7.7 Use case `RemoveInventoryItemUseCase`
-- [ ] 7.8 Use case `ListInventoryItemsUseCase` (filtrage par location)
-- [ ] 7.9 Use case `AdjustQuantityUseCase` (incrément/décrément)
-- [ ] 7.10 Implémenter `DrizzleInventoryItemRepository` + mapper
-- [ ] 7.11 Route `GET /api/inventory` (avec query `?location=pantry|fridge`)
-- [ ] 7.12 Route `POST /api/inventory`
-- [ ] 7.13 Route `PATCH /api/inventory/:id`
-- [ ] 7.14 Route `DELETE /api/inventory/:id`
-- [ ] 7.15 Tests d'intégration
+- [x] 7.1 Entité `InventoryItem` + Value Object `StorageLocation` (`pantry` | `fridge`)
+- [x] 7.2 Port `IInventoryItemRepository`
+- [x] 7.3 Port `IBarcodeResolver` (interface seule, pas d'implémentation v1)
+- [x] 7.4 Erreurs : `ItemNotFoundError`, `InvalidQuantityError`
+- [x] 7.5 Use case `AddInventoryItemUseCase`
+- [x] 7.6 Use case `UpdateInventoryItemUseCase`
+- [x] 7.7 Use case `RemoveInventoryItemUseCase`
+- [x] 7.8 Use case `ListInventoryItemsUseCase` (filtrage par location)
+- [x] 7.9 Use case `AdjustQuantityUseCase` (incrément/décrément, clamp à zéro avec suppression — v1)
+- [x] 7.10 Implémenter `DrizzleInventoryItemRepository` + mapper
+- [x] 7.11 Route `GET /api/inventory` (avec query `?location=pantry|fridge`)
+- [x] 7.12 Route `POST /api/inventory`
+- [x] 7.13 Route `PATCH /api/inventory/:id`
+- [x] 7.14 Route `DELETE /api/inventory/:id`
+- [x] 7.15 Tests d'intégration
 
 ## 8. Bounded context : Catalog (recettes)
 

@@ -5,6 +5,12 @@ import { JoinHouseholdUseCase } from '../contexts/family/application/use-cases/j
 import { LeaveHouseholdUseCase } from '../contexts/family/application/use-cases/leave-household.use-case'
 import { CryptoInviteCodeGenerator } from '../contexts/family/infrastructure/crypto-invite-code-generator'
 import { DrizzleHouseholdRepository } from '../contexts/family/infrastructure/repositories/drizzle-household.repository'
+import { AddInventoryItemUseCase } from '../contexts/inventory/application/use-cases/add-inventory-item.use-case'
+import { AdjustQuantityUseCase } from '../contexts/inventory/application/use-cases/adjust-quantity.use-case'
+import { ListInventoryItemsUseCase } from '../contexts/inventory/application/use-cases/list-inventory-items.use-case'
+import { RemoveInventoryItemUseCase } from '../contexts/inventory/application/use-cases/remove-inventory-item.use-case'
+import { UpdateInventoryItemUseCase } from '../contexts/inventory/application/use-cases/update-inventory-item.use-case'
+import { DrizzleInventoryItemRepository } from '../contexts/inventory/infrastructure/repositories/drizzle-inventory-item.repository'
 import { LoginUserUseCase } from '../contexts/platform/application/use-cases/login-user.use-case'
 import { RegisterUserUseCase } from '../contexts/platform/application/use-cases/register-user.use-case'
 import { Argon2PasswordHasher } from '../contexts/platform/infrastructure/hashers/argon2-password-hasher'
@@ -33,6 +39,9 @@ function buildContainer(): Container {
   const householdRepo = new DrizzleHouseholdRepository(db)
   const inviteCodes = new CryptoInviteCodeGenerator()
 
+  // inventory
+  const inventoryRepo = new DrizzleInventoryItemRepository(db)
+
   return {
     registerUser: new RegisterUserUseCase(userRepo, hasher),
     loginUser: new LoginUserUseCase(userRepo, hasher),
@@ -40,5 +49,10 @@ function buildContainer(): Container {
     joinHousehold: new JoinHouseholdUseCase(householdRepo),
     leaveHousehold: new LeaveHouseholdUseCase(householdRepo),
     getCurrentHousehold: new GetCurrentHouseholdUseCase(householdRepo),
+    addInventoryItem: new AddInventoryItemUseCase(inventoryRepo),
+    updateInventoryItem: new UpdateInventoryItemUseCase(inventoryRepo),
+    removeInventoryItem: new RemoveInventoryItemUseCase(inventoryRepo),
+    listInventoryItems: new ListInventoryItemsUseCase(inventoryRepo),
+    adjustInventoryQuantity: new AdjustQuantityUseCase(inventoryRepo),
   }
 }
