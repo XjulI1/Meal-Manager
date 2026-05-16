@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import listHandler from '../../../server/api/ingredients/index.get'
 import createHandler from '../../../server/api/ingredients/index.post'
 import getHandler from '../../../server/api/ingredients/[id].get'

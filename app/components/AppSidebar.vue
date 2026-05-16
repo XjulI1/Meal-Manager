@@ -3,6 +3,7 @@ const items = [
   { to: '/menu', label: 'Menu', icon: 'i-lucide-calendar-days' },
   { to: '/inventory', label: 'Inventaire', icon: 'i-lucide-package' },
   { to: '/recipes', label: 'Recettes', icon: 'i-lucide-book-open' },
+  { to: '/ingredients', label: 'Ingrédients', icon: 'i-lucide-carrot' },
   { to: '/shopping', label: 'Courses', icon: 'i-lucide-shopping-cart' },
 ]
 </script>
