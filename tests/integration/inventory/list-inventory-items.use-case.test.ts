@@ -1,46 +1,59 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { AddInventoryItemUseCase } from '../../../server/contexts/inventory/application/use-cases/add-inventory-item.use-case'
 import { ListInventoryItemsUseCase } from '../../../server/contexts/inventory/application/use-cases/list-inventory-items.use-case'
+import { InMemoryIngredientLookup } from '../_shared/in-memory-ingredient-lookup'
 import { InMemoryInventoryItemRepository } from './in-memory/in-memory-inventory-item.repository'
+
+const HH = 'hh-1'
 
 describe('ListInventoryItemsUseCase', () => {
   let repo: InMemoryInventoryItemRepository
+  let lookup: InMemoryIngredientLookup
   let add: AddInventoryItemUseCase
   let list: ListInventoryItemsUseCase
 
   beforeEach(async () => {
     repo = new InMemoryInventoryItemRepository()
-    let counter = 0
-    add = new AddInventoryItemUseCase(repo, () => `item-${++counter}`, () => new Date('2026-05-15T10:00:00Z'))
-    list = new ListInventoryItemsUseCase(repo)
+    lookup = new InMemoryIngredientLookup()
+    lookup.add(HH, { id: 'ing-pasta', name: 'Pâtes', category: 'grocery', canonicalUnit: 'g', storage: 'pantry', archived: false })
+    lookup.add(HH, { id: 'ing-rice', name: 'Riz', category: 'grocery', canonicalUnit: 'g', storage: 'pantry', archived: false })
+    lookup.add(HH, { id: 'ing-lentils', name: 'Lentilles', category: 'grocery', canonicalUnit: 'g', storage: 'pantry', archived: false })
+    lookup.add(HH, { id: 'ing-milk', name: 'Lait', category: 'dairy', canonicalUnit: 'ml', storage: 'fridge', archived: false })
+    lookup.add(HH, { id: 'ing-butter', name: 'Beurre', category: 'dairy', canonicalUnit: 'g', storage: 'fridge', archived: false })
+    lookup.add('hh-2', { id: 'ing-other', name: 'Other', category: 'other', canonicalUnit: 'g', storage: 'pantry', archived: false })
 
-    await add.execute({ householdId: 'hh-1', name: 'Pâtes', quantity: { value: 500, unit: 'g' }, location: 'pantry' })
-    await add.execute({ householdId: 'hh-1', name: 'Riz', quantity: { value: 1, unit: 'kg' }, location: 'pantry' })
-    await add.execute({ householdId: 'hh-1', name: 'Lentilles', quantity: { value: 250, unit: 'g' }, location: 'pantry' })
-    await add.execute({ householdId: 'hh-1', name: 'Lait', quantity: { value: 1, unit: 'l' }, location: 'fridge' })
-    await add.execute({ householdId: 'hh-1', name: 'Beurre', quantity: { value: 250, unit: 'g' }, location: 'fridge' })
-    await add.execute({ householdId: 'hh-2', name: 'Other', quantity: { value: 100, unit: 'g' }, location: 'pantry' })
+    let counter = 0
+    add = new AddInventoryItemUseCase(repo, lookup, () => `item-${++counter}`, () => new Date('2026-05-15T10:00:00Z'))
+    list = new ListInventoryItemsUseCase(repo, lookup)
+
+    await add.execute({ householdId: HH, ingredientId: 'ing-pasta', quantity: { value: 500, unit: 'g' } })
+    await add.execute({ householdId: HH, ingredientId: 'ing-rice', quantity: { value: 1, unit: 'kg' } })
+    await add.execute({ householdId: HH, ingredientId: 'ing-lentils', quantity: { value: 250, unit: 'g' } })
+    await add.execute({ householdId: HH, ingredientId: 'ing-milk', quantity: { value: 1, unit: 'l' } })
+    await add.execute({ householdId: HH, ingredientId: 'ing-butter', quantity: { value: 250, unit: 'g' } })
+    await add.execute({ householdId: 'hh-2', ingredientId: 'ing-other', quantity: { value: 100, unit: 'g' } })
   })
 
-  it('lists every item of the household', async () => {
-    const items = await list.execute({ householdId: 'hh-1' })
+  it('lists every item of the household with resolved name and category', async () => {
+    const items = await list.execute({ householdId: HH })
     expect(items).toHaveLength(5)
-    expect(items.map((i) => i.name)).toEqual(['Beurre', 'Lait', 'Lentilles', 'Pâtes', 'Riz'])
+    expect(items.find((i) => i.name === 'Pâtes')?.category).toBe('grocery')
+    expect(items.find((i) => i.name === 'Lait')?.category).toBe('dairy')
   })
 
   it('filters by location', async () => {
-    const items = await list.execute({ householdId: 'hh-1', location: 'pantry' })
-    expect(items.map((i) => i.name)).toEqual(['Lentilles', 'Pâtes', 'Riz'])
+    const items = await list.execute({ householdId: HH, location: 'pantry' })
+    expect(items.map((i) => i.name).sort()).toEqual(['Lentilles', 'Pâtes', 'Riz'])
   })
 
   it('returns canonical units', async () => {
-    const items = await list.execute({ householdId: 'hh-1', location: 'fridge' })
+    const items = await list.execute({ householdId: HH, location: 'fridge' })
     const lait = items.find((i) => i.name === 'Lait')
     expect(lait?.quantity).toEqual({ value: 1000, unit: 'ml' })
   })
 
   it('does not leak items from another household', async () => {
-    const items = await list.execute({ householdId: 'hh-1' })
+    const items = await list.execute({ householdId: HH })
     expect(items.find((i) => i.name === 'Other')).toBeUndefined()
   })
 })

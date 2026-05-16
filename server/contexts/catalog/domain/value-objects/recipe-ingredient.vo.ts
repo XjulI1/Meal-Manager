@@ -1,24 +1,22 @@
 import { Quantity } from '../../../../../shared/units/quantity'
 
-export const INGREDIENT_NAME_MAX_LENGTH = 120
-
 export interface RecipeIngredientProps {
-  name: string
+  ingredientId: string
   quantity: Quantity
 }
 
 export class RecipeIngredient {
-  readonly name: string
+  readonly ingredientId: string
   readonly quantity: Quantity
 
   private constructor(props: RecipeIngredientProps) {
-    this.name = props.name
+    this.ingredientId = props.ingredientId
     this.quantity = props.quantity
   }
 
-  static create(props: { name: string, quantity: Quantity }): RecipeIngredient {
+  static create(props: { ingredientId: string, quantity: Quantity }): RecipeIngredient {
     return new RecipeIngredient({
-      name: RecipeIngredient.assertName(props.name),
+      ingredientId: RecipeIngredient.assertId(props.ingredientId),
       quantity: props.quantity,
     })
   }
@@ -33,19 +31,16 @@ export class RecipeIngredient {
       throw new Error(`Scale factor must be a non-negative finite number (got ${factor}).`)
     }
     return new RecipeIngredient({
-      name: this.name,
+      ingredientId: this.ingredientId,
       quantity: Quantity.fromCanonical(this.quantity.value * factor, this.quantity.unit),
     })
   }
 
-  private static assertName(rawName: string): string {
-    const name = rawName.trim()
-    if (name.length === 0) {
-      throw new Error('Ingredient name must not be empty.')
+  private static assertId(raw: string): string {
+    const id = raw.trim()
+    if (id.length === 0) {
+      throw new Error('Recipe ingredient must reference an ingredientId.')
     }
-    if (name.length > INGREDIENT_NAME_MAX_LENGTH) {
-      throw new Error(`Ingredient name must not exceed ${INGREDIENT_NAME_MAX_LENGTH} characters.`)
-    }
-    return name
+    return id
   }
 }

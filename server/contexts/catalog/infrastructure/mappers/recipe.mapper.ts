@@ -13,7 +13,7 @@ export const RecipeMapper = {
     const ingredients = [...ingredientRows]
       .sort((a, b) => a.position - b.position)
       .map((r) => RecipeIngredient.rehydrate({
-        name: r.name,
+        ingredientId: r.ingredientId,
         quantity: Quantity.fromCanonical(r.quantityValue, r.quantityUnit),
       }))
 
@@ -45,7 +45,7 @@ export const RecipeMapper = {
     return recipe.ingredients.map((ing, position) => ({
       recipeId: recipe.id,
       position,
-      name: ing.name,
+      ingredientId: ing.ingredientId,
       quantityValue: ing.quantity.value,
       quantityUnit: ing.quantity.unit,
     }))

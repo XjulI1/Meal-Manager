@@ -18,6 +18,7 @@ describe('JoinHouseholdUseCase', () => {
     create = new CreateHouseholdUseCase(
       households,
       new FakeInviteCodeGenerator(['ABCD2345']),
+      [],
       () => `hh-${++counter}`,
     )
     join = new JoinHouseholdUseCase(households)

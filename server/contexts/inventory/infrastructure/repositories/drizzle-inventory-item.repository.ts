@@ -33,7 +33,7 @@ export class DrizzleInventoryItemRepository implements IInventoryItemRepository 
       .select()
       .from(inventoryItems)
       .where(where)
-      .orderBy(asc(inventoryItems.name))
+      .orderBy(asc(inventoryItems.ingredientId))
 
     return rows.map(InventoryItemMapper.toDomain)
   }
@@ -45,7 +45,7 @@ export class DrizzleInventoryItemRepository implements IInventoryItemRepository 
       .values(row)
       .onDuplicateKeyUpdate({
         set: {
-          name: row.name,
+          ingredientId: row.ingredientId,
           quantityValue: row.quantityValue,
           quantityUnit: row.quantityUnit,
           location: row.location,

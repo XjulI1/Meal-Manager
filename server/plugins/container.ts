@@ -23,6 +23,7 @@ import { SeedDefaultIngredientsUseCase } from '../contexts/ingredients/applicati
 import { UpdateIngredientUseCase } from '../contexts/ingredients/application/use-cases/update-ingredient.use-case'
 import { UpdateProductUseCase } from '../contexts/ingredients/application/use-cases/update-product.use-case'
 import { IngredientBarcodeResolver } from '../contexts/ingredients/infrastructure/ingredient-barcode-resolver.adapter'
+import { IngredientLookupAdapter } from '../contexts/ingredients/infrastructure/ingredient-lookup.adapter'
 import { DrizzleIngredientRepository } from '../contexts/ingredients/infrastructure/repositories/drizzle-ingredient.repository'
 import { DrizzleProductRepository } from '../contexts/ingredients/infrastructure/repositories/drizzle-product.repository'
 import { SeedDefaultIngredientsInitializer } from '../contexts/ingredients/infrastructure/seed-default-ingredients.initializer'
@@ -86,6 +87,8 @@ function buildContainer(): Container {
   const barcodeResolver = new IngredientBarcodeResolver(resolveByBarcode)
   const seedDefaultIngredients = new SeedDefaultIngredientsUseCase(ingredientRepo)
   const seedInitializer = new SeedDefaultIngredientsInitializer(seedDefaultIngredients)
+  /** Cross-context lookup: inventory & catalog use this to resolve ingredient metadata at read time. */
+  const ingredientLookup = new IngredientLookupAdapter(ingredientRepo)
 
   // family — seed initializer is injected so every new household gets the default catalog.
   const householdRepo = new DrizzleHouseholdRepository(db)
@@ -131,16 +134,16 @@ function buildContainer(): Container {
     removeProduct,
     resolveByBarcode,
     barcodeResolver,
-    addInventoryItem: new AddInventoryItemUseCase(inventoryRepo),
-    updateInventoryItem: new UpdateInventoryItemUseCase(inventoryRepo),
+    addInventoryItem: new AddInventoryItemUseCase(inventoryRepo, ingredientLookup),
+    updateInventoryItem: new UpdateInventoryItemUseCase(inventoryRepo, ingredientLookup),
     removeInventoryItem: new RemoveInventoryItemUseCase(inventoryRepo),
-    listInventoryItems: new ListInventoryItemsUseCase(inventoryRepo),
-    adjustInventoryQuantity: new AdjustQuantityUseCase(inventoryRepo),
-    createRecipe: new CreateRecipeUseCase(recipeRepo),
-    updateRecipe: new UpdateRecipeUseCase(recipeRepo),
+    listInventoryItems: new ListInventoryItemsUseCase(inventoryRepo, ingredientLookup),
+    adjustInventoryQuantity: new AdjustQuantityUseCase(inventoryRepo, ingredientLookup),
+    createRecipe: new CreateRecipeUseCase(recipeRepo, ingredientLookup),
+    updateRecipe: new UpdateRecipeUseCase(recipeRepo, ingredientLookup),
     deleteRecipe: new DeleteRecipeUseCase(recipeRepo),
     listRecipes: new ListRecipesUseCase(recipeRepo),
-    getRecipeById: new GetRecipeByIdUseCase(recipeRepo),
+    getRecipeById: new GetRecipeByIdUseCase(recipeRepo, ingredientLookup),
     createMenu: new CreateMenuUseCase(menuRepo),
     getMenuByWeek: new GetMenuByWeekUseCase(menuRepo),
     assignRecipeToSlot: new AssignRecipeToSlotUseCase(menuRepo, recipeFinder),
