@@ -1,52 +1,112 @@
 # Delta for Catalog
 
-Ce change permet à un `recipe_ingredient` de référencer optionnellement un `ingredient_id` issu du contexte `ingredients`. Les recettes existantes (string libre) restent valides.
+Ce change rend `ingredient_id` **obligatoire** sur chaque ingrédient de recette (le mode string libre disparaît, la colonne `name` est supprimée du schéma `recipe_ingredient`).
 
-## ADDED Requirements
+## MODIFIED Requirements
 
-### Requirement: Optional Ingredient Reference on Recipe Ingredients
-The system SHALL allow a recipe ingredient to optionally reference an `ingredient_id` pointing to an entry in the `ingredients` catalog of the same household.
+### Requirement: Creating a Recipe
+The system SHALL allow a household member to create a recipe.
 
-When provided:
-- The `ingredient_id` MUST belong to the same household; otherwise HTTP 400.
-- The `ingredient_id` MUST point to a non-archived ingredient; otherwise HTTP 400.
-- The submitted `unit` MUST convert to the ingredient's `canonicalUnit`; otherwise HTTP 400 (incompatible dimension).
-- The recipe ingredient's `name` MAY be omitted: if absent, the system fills it from `ingredient.name`.
+A recipe has:
+- A non-empty title (1–200 characters)
+- Free-form instructions (text, max 10000 characters)
+- A positive integer `servings` value (number of portions the recipe produces)
+- A list of one or more ingredients, each having:
+  - An `ingredientId` referencing a non-archived ingredient that belongs to the same household. **Required**; HTTP 400 if missing.
+  - A quantity (positive number) and a unit (any unit that converts to the ingredient's `canonicalUnit`; HTTP 400 otherwise).
 
-When omitted, the recipe ingredient continues to operate in **string-only mode** (legacy v1 behaviour). Both modes coexist within a single recipe.
+A recipe ingredient does NOT carry a free-text name in v1 — the displayed name is always resolved from the referenced ingredient at read time.
 
-The choice of mode is **per recipe ingredient**, not per recipe — a recipe may freely mix bound and unbound ingredients (typical migration path).
+Quantities of ingredients MUST be normalized to canonical units (g, ml, unit) before persistence.
 
-#### Scenario: Create a recipe with one bound and one unbound ingredient
+A recipe belongs to a household. It is not shared between households in v1.
+
+#### Scenario: Create a recipe with two ingredients
 - GIVEN an authenticated household member
-- AND an ingredient `ing-pasta` with `name: "Pâtes", canonicalUnit: "g"` in the household
+- AND ingredients `ing-pasta` (`canonicalUnit: "g"`) and `ing-butter` (`canonicalUnit: "g"`) in the household
 - WHEN they submit `POST /api/recipes` with:
   ```
   {
     "title": "Pâtes au beurre",
     "servings": 2,
-    "instructions": "...",
+    "instructions": "Faire bouillir, ajouter le beurre.",
     "ingredients": [
       { "ingredientId": "ing-pasta", "quantity": 200, "unit": "g" },
-      { "name": "Beurre", "quantity": 30, "unit": "g" }
+      { "ingredientId": "ing-butter", "quantity": 30, "unit": "g" }
     ]
   }
   ```
-- THEN the recipe is created with both ingredients
-- AND the first ingredient has `ingredientId: "ing-pasta"` and `name: "Pâtes"` (filled from the catalog)
-- AND the second ingredient has `ingredientId: null` and `name: "Beurre"`
+- THEN a new recipe is created in their household
+- AND both ingredients are stored with canonical units and reference their respective `ingredientId`
 
-#### Scenario: Bound ingredient with incompatible unit
-- GIVEN an ingredient `ing-pasta` with `canonicalUnit: "g"`
-- WHEN a recipe ingredient submits `{ ingredientId: "ing-pasta", quantity: 200, unit: "ml" }`
+#### Scenario: Recipe without ingredients
+- GIVEN an authenticated household member
+- WHEN they submit a recipe with an empty ingredients list
+- THEN the system returns HTTP 400 Bad Request
+- AND no recipe is created
+
+#### Scenario: Recipe with zero servings
+- GIVEN an authenticated household member
+- WHEN they submit a recipe with `servings: 0` or a non-integer servings value
 - THEN the system returns HTTP 400 Bad Request
 
-#### Scenario: Bound ingredient from another household
+#### Scenario: Ingredient missing ingredientId
+- GIVEN an authenticated household member
+- WHEN they submit a recipe where one ingredient entry lacks `ingredientId`
+- THEN the system returns HTTP 400 Bad Request
+- AND no recipe is created
+
+#### Scenario: Ingredient from another household
 - GIVEN an ingredient belonging to household A
-- WHEN a member of household B creates a recipe referencing that `ingredientId`
+- WHEN a member of household B submits a recipe referencing that `ingredientId`
 - THEN the system returns HTTP 400 Bad Request
 
-#### Scenario: Retrieving a recipe exposes the ingredient reference
-- GIVEN a recipe whose ingredients include a bound entry
-- WHEN a member calls `GET /api/recipes/:id`
-- THEN each ingredient in the response carries an `ingredientId: string | null` field
+#### Scenario: Archived ingredient
+- GIVEN an ingredient that has been soft-deleted
+- WHEN a member submits a recipe referencing that `ingredientId`
+- THEN the system returns HTTP 400 Bad Request
+
+#### Scenario: Incompatible unit dimension
+- GIVEN an ingredient `ing-pasta` with `canonicalUnit: "g"`
+- WHEN a member submits a recipe ingredient `{ ingredientId: "ing-pasta", quantity: 200, unit: "ml" }`
+- THEN the system returns HTTP 400 Bad Request
+
+### Requirement: Retrieving a Recipe
+The system SHALL return the full details of a recipe (including all ingredients) given its id.
+
+Each ingredient in the response MUST expose its `ingredientId` and the resolved `name` (from the catalog) so the client can render without a second request.
+
+#### Scenario: Get recipe by id
+- GIVEN a recipe with id `recipe-123` in the user's household
+- WHEN a member calls `GET /api/recipes/recipe-123`
+- THEN the system returns the recipe with title, servings, instructions
+- AND each ingredient carries `ingredientId`, `name` (resolved from the catalog), `quantity`, and canonical `unit`
+
+#### Scenario: Recipe from another household
+- GIVEN a recipe belonging to household A
+- WHEN a member of household B calls `GET /api/recipes/:id` for that recipe
+- THEN the system returns HTTP 404 Not Found
+
+### Requirement: Updating a Recipe
+The system SHALL allow a household member to update a recipe belonging to their household.
+
+The update operation MUST replace the entire ingredients list atomically (i.e. removing then re-adding all ingredients in a single transaction; partial updates of individual ingredients are not exposed at the API level in v1).
+
+Each ingredient entry submitted MUST follow the same validation rules as in `Creating a Recipe` (mandatory `ingredientId`, same-household, non-archived, compatible canonical unit).
+
+#### Scenario: Update title only
+- GIVEN a recipe in the user's household
+- WHEN a member calls `PATCH /api/recipes/:id` with `{ title: "New title" }`
+- THEN only the title is updated
+- AND ingredients and instructions remain unchanged
+
+#### Scenario: Replace ingredients
+- GIVEN a recipe with 3 ingredients
+- WHEN a member calls `PATCH /api/recipes/:id` with a new `ingredients` array of 2 entries, each with a valid `ingredientId`
+- THEN the recipe ends up with exactly 2 ingredients (the previous 3 are removed and the new 2 are inserted)
+
+#### Scenario: Replacement with an invalid ingredient is rejected
+- GIVEN a recipe in the user's household
+- WHEN a member calls `PATCH /api/recipes/:id` with an ingredients array where one entry lacks `ingredientId`
+- THEN the system returns HTTP 400 Bad Request
+- AND the recipe ingredients are NOT modified (atomic replacement)

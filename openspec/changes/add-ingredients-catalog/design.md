@@ -10,7 +10,7 @@ Le change initial (`init-meal-manager`) a livré un MVP où l'inventaire, les re
 - Filtrer les recettes par allergène ou régime.
 - Pré-remplir l'inventaire avec le stockage (frais/placard) sans demander à l'utilisateur.
 
-Ce change introduit le bounded context `ingredients` qui sert de **socle partagé** entre `inventory`, `catalog` et `shopping`. Il est conçu pour être adopté **progressivement** : les anciennes lignes string libre continuent de fonctionner ; les nouvelles peuvent référencer un `ingredient_id`.
+**Aucun utilisateur n'est en production.** On profite de cette fenêtre pour faire un changement direct : `ingredient_id` devient obligatoire, le mode string libre disparaît, pas de période transitoire ni de logique d'agrégation mixte à maintenir. La complexité retirée par rapport à une approche rétro-compatible est significative (un seul chemin de code dans le builder, dans les use cases, dans les formulaires).
 
 ## Goals / Non-Goals
 
@@ -20,16 +20,17 @@ Ce change introduit le bounded context `ingredients` qui sert de **socle partag�
 - Pouvoir scanner un code-barre et obtenir `{ ingredient, product }` (le client décide ensuite quoi en faire).
 - Garder le domaine isolé : aucune dépendance Drizzle/mysql2/h3/Vue dans `server/contexts/ingredients/domain/**` (règle ESLint déjà active).
 - Permettre une recherche par nom + alias (`useApiIngredients`) avec filtres rayon et storage.
-- Livrer un seed d'ingrédients FR courants par foyer pour démarrer.
-- Ne **pas** casser les routes existantes : `ingredientId` est optionnel dans les payloads create/update de `inventory_item` et `recipe_ingredient`.
+- Livrer un seed d'ingrédients FR courants par foyer pour démarrer — c'est désormais un prérequis dur de l'usage.
+- Simplifier `ShoppingListBuilder` : un seul mode d'agrégation, par `ingredient_id`.
 
 **Non-Goals :**
-- Migration automatique des chaînes libres vers `ingredient_id` (heuristique trim/lowercase + alias) — futur change.
+- Mode de coexistence string libre / `ingredient_id`. Explicitement refusé : pas d'utilisateurs en prod, pas besoin.
 - Scan caméra dans le front (sera une feature inventory plus tard, avec une lib type `zxing-js`).
 - Import OpenFoodFacts ou autre base externe — sera un adapter alternatif d'`IBarcodeResolver` plus tard.
 - Prix par produit, historique, comparateur.
 - Catalogue partagé inter-foyers (forte tentation, mais ouvre une boîte de Pandore RGPD/modération — repoussé).
 - Champ « stock minimum / par défaut » par ingrédient (pourrait alimenter une auto-suggestion liste de courses, hors scope).
+- Note libre sur les lignes d'inventaire (« pour Adrien »). Si besoin, ce sera un nouveau champ `note` distinct du nom — pas dans ce change.
 
 ## Decisions
 
@@ -52,11 +53,13 @@ Ce change introduit le bounded context `ingredients` qui sert de **socle partag�
 
 **Raison :** l'utilisateur l'a tranché en faveur de la v1+. Le coût supplémentaire est minime (deux tables au lieu d'une), et la séparation suit la sémantique métier (un yaourt nature, c'est un ingrédient ; les 7 marques en supermarché, ce sont 7 produits).
 
-### D3. Stockage (`pantry`/`fridge`) sur l'ingrédient
+### D3. Stockage (`pantry`/`fridge`) sur l'ingrédient, surchargeable par article
 
-**Décision :** `Ingredient.storage` est `'pantry' | 'fridge'`. Au scan d'un code-barre, on remonte au `Product` puis à son `Ingredient`, et on pré-remplit l'inventaire avec le bon `location`.
+**Décision :** `Ingredient.storage` est `'pantry' | 'fridge'` (valeur **par défaut**). `InventoryItem.location` reste sur l'article et **peut différer** de la valeur de l'ingrédient (exemple : « j'ai exceptionnellement mis ma sauce tomate ouverte au frigo »).
 
-**Alternative :** mettre `storage` sur le produit (un même ingrédient peut techniquement se garder au frigo OU au placard selon le format — ex: tomates en conserve vs tomates fraîches). Rejetée : si deux formats divergent vraiment sur le stockage, ce sont deux ingrédients distincts (« tomates fraîches » vs « tomates concassées »).
+Au scan d'un code-barre ou à la sélection d'un ingrédient dans le formulaire d'inventaire, le client pré-remplit `location` avec `ingredient.storage`. L'utilisateur peut changer.
+
+**Alternative :** dériver `location` strictement de l'ingrédient (pas de colonne sur l'article). Rejetée — perdrait les cas légitimes de surcharge.
 
 ### D4. Catégorie (rayon) en enum borné
 
@@ -70,7 +73,7 @@ Ce change introduit le bounded context `ingredients` qui sert de **socle partag�
 **Décision :** `Allergen` enum sur les 14 allergènes EU réglementaires :
 `gluten | crustaceans | eggs | fish | peanuts | soy | milk | nuts | celery | mustard | sesame | sulphites | lupin | molluscs`
 
-Stocké comme **set** (table de jointure `ingredient_allergen` ou colonne JSON — voir D9).
+Stocké comme **set** (colonne JSON sur `ingredient` — voir D9).
 
 **Raison :** standard légal européen, suffisant pour la v1. Pas de différenciation « trace de » vs « contient » en v1.
 
@@ -94,12 +97,14 @@ Stocké comme **set** (table de jointure `ingredient_allergen` ou colonne JSON �
 
 **Alternative :** hard delete + cascade comme on fait pour les recettes (`Deleting a Recipe`). Rejetée — supprimer un ingrédient ne doit pas effacer silencieusement une ligne d'inventaire ou un ingrédient de recette ; ça surprendrait l'utilisateur. Pour `Product`, hard delete reste possible (un produit n'est jamais référencé par d'autres entités, seuls les codes-barres lui appartiennent).
 
+**Note :** comme `ingredient_id` est NOT NULL partout, on n'a *pas* à craindre une référence orpheline ; un ingrédient archivé reste résolvable par son id (le FK reste valide).
+
 ### D9. Schéma DB
 
 ```
 ingredient
   id             char(36) PK
-  household_id   char(36) FK -> household.id, INDEX
+  household_id   char(36) FK -> household.id ON DELETE CASCADE, INDEX
   name           varchar(100) NOT NULL
   storage        ENUM('pantry','fridge') NOT NULL
   category       ENUM(...) NOT NULL
@@ -111,7 +116,9 @@ ingredient
   deleted_at     datetime NULL
   created_at     datetime NOT NULL
   updated_at     datetime NOT NULL
-  UNIQUE(household_id, name) WHERE deleted_at IS NULL  -- index unique partiel (MariaDB: index sur (household_id, name, deleted_at))
+  -- Unicité du nom au sein des actifs : enforced applicativement
+  -- (MariaDB ne supporte pas les unique partial indexes ; on
+  -- gère côté CreateIngredientUseCase via SELECT WHERE deleted_at IS NULL)
 
 ingredient_alias
   id             char(36) PK
@@ -122,7 +129,7 @@ ingredient_alias
 
 product
   id             char(36) PK
-  household_id   char(36) FK -> household.id, INDEX
+  household_id   char(36) FK -> household.id ON DELETE CASCADE, INDEX
   ingredient_id  char(36) FK -> ingredient.id ON DELETE CASCADE
   brand          varchar(100) NULL
   pack_size      INT UNSIGNED NOT NULL        -- en unité canonique de l'ingrédient
@@ -134,31 +141,38 @@ product
 product_barcode
   id             char(36) PK
   product_id     char(36) FK -> product.id ON DELETE CASCADE
-  barcode        varchar(14) NOT NULL
-  UNIQUE(<household_id-via-product>, barcode)  -- via colonne dénormalisée household_id
   household_id   char(36) NOT NULL   -- dénormalisé pour permettre l'index unique
+  barcode        varchar(14) NOT NULL
+  UNIQUE(household_id, barcode)
   INDEX(barcode)
 ```
 
-Note : l'index unique sur `product_barcode (household_id, barcode)` nécessite la dénormalisation de `household_id`. Le repository garantit la cohérence (toujours = product.household_id).
-
 **Allergènes en JSON vs table de jointure :** JSON suffit en v1 (lecture exclusive depuis l'ingrédient, pas de requête « recettes sans gluten » dans ce change). Si plus tard on veut filtrer/indexer, on extrait dans une table.
 
-### D10. Modifications des tables existantes
+### D10. Modifications BREAKING des tables existantes
 
-Trois colonnes ajoutées, toutes **nullables** :
+Pas d'utilisateurs en production : on fait une migration franche, pas de colonnes optionnelles temporaires.
 
 ```
-inventory_item:      ADD COLUMN ingredient_id char(36) NULL, ADD FK + INDEX
-recipe_ingredient:   ADD COLUMN ingredient_id char(36) NULL, ADD FK + INDEX
-shopping_list_item:  ADD COLUMN ingredient_id char(36) NULL, ADD INDEX
+inventory_item:
+  ADD COLUMN ingredient_id char(36) NOT NULL, ADD FK -> ingredient.id, ADD INDEX
+  DROP COLUMN name
+
+recipe_ingredient:
+  ADD COLUMN ingredient_id char(36) NOT NULL, ADD FK -> ingredient.id, ADD INDEX
+  DROP COLUMN name
+
+shopping_list_item:
+  ADD COLUMN ingredient_id char(36) NOT NULL, ADD FK -> ingredient.id, ADD INDEX
+  ADD COLUMN category varchar(32) NOT NULL DEFAULT 'other'
+  -- la colonne `name` reste : snapshot dénormalisé (le snapshot fige le nom au moment de la génération)
 ```
 
-Aucune contrainte `NOT NULL` ni migration de données — les lignes existantes restent en string libre. C'est explicitement le seul mode supporté en v1 (mode mixte : nouvelles entrées peuvent référencer ; anciennes restent).
+Les bases de dev existantes (avec des données legacy en string libre) doivent être réinitialisées (`pnpm db:reset` ou `docker compose down -v` puis `up --build`). Documenté dans le README. Acceptable car le projet est pré-production.
 
 ### D11. Adapter `IBarcodeResolver`
 
-Le port existant attend `resolve(barcode): Promise<BarcodeResolution | null>` avec au minimum `{ name, defaultUnit? }`. On élargit le type retour pour inclure `ingredientId` et `productId` :
+Le port existant attend `resolve(barcode): Promise<BarcodeResolution | null>` avec au minimum `{ name, defaultUnit? }`. On élargit le type retour pour inclure `ingredientId`, `productId`, `storage`, `category` :
 
 ```ts
 export interface BarcodeResolution {
@@ -166,17 +180,24 @@ export interface BarcodeResolution {
   defaultUnit?: CanonicalUnit;
   ingredientId?: string;      // nouveau
   productId?: string;         // nouveau
-  storage?: 'pantry' | 'fridge'; // nouveau (utile pour pré-remplir)
+  storage?: 'pantry' | 'fridge'; // nouveau
+  category?: IngredientCategory; // nouveau
 }
 ```
 
 Ces champs étant optionnels, la requirement existante « Barcode Resolution Port » reste satisfaite. L'adapter `IngredientBarcodeResolver` vit dans `server/contexts/ingredients/infrastructure/` et est branché par la composition root. Il prend `IProductRepository` en dépendance.
 
-### D12. Seed initial
+### D12. Seed initial comme prérequis dur
 
-Une migration Drizzle dédiée `seed_ingredients_per_household.ts` : à chaque nouvelle `household` créée, un trigger applicatif (dans `CreateHouseholdUseCase` du contexte `family`) appelle `SeedDefaultIngredientsUseCase` pour insérer ~50 ingrédients FR courants. Pas de seed des produits/codes-barres (les utilisateurs scannent leurs propres marques).
+Une migration applicative : à chaque nouvelle `household` créée, `CreateHouseholdUseCase` appelle les `IHouseholdInitializer[]` qui lui sont injectés. Ingredients en fournit un : `SeedDefaultIngredientsInitializer` insère ~50 ingrédients FR de base.
 
-**Alternative :** seed via SQL `INSERT` direct dans la migration. Rejetée — les foyers existants ne seraient pas seedés. Avec un use case, on peut aussi le déclencher depuis l'admin si besoin.
+Comme `ingredient_id` est obligatoire pour ajouter quoi que ce soit, **un foyer sans seed est inutilisable**. Le seed n'est plus optionnel. Conséquences :
+
+- Le test d'intégration du seed devient critique (couverture obligatoire).
+- Le formulaire d'inventaire/recette propose un autocomplete sur les ingrédients du foyer + un raccourci « + Nouvel ingrédient » (modale rapide) pour les cas où l'utilisateur veut quelque chose hors seed.
+- Le script `db:seed-existing-households` (cf. D14) reste utile pour les bases de dev partagées entre développeurs.
+
+**Cross-context :** `family` reçoit un port `IHouseholdInitializer` (interface dans `family/domain/ports/`). Ingredients fournit l'implémentation dans son `infrastructure/`. Aucun import direct cross-context.
 
 Liste seed (catégorie, nom, storage, canonical_unit) :
 - produce: tomate (g), oignon (g), ail (g), carotte (g), courgette (g), pomme de terre (g), salade (unit), poivron (g), citron (unit), pomme (g), banane (g)…
@@ -190,6 +211,7 @@ Liste seed (catégorie, nom, storage, canonical_unit) :
 
 ### D13. Routes API
 
+**Nouvelles :**
 ```
 GET    /api/ingredients                  -- ?q=&category=&storage=&includeArchived=
 POST   /api/ingredients
@@ -205,13 +227,27 @@ DELETE /api/products/:id
 GET    /api/barcodes/:code               -- 200 + { ingredient, product } | 404
 ```
 
-Toutes les routes passent par `requireHouseholdMember()`. Le contrôleur ne sait rien des use cases au-delà de leur signature ; il fait `event.context.container.<useCase>.execute(...)`.
+**Modifiées (BREAKING) :**
+```
+POST/PATCH /api/inventory                -- ingredientId requis, name retiré
+POST/PATCH /api/recipes                  -- chaque ingredient requiert ingredientId, name retiré
+GET    /api/inventory                    -- chaque item expose ingredientId + name (résolu)
+GET    /api/recipes/:id                  -- chaque ingredient expose ingredientId + name (résolu)
+GET    /api/shopping-lists?menuId=...    -- chaque item expose ingredientId + category, tri par rayon
+```
+
+Toutes les routes passent par `requireHouseholdMember()`. Le contrôleur fait `event.context.container.<useCase>.execute(...)`.
 
 ### D14. Front
 
-Pages :
+Pages **nouvelles** :
 - `/ingredients` : tableau avec recherche live (debounce 200ms), filtres `storage` et `category`, bouton « Nouveau ». Tri par défaut : `category` puis `name`.
 - `/ingredients/[id]` : détail, édition inline, panneau « Produits » listant les produits avec leurs codes-barres + bouton « Ajouter un produit » (formulaire avec champ code-barre simple).
+
+Pages **modifiées** :
+- `/inventory` : formulaire d'ajout remplace le champ « Nom » par un autocomplete `<USelectMenu>` sur les ingrédients du foyer. L'unité proposée est dérivée du `canonicalUnit` (avec liste des unités compatibles). Le `location` est pré-rempli depuis `ingredient.storage` mais reste éditable. Raccourci « + Nouvel ingrédient » ouvre une modale `IngredientFormModal` ; l'ingrédient créé est immédiatement sélectionné.
+- `/recipes/[id]` (édition) : chaque ligne d'ingrédient utilise le même autocomplete + même raccourci.
+- `/shopping` : la liste est groupée par rayon (titre de catégorie + items dessous), ordre fixe `produce, bakery, meat-fish, dairy, frozen, grocery, beverages, household, other`.
 
 Composables :
 - `useApiIngredients` : `list(query)`, `get(id)`, `create(dto)`, `update(id, dto)`, `delete(id)`.
@@ -224,24 +260,32 @@ Pas de page « scanner ». Le champ code-barre dans le formulaire produit est un
 | Risque | Mitigation |
 |---|---|
 | **Surcharge cognitive pour l'utilisateur** : deux concepts (ingrédient + produit) là où il en attend peut-être un seul. | UI v1 : on cache `Product` derrière une section « Produits / codes-barres » de la page ingrédient. L'utilisateur lambda gère des ingrédients ; les produits n'apparaissent que s'il veut scanner. |
-| **Mode mixte string + ingredientId** dans inventory/recipes/shopping : risque de bugs d'agrégation (un même article comptabilisé deux fois). | `ShoppingListBuilder` agrège d'abord par `ingredient_id` quand présent, puis par `(name.lower, unit)` pour le reste. Documenté dans le delta `shopping/spec.md`. Test d'intégration dédié. |
+| **Le seed plante** ⟶ foyer inutilisable. C'est désormais critique : aucun fallback string libre. | Le seed est transactionnel : si l'insertion échoue, la création du foyer est rollback. Test d'intégration obligatoire couvrant le succès et l'échec partiel. Le script `db:seed-existing-households` permet une réparation manuelle. |
+| **Friction utilisateur** quand un ingrédient désiré n'est pas dans le seed. | Raccourci « + Nouvel ingrédient » dans les formulaires inventory/recipe (modale minimaliste, 4 champs : nom, storage, category, canonicalUnit). |
+| **Migration destructive sur les bases de dev** : les bases existantes ont des `inventory_item.name` non-null sans `ingredient_id`. | Le projet est pré-production. Documenter clairement dans le README et le commit : `pnpm db:reset` ou `docker compose down -v` requis. Aucune tentative de migration heuristique. |
 | **Seed dupliqué par foyer** : N foyers × ~50 lignes. À 10k foyers ça reste < 500k lignes, négligeable. | Aucune mitigation nécessaire en v1. |
 | **Soft delete oublié dans les requêtes** : un repo qui ne filtre pas `deleted_at IS NULL` retourne des ingrédients archivés. | Filtre `deletedAt: null` factorisé dans une méthode `baseQuery()` du repository. Test d'intégration : créer/soft-delete/list ne retourne pas l'ingrédient. |
 | **Validation checksum EAN trop stricte** : un code-barre vraiment scanné par l'utilisateur mais avec checksum erroné serait rejeté. | Logger les rejets en dev pour mesurer ; possibilité d'ajouter un mode `lax` plus tard si nécessaire. |
-| **Conflit FK lors d'un `DELETE household`** : ingredients / products référencent household. | `ON DELETE CASCADE` sur `household_id` partout (cohérent avec les autres tables foyer-scoped). |
-| **Boucle d'instanciation seed** : `CreateHouseholdUseCase` (family) doit appeler `SeedDefaultIngredientsUseCase` (ingredients), créant un couplage cross-context. | Famille reçoit un port `IHouseholdInitializer[]` (liste d'initializers) via la composition root. Ingredients fournit un `SeedDefaultIngredientsInitializer` qui implémente ce port. Pas d'import direct cross-context. |
+| **Renommer un ingrédient change les noms affichés dans les recettes / inventaire existants** (effet de bord du fait qu'on a drop la colonne `name` legacy). | C'est le comportement attendu (l'ingrédient *est* la source de vérité). Pour les snapshots de liste de courses, on dénormalise volontairement `name` au moment de la génération (le snapshot fige l'historique). |
 
 ## Migration Plan
 
-Pas de migration de données à proprement parler — uniquement schéma :
+Pas de migration de données — uniquement schéma destructif sur 3 tables existantes :
 
 1. Générer la migration Drizzle (`pnpm db:generate`) qui :
    - Crée `ingredient`, `ingredient_alias`, `product`, `product_barcode`.
-   - Ajoute `ingredient_id` (nullable) sur `inventory_item`, `recipe_ingredient`, `shopping_list_item`.
-2. La migration de seed n'est **pas** une migration SQL — elle est déclenchée applicativement à la création d'un foyer (via l'initializer).
-3. Pour les foyers **déjà existants** : un script utilitaire `pnpm db:seed-existing-households` (one-shot dans `scripts/`) parcourt les foyers sans aucun ingrédient et déclenche le seed pour chacun. Documenté dans le README.
-4. Rollback : `drizzle-kit drop` sur la migration. Les colonnes nullables ajoutées n'ont pas de données, donc le rollback est trivial. Si un foyer a déjà créé des ingrédients, le rollback supprime ces données — accepté en v1 pré-production.
+   - Ajoute `ingredient_id NOT NULL` + FK + INDEX sur `inventory_item`, `recipe_ingredient`, `shopping_list_item`.
+   - Ajoute `category` sur `shopping_list_item`.
+   - Drop les colonnes `name` sur `inventory_item` et `recipe_ingredient`.
+2. **Toutes les bases de dev doivent être réinitialisées** avant d'appliquer la migration (sinon `NOT NULL` casse). Documenté dans le README + dans le message de commit de la migration. La commande recommandée :
+   ```
+   docker compose down -v   # ou pnpm db:reset si script ajouté
+   docker compose up --build
+   ```
+3. La logique de seed est applicative, pas SQL. Elle se déclenche automatiquement à chaque création de foyer via `CreateHouseholdUseCase` + `SeedDefaultIngredientsInitializer`.
+4. Pour les foyers déjà créés dans une base de dev partagée et qui ne seraient plus seedables après réinitialisation : `pnpm db:seed-existing-households` (one-shot) parcourt les foyers sans ingrédients et déclenche le seed pour chacun.
+5. Rollback : `drizzle-kit drop` sur la migration. Le rollback supprime les données ingredients (ingrédients et produits créés post-migration). Accepté en pré-production.
 
 ## Open Questions
 
-Aucune — toutes les décisions structurantes sont actées ci-dessus (foyer-scoped, deux agrégats, soft-delete des ingrédients, hard-delete des produits, seed via initializer, format EAN/UPC avec checksum).
+Aucune — toutes les décisions structurantes sont actées ci-dessus (foyer-scoped, deux agrégats, `ingredient_id` obligatoire partout, drop des colonnes `name` legacy, soft-delete des ingrédients référencés, hard-delete des produits, seed via initializer transactionnel, format EAN/UPC avec checksum, location surchargeable par article).

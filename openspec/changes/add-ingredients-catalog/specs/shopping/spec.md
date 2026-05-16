@@ -1,6 +1,6 @@
 # Delta for Shopping
 
-Ce change étend l'algorithme d'agrégation pour fusionner d'abord sur `ingredient_id` quand il est présent, et ajoute un champ `category` à chaque entrée de la liste de courses pour permettre un tri par rayon. Les entrées sans `ingredient_id` continuent d'être agrégées par nom (mode mixte).
+Ce change simplifie l'algorithme d'agrégation : un seul mode, par `(ingredient_id, canonical_unit)`. Le snapshot dénormalise `name` et `category` au moment de la génération (état figé, robuste à un renommage ultérieur de l'ingrédient). La liste est triée par rayon dans la réponse.
 
 ## MODIFIED Requirements
 
@@ -9,56 +9,33 @@ The system SHALL generate a shopping list snapshot from a given menu.
 
 The generation algorithm:
 
-1. Collect every ingredient required by every assigned slot of the menu.
+1. Collect every ingredient required by every assigned slot of the menu. Each recipe ingredient carries a mandatory `ingredient_id`.
 2. For each slot, scale the recipe's ingredient quantities by the ratio `slot.servings / recipe.servings`.
-3. Aggregate identical ingredients by:
-   - **Primary key when present:** `(ingredient_id, canonical_unit)`. All entries sharing the same `ingredient_id` are summed.
-   - **Fallback for legacy entries (no `ingredient_id`):** `(name.trim().toLowerCase(), canonical_unit)`. Legacy entries are NEVER merged with bound entries even if their name matches — this would silently change behaviour for users who haven't migrated.
-4. For each aggregated entry, subtract the matching inventory quantity:
-   - If the aggregated entry has an `ingredient_id`, match inventory items by `ingredient_id` AND canonical unit.
-   - Otherwise, match inventory items by `(name.trim().toLowerCase(), canonical_unit)` AND only inventory items that themselves have no `ingredient_id`.
+3. Aggregate identical ingredients by `(ingredient_id, canonical_unit)`. All scaled entries sharing the same key are summed.
+4. For each aggregated entry, subtract the quantity of the matching inventory item — matched by `(ingredient_id, canonical_unit)`.
 5. Discard entries whose remaining quantity is zero or negative.
 6. Persist the result as a `ShoppingListSnapshot` linked to the menu. For each persisted item:
-   - Store the `ingredient_id` if the aggregation used one (nullable in DB).
-   - Store the `name` (resolved from the ingredient when bound, or from the original string).
-   - Store a `category` derived from the ingredient when bound; for legacy unbound entries, `category` defaults to `other`.
-   - Mark `isChecked` as `false`.
+   - `ingredientId` is the aggregation key (not nullable).
+   - `name` is the resolved ingredient name **at generation time** (denormalized in the snapshot so a later rename of the ingredient does not retroactively change the shopping list).
+   - `category` is the resolved ingredient category **at generation time** (same rationale).
+   - `isChecked` is `false`.
 
 If a `ShoppingListSnapshot` already exists for the given menu, the request MUST either:
 - Return the existing snapshot if the client provides `?reuse=true`
 - Otherwise, replace it with a newly generated one (the previous snapshot is deleted, including any checked state)
 
-#### Scenario: Generate a fresh shopping list (legacy string mode)
-- GIVEN a household with:
-  - A menu containing one slot for `recipe-pasta` (servings = 2) at 4 servings
-  - `recipe-pasta` requires `200 g` pasta and `30 g` butter (for 2 servings), both as legacy string entries (no `ingredient_id`)
-  - Inventory contains `100 g` of "butter" (also legacy) and nothing else
-- WHEN a member calls `POST /api/shopping-lists` with `{ menuId: "...", reuse: false }`
-- THEN a new snapshot is created with:
-  - `400 g` of pasta (200 × 2)
-  - `(60 - 100) g` of butter, which is negative, so butter is omitted entirely
-- AND each remaining item is marked as `isChecked: false`
-- AND each item has `ingredientId: null` and `category: "other"`
-
-#### Scenario: Generate using ingredient ids
+#### Scenario: Generate a fresh shopping list
 - GIVEN a household with:
   - An ingredient `ing-pasta` (`name: "Pâtes"`, `canonicalUnit: "g"`, `category: "grocery"`)
   - An ingredient `ing-butter` (`name: "Beurre"`, `canonicalUnit: "g"`, `category: "dairy"`)
-  - A menu with one slot for `recipe-pasta` (servings = 2) at 4 servings
-  - `recipe-pasta` requires `ing-pasta` × 200 g and `ing-butter` × 30 g, both bound
-  - Inventory contains `100 g` of `ing-butter` (bound) and nothing else
-- WHEN a member generates the shopping list
-- THEN the snapshot contains a single entry: `Pâtes — 400 g`, with `ingredientId: "ing-pasta"` and `category: "grocery"`
-- AND butter is omitted (60 − 100 < 0)
-
-#### Scenario: Bound and unbound do not merge
-- GIVEN a recipe with two ingredients sharing the name "Beurre":
-  - One bound to ingredient `ing-butter` with scaled quantity `30 g`
-  - One legacy string entry `"Beurre"` with scaled quantity `20 g`
-- WHEN the shopping list is generated
-- THEN the snapshot contains TWO separate entries:
-  - `Beurre — 30 g` with `ingredientId: "ing-butter"`, `category: "dairy"`
-  - `Beurre — 20 g` with `ingredientId: null`, `category: "other"`
+  - A menu containing one slot for `recipe-pasta` (servings = 2) at 4 servings
+  - `recipe-pasta` requires `ing-pasta` × 200 g and `ing-butter` × 30 g (for 2 servings)
+  - Inventory contains `100 g` of `ing-butter` and nothing else
+- WHEN a member calls `POST /api/shopping-lists` with `{ menuId: "...", reuse: false }`
+- THEN a new snapshot is created with:
+  - One entry `Pâtes — 400 g` with `ingredientId: "ing-pasta"`, `category: "grocery"`
+  - No entry for butter ((60 − 100) < 0, omitted)
+- AND each item is marked as `isChecked: false`
 
 #### Scenario: Reuse an existing list
 - GIVEN a snapshot already exists for menu `menu-123` and several items are checked
@@ -83,43 +60,40 @@ If a `ShoppingListSnapshot` already exists for the given menu, the request MUST 
 - THEN the system returns a snapshot with an empty items list
 - AND HTTP 200 OK
 
+#### Scenario: Snapshot survives a later rename of an ingredient
+- GIVEN a snapshot generated when ingredient `ing-pasta` was named `"Pâtes"`
+- WHEN the ingredient is later renamed to `"Pâtes complètes"`
+- AND a member fetches the existing snapshot via `GET /api/shopping-lists?menuId=...`
+- THEN the snapshot item still displays the name `"Pâtes"` (the denormalized historical value)
+- AND its `ingredientId` still resolves to `ing-pasta`
+
 ### Requirement: Aggregation Rules
-When aggregating ingredients across recipes, the system MUST:
+When aggregating ingredients across recipes, the system MUST aggregate by `(ingredient_id, canonical_unit)`.
 
-- Aggregate first by `ingredient_id` when present. Two scaled lines from two different recipes that both reference `ing-butter` MUST be summed into a single entry.
-- For lines without `ingredient_id`, fall back to comparing names using **trimmed, lower-cased** strings (e.g. `"Lait"`, `" lait "`, `"LAIT"` collapse).
-- NEVER merge a bound entry (with `ingredient_id`) with an unbound entry (without `ingredient_id`), even if their names match — preserving user intent.
-- Sum quantities only if they share the same canonical unit; entries with the same key but different canonical dimensions MUST be kept as separate entries.
+Two scaled lines from two different recipes that both reference the same `ingredient_id` MUST be summed into a single entry. The system MUST sum quantities only if they share the same canonical unit; entries with the same `ingredient_id` but different canonical units (this should not occur given the `canonical_unit` is fixed per ingredient, but is defended against) MUST be kept as separate entries.
 
-#### Scenario: Two recipes share a bound ingredient
+#### Scenario: Two recipes share an ingredient
 - GIVEN two slots whose recipes both reference `ing-butter`
 - AND the scaled quantities are `30 g` and `50 g`
 - WHEN the shopping list is generated
 - THEN the resulting snapshot contains a single entry `Beurre — 80 g` with `ingredientId: "ing-butter"`
 
-#### Scenario: Two recipes share an unbound ingredient name
-- GIVEN two slots whose recipes both list `"Beurre"` as a legacy string entry
-- AND the scaled quantities are `30 g` and `50 g`
-- WHEN the shopping list is generated
-- THEN the resulting snapshot contains a single entry `Beurre — 80 g` with `ingredientId: null`
-
 ## ADDED Requirements
 
 ### Requirement: Shopping List Sorted by Aisle
-The `GET /api/shopping-lists?menuId=...` response MUST return items grouped/sortable by `category` (aisle).
+The `GET /api/shopping-lists?menuId=...` response MUST return items ordered for in-store shopping by `(category, name)`.
 
-The response payload structure for each item MUST include the `category` field (one of the closed set defined by `ingredients` capability, plus `other` for legacy or unresolved entries). Items SHOULD be ordered by `(category, name)` so a client rendering the list naturally groups by aisle.
+The category order MUST follow the fixed sequence: `produce, bakery, meat-fish, dairy, frozen, grocery, beverages, household, other`. Within a category, items are sorted alphabetically by `name`.
 
-The category order in the response MUST follow a fixed, store-friendly sequence: `produce, bakery, meat-fish, dairy, frozen, grocery, beverages, household, other`.
+The response payload structure for each item MUST include the `ingredientId`, `name`, `category`, `quantity` (with canonical unit), and `isChecked` fields.
 
 #### Scenario: List returns items ordered by aisle
 - GIVEN a snapshot with items in categories `dairy`, `produce`, `grocery`
 - WHEN a member calls `GET /api/shopping-lists?menuId=...`
 - THEN the items are ordered: `produce` items first, then `dairy`, then `grocery`
-- AND each item carries a `category` field
+- AND each item carries `ingredientId`, `name`, `category`, `quantity`, and `isChecked`
 
-#### Scenario: Legacy entries land in `other`
-- GIVEN a snapshot generated entirely from legacy string entries
+#### Scenario: Items within a category sorted by name
+- GIVEN a snapshot with three `produce` items: `Tomate`, `Carotte`, `Oignon`
 - WHEN a member fetches the list
-- THEN every item has `category: "other"`
-- AND they appear last in the ordering
+- THEN the produce items appear in alphabetical order: `Carotte`, `Oignon`, `Tomate`
