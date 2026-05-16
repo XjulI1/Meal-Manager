@@ -6,12 +6,14 @@ import type {
   IngredientView,
   ListIngredientsQueryDto,
 } from '../../../shared/dto/ingredient'
+import type { CreateProductDto } from '../../../shared/dto/product'
 import { CATEGORY_LABELS, CATEGORY_ORDER, STORAGE_LABELS } from '../../composables/useApiIngredients'
 
 definePageMeta({ title: 'Ingrédients' })
 
 const toast = useToast()
 const api = useApiIngredients()
+const productsApi = useApiProducts()
 
 const search = ref('')
 const debouncedSearch = ref('')
@@ -40,9 +42,17 @@ const showForm = ref(false)
 const editing = ref<IngredientView | null>(null)
 const submitting = ref(false)
 
+const showProductForm = ref(false)
+const productTarget = ref<IngredientView | null>(null)
+
 function openCreate() {
   editing.value = null
   showForm.value = true
+}
+
+function openAddProduct(ing: IngredientView) {
+  productTarget.value = ing
+  showProductForm.value = true
 }
 
 async function onSubmit(payload: CreateIngredientDto) {
@@ -58,6 +68,26 @@ async function onSubmit(payload: CreateIngredientDto) {
     }
     showForm.value = false
     await refresh()
+  }
+  catch (error) {
+    toast.add({
+      title: (error as { statusMessage?: string }).statusMessage ?? 'Action impossible',
+      color: 'error',
+    })
+  }
+  finally {
+    submitting.value = false
+  }
+}
+
+async function onProductSubmit(payload: CreateProductDto) {
+  if (!productTarget.value) return
+  submitting.value = true
+  try {
+    await productsApi.addToIngredient(productTarget.value.id, payload)
+    toast.add({ title: 'Produit ajouté', color: 'success' })
+    showProductForm.value = false
+    productTarget.value = null
   }
   catch (error) {
     toast.add({
@@ -151,28 +181,38 @@ const grouped = computed<ItemsByCategory[]>(() => {
         </h2>
         <UCard>
           <ul class="divide-y divide-gray-200 dark:divide-gray-800">
-            <li v-for="ing in group.items" :key="ing.id" class="py-3 flex items-center gap-3">
-              <div class="flex-1 min-w-0">
-                <NuxtLink
-                  :to="`/ingredients/${ing.id}`"
-                  class="font-medium truncate hover:underline"
-                  :class="{ 'opacity-50': ing.archived }"
-                >
-                  {{ ing.name }}
-                  <UBadge v-if="ing.archived" color="neutral" variant="subtle" class="ml-2">Archivé</UBadge>
-                </NuxtLink>
-                <p class="text-xs text-gray-500">
-                  {{ STORAGE_LABELS[ing.storage] }} · {{ ing.canonicalUnit }}
-                  <span v-if="ing.aliases.length"> · alias : {{ ing.aliases.join(', ') }}</span>
-                </p>
-              </div>
-              <UButton
-                icon="i-lucide-trash-2"
-                color="error"
-                variant="ghost"
-                size="sm"
-                @click="onDelete(ing)"
-              />
+            <li v-for="ing in group.items" :key="ing.id">
+              <NuxtLink
+                :to="`/ingredients/${ing.id}`"
+                class="py-3 px-2 -mx-2 rounded flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                :class="{ 'opacity-50': ing.archived }"
+              >
+                <div class="flex-1 min-w-0">
+                  <p class="font-medium truncate">
+                    {{ ing.name }}
+                    <UBadge v-if="ing.archived" color="neutral" variant="subtle" class="ml-2">Archivé</UBadge>
+                  </p>
+                  <p class="text-xs text-gray-500">
+                    {{ STORAGE_LABELS[ing.storage] }} · {{ ing.canonicalUnit }}
+                    <span v-if="ing.aliases.length"> · alias : {{ ing.aliases.join(', ') }}</span>
+                  </p>
+                </div>
+                <UButton
+                  icon="i-lucide-barcode"
+                  color="neutral"
+                  variant="ghost"
+                  size="sm"
+                  title="Ajouter un produit / code-barre"
+                  @click.prevent.stop="openAddProduct(ing)"
+                />
+                <UButton
+                  icon="i-lucide-trash-2"
+                  color="error"
+                  variant="ghost"
+                  size="sm"
+                  @click.prevent.stop="onDelete(ing)"
+                />
+              </NuxtLink>
             </li>
           </ul>
         </UCard>
@@ -186,6 +226,21 @@ const grouped = computed<ItemsByCategory[]>(() => {
           :loading="submitting"
           @submit="onSubmit"
           @cancel="showForm = false"
+        />
+      </template>
+    </UModal>
+
+    <UModal
+      v-model:open="showProductForm"
+      :title="productTarget ? `Nouveau produit pour « ${productTarget.name} »` : 'Nouveau produit'"
+    >
+      <template #body>
+        <IngredientsProductForm
+          v-if="productTarget"
+          :ingredient-canonical-unit="productTarget.canonicalUnit"
+          :loading="submitting"
+          @submit="onProductSubmit"
+          @cancel="showProductForm = false"
         />
       </template>
     </UModal>
