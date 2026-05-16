@@ -11,6 +11,7 @@ import type { AddProductUseCase } from '../contexts/ingredients/application/use-
 import type { CreateIngredientUseCase } from '../contexts/ingredients/application/use-cases/create-ingredient.use-case'
 import type { DeleteIngredientUseCase } from '../contexts/ingredients/application/use-cases/delete-ingredient.use-case'
 import type { GetIngredientUseCase } from '../contexts/ingredients/application/use-cases/get-ingredient.use-case'
+import type { GetProductUseCase } from '../contexts/ingredients/application/use-cases/get-product.use-case'
 import type { ListIngredientsUseCase } from '../contexts/ingredients/application/use-cases/list-ingredients.use-case'
 import type { RemoveProductUseCase } from '../contexts/ingredients/application/use-cases/remove-product.use-case'
 import type { ResolveByBarcodeUseCase } from '../contexts/ingredients/application/use-cases/resolve-by-barcode.use-case'
@@ -49,6 +50,7 @@ export interface Container {
   listIngredients: ListIngredientsUseCase
   getIngredient: GetIngredientUseCase
   addProduct: AddProductUseCase
+  getProduct: GetProductUseCase
   updateProduct: UpdateProductUseCase
   removeProduct: RemoveProductUseCase
   resolveByBarcode: ResolveByBarcodeUseCase

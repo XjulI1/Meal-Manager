@@ -15,6 +15,7 @@ import { AddProductUseCase } from '../contexts/ingredients/application/use-cases
 import { CreateIngredientUseCase } from '../contexts/ingredients/application/use-cases/create-ingredient.use-case'
 import { DeleteIngredientUseCase } from '../contexts/ingredients/application/use-cases/delete-ingredient.use-case'
 import { GetIngredientUseCase } from '../contexts/ingredients/application/use-cases/get-ingredient.use-case'
+import { GetProductUseCase } from '../contexts/ingredients/application/use-cases/get-product.use-case'
 import { ListIngredientsUseCase } from '../contexts/ingredients/application/use-cases/list-ingredients.use-case'
 import { RemoveProductUseCase } from '../contexts/ingredients/application/use-cases/remove-product.use-case'
 import { ResolveByBarcodeUseCase } from '../contexts/ingredients/application/use-cases/resolve-by-barcode.use-case'
@@ -78,6 +79,7 @@ function buildContainer(): Container {
   const listIngredients = new ListIngredientsUseCase(ingredientRepo)
   const getIngredient = new GetIngredientUseCase(ingredientRepo, productRepo)
   const addProduct = new AddProductUseCase(ingredientRepo, productRepo)
+  const getProduct = new GetProductUseCase(productRepo)
   const updateProduct = new UpdateProductUseCase(productRepo)
   const removeProduct = new RemoveProductUseCase(productRepo)
   const resolveByBarcode = new ResolveByBarcodeUseCase(ingredientRepo, productRepo)
@@ -124,6 +126,7 @@ function buildContainer(): Container {
     listIngredients,
     getIngredient,
     addProduct,
+    getProduct,
     updateProduct,
     removeProduct,
     resolveByBarcode,

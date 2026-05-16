@@ -16,6 +16,18 @@ interface MockH3Error extends Error {
   validator: (raw: unknown) => unknown,
 ) => validator(event._body)
 
+;(globalThis as any).getValidatedQuery = async (
+  event: { _query?: unknown },
+  validator: (raw: unknown) => unknown,
+) => validator(event._query ?? {})
+
+;(globalThis as any).getRouterParam = (event: { _params?: Record<string, string> }, name: string) =>
+  event._params?.[name]
+
+;(globalThis as any).setResponseStatus = (event: { _status?: number }, status: number) => {
+  event._status = status
+}
+
 ;(globalThis as any).createError = (opts: { statusCode: number, statusMessage?: string }): MockH3Error => {
   const err = new Error(opts.statusMessage ?? 'Error') as MockH3Error
   err.statusCode = opts.statusCode
@@ -46,7 +58,10 @@ interface MockH3Error extends Error {
 
 export interface MockEvent<TBody = unknown> {
   _body?: TBody
+  _query?: Record<string, unknown>
+  _params?: Record<string, string>
   _session?: { user?: { id: string, email: string } }
+  _status?: number
   context: {
     container: any
     user?: { id: string, email: string }
@@ -55,11 +70,15 @@ export interface MockEvent<TBody = unknown> {
 
 export function makeEvent<TBody>(opts: {
   body?: TBody
+  query?: Record<string, unknown>
+  params?: Record<string, string>
   session?: { user?: { id: string, email: string } }
   container: any
 }): MockEvent<TBody> {
   return {
     _body: opts.body,
+    _query: opts.query,
+    _params: opts.params,
     _session: opts.session,
     context: { container: opts.container },
   }
