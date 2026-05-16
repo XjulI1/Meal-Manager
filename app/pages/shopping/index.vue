@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { ShoppingListView } from '../../../shared/dto/shopping'
+import type { ShoppingListItemView, ShoppingListView } from '../../../shared/dto/shopping'
+import { CATEGORY_LABELS, CATEGORY_ORDER } from '../../composables/useApiIngredients'
 
 definePageMeta({ title: 'Liste de courses' })
 
@@ -59,6 +60,24 @@ async function generate(reuse = false) {
     generating.value = false
   }
 }
+
+interface AisleGroup {
+  category: string
+  label: string
+  items: ShoppingListItemView[]
+}
+
+const grouped = computed<AisleGroup[]>(() => {
+  const out: AisleGroup[] = []
+  const items = list.value?.items ?? []
+  for (const cat of CATEGORY_ORDER) {
+    const slice = items.filter((i) => i.category === cat)
+    if (slice.length > 0) {
+      out.push({ category: cat, label: CATEGORY_LABELS[cat], items: slice })
+    }
+  }
+  return out
+})
 
 async function toggle(itemId: string, isChecked: boolean) {
   if (!list.value) return
@@ -123,28 +142,37 @@ async function toggle(itemId: string, isChecked: boolean) {
       </div>
     </UCard>
 
-    <UCard v-else>
-      <ul v-if="list.items.length" class="divide-y divide-gray-200 dark:divide-gray-800">
-        <li
-          v-for="item in list.items"
-          :key="item.id"
-          class="py-2 flex items-center gap-3"
-        >
-          <UCheckbox
-            :model-value="item.isChecked"
-            @update:model-value="(v: boolean | 'indeterminate') => toggle(item.id, v === true)"
-          />
-          <div class="flex-1 min-w-0" :class="item.isChecked ? 'line-through text-gray-400' : ''">
-            <span class="font-medium">{{ item.ingredientName }}</span>
-            <span class="text-sm text-gray-500 ml-2">
-              {{ item.quantity.value }} {{ item.quantity.unit }}
-            </span>
-          </div>
-        </li>
-      </ul>
-      <div v-else class="p-6 text-center text-gray-500">
-        Liste vide — tout est déjà dans l’inventaire.
-      </div>
-    </UCard>
+    <template v-else>
+      <UCard v-if="!list.items.length">
+        <div class="p-6 text-center text-gray-500">
+          Liste vide — tout est déjà dans l’inventaire.
+        </div>
+      </UCard>
+      <section v-for="group in grouped" :key="group.category">
+        <h2 class="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-2">
+          {{ group.label }}
+        </h2>
+        <UCard>
+          <ul class="divide-y divide-gray-200 dark:divide-gray-800">
+            <li
+              v-for="item in group.items"
+              :key="item.id"
+              class="py-2 flex items-center gap-3"
+            >
+              <UCheckbox
+                :model-value="item.isChecked"
+                @update:model-value="(v: boolean | 'indeterminate') => toggle(item.id, v === true)"
+              />
+              <div class="flex-1 min-w-0" :class="item.isChecked ? 'line-through text-gray-400' : ''">
+                <span class="font-medium">{{ item.ingredientName }}</span>
+                <span class="text-sm text-gray-500 ml-2">
+                  {{ item.quantity.value }} {{ item.quantity.unit }}
+                </span>
+              </div>
+            </li>
+          </ul>
+        </UCard>
+      </section>
+    </template>
   </div>
 </template>
