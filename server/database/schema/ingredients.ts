@@ -20,7 +20,7 @@ export const ingredients = mysqlTable(
       .notNull()
       .references(() => households.id, { onDelete: 'cascade' }),
     name: varchar('name', { length: 100 }).notNull(),
-    storage: mysqlEnum('storage', ['pantry', 'fridge']).notNull(),
+    storage: mysqlEnum('storage', ['pantry', 'fridge', 'freezer']).notNull(),
     category: mysqlEnum('category', [
       'produce',
       'bakery',

@@ -11,7 +11,7 @@ export interface UpdateIngredientInput {
   householdId: string
   id: string
   name?: string
-  storage?: 'pantry' | 'fridge'
+  storage?: 'pantry' | 'fridge' | 'freezer'
   category?: IngredientCategoryValue
   canonicalUnit?: CanonicalUnit
   shelfLifeDays?: number | null

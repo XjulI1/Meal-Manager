@@ -58,7 +58,7 @@ describe('SeedDefaultIngredientsUseCase', () => {
   it('every seeded ingredient has valid category, canonicalUnit and storage', async () => {
     await seed.execute({ householdId: HH })
     for (const ing of ingredients.forHousehold(HH)) {
-      expect(['pantry', 'fridge']).toContain(ing.storage)
+      expect(['pantry', 'fridge', 'freezer']).toContain(ing.storage)
       expect(['g', 'ml', 'unit']).toContain(ing.canonicalUnit)
       expect(ing.category.value).toBeDefined()
     }

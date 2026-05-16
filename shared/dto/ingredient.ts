@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-export const IngredientStorageSchema = z.enum(['pantry', 'fridge'])
+export const IngredientStorageSchema = z.enum(['pantry', 'fridge', 'freezer'])
 export type IngredientStorage = z.infer<typeof IngredientStorageSchema>
 
 export const IngredientCategorySchema = z.enum([

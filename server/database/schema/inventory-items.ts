@@ -22,7 +22,7 @@ export const inventoryItems = mysqlTable(
     /** Quantity in canonical unit (g, ml, unit). */
     quantityValue: int('quantity_value', { unsigned: true }).notNull(),
     quantityUnit: mysqlEnum('quantity_unit', ['g', 'ml', 'unit']).notNull(),
-    location: mysqlEnum('location', ['pantry', 'fridge']).notNull(),
+    location: mysqlEnum('location', ['pantry', 'fridge', 'freezer']).notNull(),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
   },

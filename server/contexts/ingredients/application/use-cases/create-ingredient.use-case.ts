@@ -9,7 +9,7 @@ import { toIngredientView, type IngredientView } from './views'
 export interface CreateIngredientInput {
   householdId: string
   name: string
-  storage: 'pantry' | 'fridge'
+  storage: 'pantry' | 'fridge' | 'freezer'
   category: IngredientCategoryValue
   canonicalUnit: CanonicalUnit
   shelfLifeDays?: number | null

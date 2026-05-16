@@ -8,7 +8,7 @@ export interface BarcodeResolution {
   defaultUnit?: string
   ingredientId?: string
   productId?: string
-  storage?: 'pantry' | 'fridge'
+  storage?: 'pantry' | 'fridge' | 'freezer'
   category?: string
 }
 

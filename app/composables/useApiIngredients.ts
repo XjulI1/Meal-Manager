@@ -54,6 +54,7 @@ export function useApiIngredients() {
 export const STORAGE_LABELS: Record<IngredientStorage, string> = {
   pantry: 'Placard',
   fridge: 'Frigo',
+  freezer: 'Congélateur',
 }
 
 export const CATEGORY_LABELS: Record<IngredientCategory, string> = {

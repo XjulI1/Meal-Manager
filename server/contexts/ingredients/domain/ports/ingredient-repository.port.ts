@@ -5,7 +5,7 @@ export interface ListIngredientsFilter {
   /** Substring match (case-insensitive) on name OR aliases. */
   q?: string
   category?: IngredientCategoryValue
-  storage?: 'pantry' | 'fridge'
+  storage?: 'pantry' | 'fridge' | 'freezer'
   /** If false (default), excludes soft-deleted rows. */
   includeArchived?: boolean
 }

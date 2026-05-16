@@ -4,7 +4,7 @@ import type { Product } from '../../domain/entities/product.entity'
 export interface IngredientView {
   id: string
   name: string
-  storage: 'pantry' | 'fridge'
+  storage: 'pantry' | 'fridge' | 'freezer'
   category: string
   canonicalUnit: 'g' | 'ml' | 'unit'
   shelfLifeDays: number | null

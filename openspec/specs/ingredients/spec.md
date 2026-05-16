@@ -9,7 +9,7 @@ The system SHALL allow a household member to create an ingredient in their house
 
 An ingredient has:
 - A non-empty name (1–100 characters), unique per household among non-archived ingredients (case-insensitive).
-- A `storage` value: `pantry` or `fridge`.
+- A `storage` value: `pantry`, `fridge` or `freezer`.
 - A `category` value from the closed set: `produce | dairy | bakery | meat-fish | frozen | grocery | beverages | household | other`.
 - A `canonicalUnit` value: `g | ml | unit`.
 - Optional `shelfLifeDays` (positive integer).
@@ -44,7 +44,7 @@ An ingredient has:
 
 #### Scenario: Invalid storage
 - GIVEN an authenticated household member
-- WHEN they submit an ingredient with `storage: "freezer"`
+- WHEN they submit an ingredient with `storage: "basement"` (not in the closed set)
 - THEN the system returns HTTP 400 Bad Request
 
 #### Scenario: Invalid canonical unit
@@ -58,7 +58,7 @@ The system SHALL return the list of ingredients belonging to the user's househol
 The list MAY be filtered by:
 - `?q=<term>`: matches the ingredient name OR any of its aliases (case-insensitive substring).
 - `?category=<value>`: returns only ingredients in that category.
-- `?storage=pantry|fridge`: returns only ingredients with that storage value.
+- `?storage=pantry|fridge|freezer`: returns only ingredients with that storage value.
 - `?includeArchived=true`: includes soft-deleted ingredients (default: excluded).
 
 Without filters, all non-archived ingredients of the household are returned, sorted by `category` then `name`.

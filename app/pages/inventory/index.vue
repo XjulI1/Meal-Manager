@@ -66,7 +66,14 @@ async function onDelete(item: InventoryItemView) {
 const tabItems = [
   { label: 'Placard', value: 'pantry' as StorageLocation, icon: 'i-lucide-archive' },
   { label: 'Frigo', value: 'fridge' as StorageLocation, icon: 'i-lucide-refrigerator' },
+  { label: 'Congélateur', value: 'freezer' as StorageLocation, icon: 'i-lucide-snowflake' },
 ]
+
+const EMPTY_LABELS: Record<StorageLocation, string> = {
+  pantry: 'dans le placard',
+  fridge: 'au frigo',
+  freezer: 'au congélateur',
+}
 </script>
 
 <template>
@@ -81,7 +88,7 @@ const tabItems = [
     <UCard>
       <div v-if="pending && !items?.length" class="p-8 text-center text-gray-500">Chargement…</div>
       <div v-else-if="!items?.length" class="p-8 text-center text-gray-500">
-        Aucun article {{ location === 'pantry' ? 'dans le placard' : 'au frigo' }}.
+        Aucun article {{ EMPTY_LABELS[location] }}.
       </div>
       <ul v-else class="divide-y divide-gray-200 dark:divide-gray-800">
         <li v-for="item in items" :key="item.id" class="py-3 flex items-center gap-3">

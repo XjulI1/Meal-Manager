@@ -6,7 +6,7 @@ export interface ListIngredientsInput {
   householdId: string
   q?: string
   category?: IngredientCategoryValue
-  storage?: 'pantry' | 'fridge'
+  storage?: 'pantry' | 'fridge' | 'freezer'
   includeArchived?: boolean
 }
 
