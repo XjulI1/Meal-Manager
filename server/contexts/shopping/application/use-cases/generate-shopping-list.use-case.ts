@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { ShoppingListSnapshot } from '../../domain/entities/shopping-list-snapshot.entity'
 import { MenuNotAvailableError } from '../../domain/errors/menu-not-available.error'
+import type { IIngredientSummaryFinder } from '../../domain/ports/ingredient-summary-finder.port'
 import type { IInventorySnapshotFinder } from '../../domain/ports/inventory-snapshot-finder.port'
 import type { IMenuSnapshotFinder } from '../../domain/ports/menu-snapshot-finder.port'
 import type { IRecipeSnapshotFinder } from '../../domain/ports/recipe-snapshot-finder.port'
@@ -16,7 +17,9 @@ export interface GenerateShoppingListInput {
 
 export interface ShoppingListItemView {
   id: string
+  ingredientId: string
   ingredientName: string
+  category: string
   quantity: { value: number, unit: string }
   isChecked: boolean
 }
@@ -28,12 +31,30 @@ export interface ShoppingListView {
   items: ShoppingListItemView[]
 }
 
+const CATEGORY_ORDER = [
+  'produce',
+  'bakery',
+  'meat-fish',
+  'dairy',
+  'frozen',
+  'grocery',
+  'beverages',
+  'household',
+  'other',
+] as const
+
+function categoryRank(category: string): number {
+  const idx = (CATEGORY_ORDER as readonly string[]).indexOf(category)
+  return idx === -1 ? CATEGORY_ORDER.length : idx
+}
+
 export class GenerateShoppingListUseCase {
   constructor(
     private readonly snapshots: IShoppingListRepository,
     private readonly menus: IMenuSnapshotFinder,
     private readonly recipes: IRecipeSnapshotFinder,
     private readonly inventory: IInventorySnapshotFinder,
+    private readonly summaries: IIngredientSummaryFinder,
     private readonly idGenerator: () => string = randomUUID,
     private readonly clock: () => Date = () => new Date(),
   ) {}
@@ -62,9 +83,18 @@ export class GenerateShoppingListUseCase {
       })
       .filter((s): s is { recipe: NonNullable<ReturnType<typeof recipes.get>>, servings: number } => s !== null)
 
+    // Collect every ingredient id we may need to denormalize (recipes + stock)
+    const ingredientIds = new Set<string>()
+    for (const { recipe } of slotsWithRecipes) {
+      for (const ing of recipe.ingredients) ingredientIds.add(ing.ingredientId)
+    }
+    for (const s of stock) ingredientIds.add(s.ingredientId)
+    const summaries = await this.summaries.findByIds(Array.from(ingredientIds), input.householdId)
+
     const items = ShoppingListBuilder.build({
       slots: slotsWithRecipes,
       inventory: stock,
+      summaries,
       idGenerator: this.idGenerator,
     })
 
@@ -82,15 +112,24 @@ export class GenerateShoppingListUseCase {
 }
 
 export function toShoppingListView(snapshot: ShoppingListSnapshot): ShoppingListView {
+  const items = snapshot.items
+    .map((item) => ({
+      id: item.id,
+      ingredientId: item.ingredientId,
+      ingredientName: item.ingredientName,
+      category: item.category,
+      quantity: { value: item.quantity.value, unit: item.quantity.unit },
+      isChecked: item.isChecked,
+    }))
+    .sort((a, b) => {
+      const rankDiff = categoryRank(a.category) - categoryRank(b.category)
+      if (rankDiff !== 0) return rankDiff
+      return a.ingredientName.localeCompare(b.ingredientName)
+    })
   return {
     id: snapshot.id,
     menuId: snapshot.menuId,
     generatedAt: snapshot.generatedAt.toISOString(),
-    items: snapshot.items.map((item) => ({
-      id: item.id,
-      ingredientName: item.ingredientName,
-      quantity: { value: item.quantity.value, unit: item.quantity.unit },
-      isChecked: item.isChecked,
-    })),
+    items,
   }
 }

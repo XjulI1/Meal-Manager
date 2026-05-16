@@ -1,7 +1,7 @@
 import type { Quantity } from '../../../../../shared/units/quantity'
 
 export interface InventorySnapshotItem {
-  name: string
+  ingredientId: string
   quantity: Quantity
 }
 

@@ -1,5 +1,9 @@
 import { Quantity } from '../../../../shared/units/quantity'
 import type {
+  IIngredientSummaryFinder,
+  IngredientSummarySnapshot,
+} from '../../../../server/contexts/shopping/domain/ports/ingredient-summary-finder.port'
+import type {
   IInventorySnapshotFinder,
   InventorySnapshotItem,
 } from '../../../../server/contexts/shopping/domain/ports/inventory-snapshot-finder.port'
@@ -13,7 +17,7 @@ import type {
 } from '../../../../server/contexts/shopping/domain/ports/recipe-snapshot-finder.port'
 
 interface IngredientSpec {
-  name: string
+  ingredientId: string
   value: number
   unit: string
 }
@@ -43,7 +47,7 @@ export class FakeRecipeFinder implements IRecipeSnapshotFinder {
         id,
         servings,
         ingredients: ingredients.map((ing) => ({
-          name: ing.name,
+          ingredientId: ing.ingredientId,
           quantity: Quantity.fromUserInput(ing.value, ing.unit),
         })),
       },
@@ -71,7 +75,7 @@ export class FakeInventoryFinder implements IInventorySnapshotFinder {
 
   setStock(householdId: string, items: IngredientSpec[]): this {
     this.stocks.set(householdId, items.map((ing) => ({
-      name: ing.name,
+      ingredientId: ing.ingredientId,
       quantity: Quantity.fromUserInput(ing.value, ing.unit),
     })))
     return this
@@ -79,5 +83,26 @@ export class FakeInventoryFinder implements IInventorySnapshotFinder {
 
   async listForHousehold(householdId: string): Promise<InventorySnapshotItem[]> {
     return this.stocks.get(householdId) ?? []
+  }
+}
+
+export class FakeIngredientSummaryFinder implements IIngredientSummaryFinder {
+  private readonly summaries = new Map<string, IngredientSummarySnapshot>()
+
+  add(id: string, name: string, category: string): this {
+    this.summaries.set(id, { id, name, category })
+    return this
+  }
+
+  async findByIds(
+    ids: ReadonlyArray<string>,
+    _householdId: string,
+  ): Promise<Map<string, IngredientSummarySnapshot>> {
+    const result = new Map<string, IngredientSummarySnapshot>()
+    for (const id of ids) {
+      const s = this.summaries.get(id)
+      if (s) result.set(id, s)
+    }
+    return result
   }
 }

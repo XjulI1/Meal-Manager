@@ -9,6 +9,6 @@ export class InventoryAdapter implements IInventorySnapshotFinder {
 
   async listForHousehold(householdId: string): Promise<InventorySnapshotItem[]> {
     const items = await this.items.listForHousehold(householdId)
-    return items.map((item) => ({ name: item.name, quantity: item.quantity }))
+    return items.map((item) => ({ ingredientId: item.ingredientId, quantity: item.quantity }))
   }
 }

@@ -47,6 +47,7 @@ import { GenerateShoppingListUseCase } from '../contexts/shopping/application/us
 import { GetShoppingListByMenuUseCase } from '../contexts/shopping/application/use-cases/get-shopping-list-by-menu.use-case'
 import { RegenerateShoppingListUseCase } from '../contexts/shopping/application/use-cases/regenerate-shopping-list.use-case'
 import { ToggleShoppingListItemUseCase } from '../contexts/shopping/application/use-cases/toggle-shopping-list-item.use-case'
+import { IngredientsCatalogSummaryFinder } from '../contexts/shopping/infrastructure/adapters/ingredient-summary-finder.adapter'
 import { InventoryAdapter } from '../contexts/shopping/infrastructure/adapters/inventory-snapshot-finder.adapter'
 import { MealPlanningMenuSnapshotFinder } from '../contexts/shopping/infrastructure/adapters/menu-snapshot-finder.adapter'
 import { CatalogRecipeSnapshotFinder } from '../contexts/shopping/infrastructure/adapters/recipe-snapshot-finder.adapter'
@@ -109,11 +110,13 @@ function buildContainer(): Container {
   const menuSnapshotFinder = new MealPlanningMenuSnapshotFinder(menuRepo)
   const recipeSnapshotFinder = new CatalogRecipeSnapshotFinder(recipeRepo)
   const inventorySnapshotFinder = new InventoryAdapter(inventoryRepo)
+  const ingredientSummaryFinder = new IngredientsCatalogSummaryFinder(ingredientRepo)
   const generateShoppingList = new GenerateShoppingListUseCase(
     shoppingRepo,
     menuSnapshotFinder,
     recipeSnapshotFinder,
     inventorySnapshotFinder,
+    ingredientSummaryFinder,
   )
 
   return {

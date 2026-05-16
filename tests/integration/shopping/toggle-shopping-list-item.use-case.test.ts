@@ -5,7 +5,7 @@ import {
   ShoppingListItemNotFoundError,
   ShoppingListNotFoundError,
 } from '../../../server/contexts/shopping/domain/errors/shopping-list-not-found.error'
-import { FakeInventoryFinder, FakeMenuFinder, FakeRecipeFinder } from './in-memory/fake-finders'
+import { FakeIngredientSummaryFinder, FakeInventoryFinder, FakeMenuFinder, FakeRecipeFinder } from './in-memory/fake-finders'
 import { InMemoryShoppingListRepository } from './in-memory/in-memory-shopping-list.repository'
 
 describe('ToggleShoppingListItemUseCase', () => {
@@ -22,13 +22,14 @@ describe('ToggleShoppingListItemUseCase', () => {
       slots: [{ recipeId: 'r1', servings: 2 }],
     })
     const recipes = new FakeRecipeFinder().register('r1', 'hh-1', 2, [
-      { name: 'Pâtes', value: 200, unit: 'g' },
+      { ingredientId: 'ing-pasta', value: 200, unit: 'g' },
     ])
     const inventory = new FakeInventoryFinder()
+    const summaries = new FakeIngredientSummaryFinder().add('ing-pasta', 'Pâtes', 'grocery')
 
     let counter = 0
     const generate = new GenerateShoppingListUseCase(
-      snapshots, menus, recipes, inventory,
+      snapshots, menus, recipes, inventory, summaries,
       () => `id-${++counter}`,
       () => new Date('2026-05-15T10:00:00Z'),
     )
