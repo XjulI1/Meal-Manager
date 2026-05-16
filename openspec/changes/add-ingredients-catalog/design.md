@@ -199,6 +199,8 @@ Comme `ingredient_id` est obligatoire pour ajouter quoi que ce soit, **un foyer 
 
 **Cross-context :** `family` reçoit un port `IHouseholdInitializer` (interface dans `family/domain/ports/`). Ingredients fournit l'implémentation dans son `infrastructure/`. Aucun import direct cross-context.
 
+Pas besoin de script de migration pour les foyers existants : la base est vide au moment où ce change est appliqué. Tout nouveau foyer (le premier inclus) sera seedé automatiquement par l'initializer.
+
 Liste seed (catégorie, nom, storage, canonical_unit) :
 - produce: tomate (g), oignon (g), ail (g), carotte (g), courgette (g), pomme de terre (g), salade (unit), poivron (g), citron (unit), pomme (g), banane (g)…
 - dairy: lait (ml), beurre (g), œufs (unit), yaourt nature (g), crème fraîche (ml), fromage râpé (g)…
@@ -262,7 +264,6 @@ Pas de page « scanner ». Le champ code-barre dans le formulaire produit est un
 | **Surcharge cognitive pour l'utilisateur** : deux concepts (ingrédient + produit) là où il en attend peut-être un seul. | UI v1 : on cache `Product` derrière une section « Produits / codes-barres » de la page ingrédient. L'utilisateur lambda gère des ingrédients ; les produits n'apparaissent que s'il veut scanner. |
 | **Le seed plante** ⟶ foyer inutilisable. C'est désormais critique : aucun fallback string libre. | Le seed est transactionnel : si l'insertion échoue, la création du foyer est rollback. Test d'intégration obligatoire couvrant le succès et l'échec partiel. Le script `db:seed-existing-households` permet une réparation manuelle. |
 | **Friction utilisateur** quand un ingrédient désiré n'est pas dans le seed. | Raccourci « + Nouvel ingrédient » dans les formulaires inventory/recipe (modale minimaliste, 4 champs : nom, storage, category, canonicalUnit). |
-| **Migration destructive sur les bases de dev** : les bases existantes ont des `inventory_item.name` non-null sans `ingredient_id`. | Le projet est pré-production. Documenter clairement dans le README et le commit : `pnpm db:reset` ou `docker compose down -v` requis. Aucune tentative de migration heuristique. |
 | **Seed dupliqué par foyer** : N foyers × ~50 lignes. À 10k foyers ça reste < 500k lignes, négligeable. | Aucune mitigation nécessaire en v1. |
 | **Soft delete oublié dans les requêtes** : un repo qui ne filtre pas `deleted_at IS NULL` retourne des ingrédients archivés. | Filtre `deletedAt: null` factorisé dans une méthode `baseQuery()` du repository. Test d'intégration : créer/soft-delete/list ne retourne pas l'ingrédient. |
 | **Validation checksum EAN trop stricte** : un code-barre vraiment scanné par l'utilisateur mais avec checksum erroné serait rejeté. | Logger les rejets en dev pour mesurer ; possibilité d'ajouter un mode `lax` plus tard si nécessaire. |
@@ -270,21 +271,16 @@ Pas de page « scanner ». Le champ code-barre dans le formulaire produit est un
 
 ## Migration Plan
 
-Pas de migration de données — uniquement schéma destructif sur 3 tables existantes :
+Pas de migration de données — la base est vide au moment où ce change est appliqué. Uniquement schéma :
 
 1. Générer la migration Drizzle (`pnpm db:generate`) qui :
    - Crée `ingredient`, `ingredient_alias`, `product`, `product_barcode`.
    - Ajoute `ingredient_id NOT NULL` + FK + INDEX sur `inventory_item`, `recipe_ingredient`, `shopping_list_item`.
    - Ajoute `category` sur `shopping_list_item`.
    - Drop les colonnes `name` sur `inventory_item` et `recipe_ingredient`.
-2. **Toutes les bases de dev doivent être réinitialisées** avant d'appliquer la migration (sinon `NOT NULL` casse). Documenté dans le README + dans le message de commit de la migration. La commande recommandée :
-   ```
-   docker compose down -v   # ou pnpm db:reset si script ajouté
-   docker compose up --build
-   ```
-3. La logique de seed est applicative, pas SQL. Elle se déclenche automatiquement à chaque création de foyer via `CreateHouseholdUseCase` + `SeedDefaultIngredientsInitializer`.
-4. Pour les foyers déjà créés dans une base de dev partagée et qui ne seraient plus seedables après réinitialisation : `pnpm db:seed-existing-households` (one-shot) parcourt les foyers sans ingrédients et déclenche le seed pour chacun.
-5. Rollback : `drizzle-kit drop` sur la migration. Le rollback supprime les données ingredients (ingrédients et produits créés post-migration). Accepté en pré-production.
+2. Appliquer (`pnpm db:migrate`).
+3. La logique de seed est applicative, pas SQL : elle se déclenche automatiquement à chaque création de foyer via `CreateHouseholdUseCase` + `SeedDefaultIngredientsInitializer`. Tout foyer créé après l'application de ce change est immédiatement utilisable.
+4. Rollback : `drizzle-kit drop` sur la migration. Accepté en pré-production.
 
 ## Open Questions
 

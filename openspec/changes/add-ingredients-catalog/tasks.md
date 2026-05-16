@@ -37,9 +37,7 @@ Checklist d'implémentation du change `add-ingredients-catalog`. Ordonnée pour 
 - [ ] 4.4 **BREAKING** Modifier `server/database/schema/recipes.ts` (table `recipe_ingredients`) : ajouter `ingredient_id char(36) NOT NULL` + FK + INDEX, supprimer la colonne `name`
 - [ ] 4.5 Modifier `server/database/schema/shopping-lists.ts` (table `shopping_list_items`) : ajouter `ingredient_id char(36) NOT NULL` + FK + INDEX + `category varchar(32) NOT NULL DEFAULT 'other'` (la colonne `name` est conservée — snapshot dénormalisé)
 - [ ] 4.6 Générer la migration (`pnpm db:generate`) et la commiter
-- [ ] 4.7 Ajouter un script `pnpm db:reset` (équivalent `drizzle-kit drop` + recreate) pour faciliter la réinitialisation en dev
-- [ ] 4.8 Documenter dans le README la nécessité de `pnpm db:reset` ou `docker compose down -v` avant d'appliquer cette migration sur une base de dev existante
-- [ ] 4.9 Vérifier que `pnpm db:migrate` applique la migration sur une base vierge sans erreur
+- [ ] 4.7 Vérifier que `pnpm db:migrate` applique la migration sans erreur (la base est vide à ce stade)
 
 ## 5. Infrastructure — repositories et mappers (`ingredients`)
 
@@ -138,17 +136,11 @@ Checklist d'implémentation du change `add-ingredients-catalog`. Ordonnée pour 
 - [ ] 14.4 Mettre à jour les composables `useApiInventory` et `useApiRecipes` pour le nouveau contrat
 - [ ] 14.5 Test manuel : créer un foyer → vérifier l'apparition du seed → ajouter un item d'inventaire en sélectionnant un ingrédient seed → créer une recette mixant ingrédients seed et un ingrédient créé via quick-create → générer une liste de courses et vérifier le tri par rayon
 
-## 15. Script utilitaire pour foyers existants (dev)
+## 15. Validation finale
 
-- [ ] 15.1 Créer `scripts/seed-existing-households.ts` qui parcourt les foyers sans aucun ingrédient et appelle `SeedDefaultIngredientsUseCase` pour chacun
-- [ ] 15.2 Ajouter la commande au `package.json` : `"db:seed-existing-households": "tsx scripts/seed-existing-households.ts"`
-- [ ] 15.3 Documenter dans le README dans une section « Migration `add-ingredients-catalog` » (incluant l'instruction `db:reset` ou `docker compose down -v`)
-
-## 16. Validation finale
-
-- [ ] 16.1 `pnpm lint` passe (vérifier qu'aucun fichier `server/contexts/ingredients/domain/**` n'importe `drizzle-orm`, `mysql2`, `h3`, `nuxt`, `vue`, ni `~/server/database/*`)
-- [ ] 16.2 `pnpm typecheck` passe
-- [ ] 16.3 `pnpm test` passe (tous les nouveaux unit + integration, tous les anciens tests inventory/catalog/shopping mis à jour)
-- [ ] 16.4 `pnpm build` produit un build propre
-- [ ] 16.5 `docker compose down -v && docker compose up --build` : parcours manuel — créer un foyer → vérifier que le seed a livré ≥30 ingrédients → créer un produit avec code-barre → résoudre via `GET /api/barcodes/:code` → ajouter un item d'inventaire en sélectionnant un ingrédient → générer une liste de courses et vérifier le tri par rayon
-- [ ] 16.6 `npx -y -p @fission-ai/openspec@latest openspec validate add-ingredients-catalog --strict` passe sans erreur
+- [ ] 15.1 `pnpm lint` passe (vérifier qu'aucun fichier `server/contexts/ingredients/domain/**` n'importe `drizzle-orm`, `mysql2`, `h3`, `nuxt`, `vue`, ni `~/server/database/*`)
+- [ ] 15.2 `pnpm typecheck` passe
+- [ ] 15.3 `pnpm test` passe (tous les nouveaux unit + integration, tous les anciens tests inventory/catalog/shopping mis à jour)
+- [ ] 15.4 `pnpm build` produit un build propre
+- [ ] 15.5 `docker compose up --build` : parcours manuel — créer un foyer → vérifier que le seed a livré ≥30 ingrédients → créer un produit avec code-barre → résoudre via `GET /api/barcodes/:code` → ajouter un item d'inventaire en sélectionnant un ingrédient → générer une liste de courses et vérifier le tri par rayon
+- [ ] 15.6 `npx -y -p @fission-ai/openspec@latest openspec validate add-ingredients-catalog --strict` passe sans erreur
