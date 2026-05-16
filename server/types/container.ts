@@ -7,6 +7,16 @@ import type { CreateHouseholdUseCase } from '../contexts/family/application/use-
 import type { GetCurrentHouseholdUseCase } from '../contexts/family/application/use-cases/get-current-household.use-case'
 import type { JoinHouseholdUseCase } from '../contexts/family/application/use-cases/join-household.use-case'
 import type { LeaveHouseholdUseCase } from '../contexts/family/application/use-cases/leave-household.use-case'
+import type { AddProductUseCase } from '../contexts/ingredients/application/use-cases/add-product.use-case'
+import type { CreateIngredientUseCase } from '../contexts/ingredients/application/use-cases/create-ingredient.use-case'
+import type { DeleteIngredientUseCase } from '../contexts/ingredients/application/use-cases/delete-ingredient.use-case'
+import type { GetIngredientUseCase } from '../contexts/ingredients/application/use-cases/get-ingredient.use-case'
+import type { ListIngredientsUseCase } from '../contexts/ingredients/application/use-cases/list-ingredients.use-case'
+import type { RemoveProductUseCase } from '../contexts/ingredients/application/use-cases/remove-product.use-case'
+import type { ResolveByBarcodeUseCase } from '../contexts/ingredients/application/use-cases/resolve-by-barcode.use-case'
+import type { UpdateIngredientUseCase } from '../contexts/ingredients/application/use-cases/update-ingredient.use-case'
+import type { UpdateProductUseCase } from '../contexts/ingredients/application/use-cases/update-product.use-case'
+import type { IBarcodeResolver } from '../contexts/inventory/domain/ports/barcode-resolver'
 import type { AssignRecipeToSlotUseCase } from '../contexts/meal-planning/application/use-cases/assign-recipe-to-slot.use-case'
 import type { ClearSlotUseCase } from '../contexts/meal-planning/application/use-cases/clear-slot.use-case'
 import type { CreateMenuUseCase } from '../contexts/meal-planning/application/use-cases/create-menu.use-case'
@@ -32,6 +42,18 @@ export interface Container {
   joinHousehold: JoinHouseholdUseCase
   leaveHousehold: LeaveHouseholdUseCase
   getCurrentHousehold: GetCurrentHouseholdUseCase
+  // ingredients
+  createIngredient: CreateIngredientUseCase
+  updateIngredient: UpdateIngredientUseCase
+  deleteIngredient: DeleteIngredientUseCase
+  listIngredients: ListIngredientsUseCase
+  getIngredient: GetIngredientUseCase
+  addProduct: AddProductUseCase
+  updateProduct: UpdateProductUseCase
+  removeProduct: RemoveProductUseCase
+  resolveByBarcode: ResolveByBarcodeUseCase
+  /** Implements the inventory IBarcodeResolver port, bound to the in-household catalog. */
+  barcodeResolver: IBarcodeResolver
   // inventory
   addInventoryItem: AddInventoryItemUseCase
   updateInventoryItem: UpdateInventoryItemUseCase

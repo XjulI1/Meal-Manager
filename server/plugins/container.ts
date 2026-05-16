@@ -11,6 +11,20 @@ import { JoinHouseholdUseCase } from '../contexts/family/application/use-cases/j
 import { LeaveHouseholdUseCase } from '../contexts/family/application/use-cases/leave-household.use-case'
 import { CryptoInviteCodeGenerator } from '../contexts/family/infrastructure/crypto-invite-code-generator'
 import { DrizzleHouseholdRepository } from '../contexts/family/infrastructure/repositories/drizzle-household.repository'
+import { AddProductUseCase } from '../contexts/ingredients/application/use-cases/add-product.use-case'
+import { CreateIngredientUseCase } from '../contexts/ingredients/application/use-cases/create-ingredient.use-case'
+import { DeleteIngredientUseCase } from '../contexts/ingredients/application/use-cases/delete-ingredient.use-case'
+import { GetIngredientUseCase } from '../contexts/ingredients/application/use-cases/get-ingredient.use-case'
+import { ListIngredientsUseCase } from '../contexts/ingredients/application/use-cases/list-ingredients.use-case'
+import { RemoveProductUseCase } from '../contexts/ingredients/application/use-cases/remove-product.use-case'
+import { ResolveByBarcodeUseCase } from '../contexts/ingredients/application/use-cases/resolve-by-barcode.use-case'
+import { SeedDefaultIngredientsUseCase } from '../contexts/ingredients/application/use-cases/seed-default-ingredients.use-case'
+import { UpdateIngredientUseCase } from '../contexts/ingredients/application/use-cases/update-ingredient.use-case'
+import { UpdateProductUseCase } from '../contexts/ingredients/application/use-cases/update-product.use-case'
+import { IngredientBarcodeResolver } from '../contexts/ingredients/infrastructure/ingredient-barcode-resolver.adapter'
+import { DrizzleIngredientRepository } from '../contexts/ingredients/infrastructure/repositories/drizzle-ingredient.repository'
+import { DrizzleProductRepository } from '../contexts/ingredients/infrastructure/repositories/drizzle-product.repository'
+import { SeedDefaultIngredientsInitializer } from '../contexts/ingredients/infrastructure/seed-default-ingredients.initializer'
 import { AddInventoryItemUseCase } from '../contexts/inventory/application/use-cases/add-inventory-item.use-case'
 import { AdjustQuantityUseCase } from '../contexts/inventory/application/use-cases/adjust-quantity.use-case'
 import { ListInventoryItemsUseCase } from '../contexts/inventory/application/use-cases/list-inventory-items.use-case'
@@ -55,7 +69,23 @@ function buildContainer(): Container {
   const userRepo = new DrizzleUserRepository(db)
   const hasher = new Argon2PasswordHasher()
 
-  // family
+  // ingredients
+  const ingredientRepo = new DrizzleIngredientRepository(db)
+  const productRepo = new DrizzleProductRepository(db)
+  const createIngredient = new CreateIngredientUseCase(ingredientRepo)
+  const updateIngredient = new UpdateIngredientUseCase(ingredientRepo, productRepo)
+  const deleteIngredient = new DeleteIngredientUseCase(ingredientRepo)
+  const listIngredients = new ListIngredientsUseCase(ingredientRepo)
+  const getIngredient = new GetIngredientUseCase(ingredientRepo, productRepo)
+  const addProduct = new AddProductUseCase(ingredientRepo, productRepo)
+  const updateProduct = new UpdateProductUseCase(productRepo)
+  const removeProduct = new RemoveProductUseCase(productRepo)
+  const resolveByBarcode = new ResolveByBarcodeUseCase(ingredientRepo, productRepo)
+  const barcodeResolver = new IngredientBarcodeResolver(resolveByBarcode)
+  const seedDefaultIngredients = new SeedDefaultIngredientsUseCase(ingredientRepo)
+  const seedInitializer = new SeedDefaultIngredientsInitializer(seedDefaultIngredients)
+
+  // family — seed initializer is injected so every new household gets the default catalog.
   const householdRepo = new DrizzleHouseholdRepository(db)
   const inviteCodes = new CryptoInviteCodeGenerator()
 
@@ -84,10 +114,20 @@ function buildContainer(): Container {
   return {
     registerUser: new RegisterUserUseCase(userRepo, hasher),
     loginUser: new LoginUserUseCase(userRepo, hasher),
-    createHousehold: new CreateHouseholdUseCase(householdRepo, inviteCodes),
+    createHousehold: new CreateHouseholdUseCase(householdRepo, inviteCodes, [seedInitializer]),
     joinHousehold: new JoinHouseholdUseCase(householdRepo),
     leaveHousehold: new LeaveHouseholdUseCase(householdRepo),
     getCurrentHousehold: new GetCurrentHouseholdUseCase(householdRepo),
+    createIngredient,
+    updateIngredient,
+    deleteIngredient,
+    listIngredients,
+    getIngredient,
+    addProduct,
+    updateProduct,
+    removeProduct,
+    resolveByBarcode,
+    barcodeResolver,
     addInventoryItem: new AddInventoryItemUseCase(inventoryRepo),
     updateInventoryItem: new UpdateInventoryItemUseCase(inventoryRepo),
     removeInventoryItem: new RemoveInventoryItemUseCase(inventoryRepo),
