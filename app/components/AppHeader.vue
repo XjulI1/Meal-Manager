@@ -18,6 +18,11 @@ const menuItems = computed(() => [
       icon: 'i-lucide-users',
       to: '/household',
     },
+    {
+      label: 'Paramètres',
+      icon: 'i-lucide-settings',
+      to: '/settings/tokens',
+    },
   ],
   [
     {
