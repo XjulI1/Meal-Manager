@@ -10,6 +10,7 @@ import {
   index,
 } from 'drizzle-orm/mysql-core'
 import { households } from './households'
+import { ingredients } from './ingredients'
 
 export const recipes = mysqlTable(
   'recipes',
@@ -36,12 +37,15 @@ export const recipeIngredients = mysqlTable(
       .notNull()
       .references(() => recipes.id, { onDelete: 'cascade' }),
     position: int('position', { unsigned: true }).notNull(),
-    name: varchar('name', { length: 120 }).notNull(),
+    ingredientId: char('ingredient_id', { length: 36 })
+      .notNull()
+      .references(() => ingredients.id, { onDelete: 'restrict' }),
     quantityValue: int('quantity_value', { unsigned: true }).notNull(),
     quantityUnit: mysqlEnum('quantity_unit', ['g', 'ml', 'unit']).notNull(),
   },
   (t) => ({
     pk: primaryKey({ columns: [t.recipeId, t.position] }),
+    ingredientIdx: index('recipe_ingredients_ingredient_idx').on(t.ingredientId),
   }),
 )
 

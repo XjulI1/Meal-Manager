@@ -1,5 +1,7 @@
 export * from './users'
 export * from './households'
+export * from './ingredients'
+export * from './products'
 export * from './inventory-items'
 export * from './recipes'
 export * from './menus'
