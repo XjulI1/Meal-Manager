@@ -5,7 +5,12 @@ import { CATEGORY_LABELS, CATEGORY_ORDER, STORAGE_LABELS } from '../../composabl
 const props = defineProps<{
   initial?: IngredientView | null
   loading?: boolean
-  /** When true, hide the optional fields panel for a compact "quick create" flow. */
+  /**
+   * When true, hide the optional fields panel for a compact "quick create" flow.
+   * Also renders the wrapper as a <div> instead of <form> so the component can
+   * be embedded inline inside another form without producing nested <form>
+   * elements (which HTML5 forbids and browsers silently break).
+   */
   compact?: boolean
 }>()
 
@@ -89,7 +94,8 @@ function onSubmit() {
 </script>
 
 <template>
-  <UForm :state="state" class="space-y-4" @submit.prevent="onSubmit">
+  <!-- Full mode: use <UForm> for keyboard ergonomics (Enter submits, native form semantics). -->
+  <UForm v-if="!compact" :state="state" class="space-y-4" @submit.prevent="onSubmit">
     <UFormField label="Nom" required>
       <UInput v-model="state.name" placeholder="Tomate cerise, lait demi-écrémé…" class="w-full" />
     </UFormField>
@@ -106,32 +112,66 @@ function onSubmit() {
       </UFormField>
     </div>
 
-    <template v-if="!compact">
-      <UFormField label="Alias (séparés par des virgules)">
-        <UInput v-model="state.aliasesText" placeholder="tomates cerises, cherry" class="w-full" />
-      </UFormField>
+    <UFormField label="Alias (séparés par des virgules)">
+      <UInput v-model="state.aliasesText" placeholder="tomates cerises, cherry" class="w-full" />
+    </UFormField>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <UFormField label="Durée de conservation (jours)" help="Indicatif pour les produits frais.">
-          <UInput v-model.number="state.shelfLifeDays" type="number" min="1" class="w-full" />
-        </UFormField>
-        <UFormField label="Conditionnement par défaut" help="Quantité du pack courant (en unité canonique).">
-          <UInput v-model.number="state.defaultPackSize" type="number" min="1" class="w-full" />
-        </UFormField>
-      </div>
-
-      <UFormField label="Allergènes">
-        <USelectMenu v-model="state.allergens" :items="allergenOptions" multiple class="w-full" />
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <UFormField label="Durée de conservation (jours)" help="Indicatif pour les produits frais.">
+        <UInput v-model.number="state.shelfLifeDays" type="number" min="1" class="w-full" />
       </UFormField>
-
-      <UFormField label="Image (URL)">
-        <UInput v-model="state.imageUrl" type="url" placeholder="https://…" class="w-full" />
+      <UFormField label="Conditionnement par défaut" help="Quantité du pack courant (en unité canonique).">
+        <UInput v-model.number="state.defaultPackSize" type="number" min="1" class="w-full" />
       </UFormField>
-    </template>
+    </div>
+
+    <UFormField label="Allergènes">
+      <USelectMenu v-model="state.allergens" :items="allergenOptions" multiple class="w-full" />
+    </UFormField>
+
+    <UFormField label="Image (URL)">
+      <UInput v-model="state.imageUrl" type="url" placeholder="https://…" class="w-full" />
+    </UFormField>
 
     <div class="flex justify-end gap-2 pt-2">
-      <UButton variant="ghost" color="neutral" @click="emit('cancel')">Annuler</UButton>
+      <UButton variant="ghost" color="neutral" type="button" @click="emit('cancel')">Annuler</UButton>
       <UButton type="submit" :loading="loading">{{ initial ? 'Enregistrer' : 'Créer' }}</UButton>
     </div>
   </UForm>
+
+  <!-- Compact mode: a <div>, not a <form>. Used when the component is embedded
+       inside another <form> (e.g. IngredientPicker inside InventoryItemForm).
+       Enter on the name field triggers submit; the «Créer» button does too. -->
+  <div v-else class="space-y-3">
+    <UFormField label="Nom" required>
+      <UInput
+        v-model="state.name"
+        placeholder="Tomate cerise, lait demi-écrémé…"
+        class="w-full"
+        autofocus
+        @keydown.enter.prevent="onSubmit"
+      />
+    </UFormField>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <UFormField label="Stockage" required>
+        <USelect v-model="state.storage" :items="storageOptions" class="w-full" />
+      </UFormField>
+      <UFormField label="Rayon" required>
+        <USelect v-model="state.category" :items="categoryOptions" class="w-full" />
+      </UFormField>
+      <UFormField label="Unité" required>
+        <USelect v-model="state.canonicalUnit" :items="unitOptions" class="w-full" />
+      </UFormField>
+    </div>
+
+    <div class="flex justify-end gap-2 pt-1">
+      <UButton variant="ghost" color="neutral" type="button" size="sm" @click="emit('cancel')">
+        Annuler
+      </UButton>
+      <UButton type="button" size="sm" :loading="loading" @click="onSubmit">
+        Créer
+      </UButton>
+    </div>
+  </div>
 </template>

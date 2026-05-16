@@ -64,36 +64,45 @@ async function onQuickCreate(payload: CreateIngredientDto) {
 </script>
 
 <template>
-  <div class="flex gap-2 items-start">
-    <USelectMenu
-      :model-value="modelValue"
-      :items="options"
-      value-key="value"
-      label-key="label"
-      :loading="pending"
-      placeholder="Choisir un ingrédient…"
-      class="flex-1"
-      searchable
-      @update:model-value="onSelect"
-    />
-    <UButton
-      icon="i-lucide-plus"
-      color="neutral"
-      variant="ghost"
-      type="button"
-      :title="`Nouvel ingrédient`"
-      @click="showQuickCreate = true"
-    />
+  <div class="space-y-2">
+    <div class="flex gap-2 items-start">
+      <USelectMenu
+        :model-value="modelValue"
+        :items="options"
+        value-key="value"
+        label-key="label"
+        :loading="pending"
+        placeholder="Choisir un ingrédient…"
+        class="flex-1"
+        searchable
+        @update:model-value="onSelect"
+      />
+      <UButton
+        :icon="showQuickCreate ? 'i-lucide-x' : 'i-lucide-plus'"
+        :color="showQuickCreate ? 'neutral' : 'primary'"
+        :variant="showQuickCreate ? 'soft' : 'solid'"
+        type="button"
+        :title="showQuickCreate ? 'Annuler' : 'Nouvel ingrédient'"
+        @click="showQuickCreate = !showQuickCreate"
+      />
+    </div>
 
-    <UModal v-model:open="showQuickCreate" title="Nouvel ingrédient">
-      <template #body>
-        <IngredientsIngredientForm
-          compact
-          :loading="submitting"
-          @submit="onQuickCreate"
-          @cancel="showQuickCreate = false"
-        />
-      </template>
-    </UModal>
+    <!-- Inline quick-create panel: avoids nesting a modal inside another modal,
+         which broke the inner form's submit event when used inside InventoryItemForm
+         or RecipeForm modals (focus trap interference). -->
+    <div
+      v-if="showQuickCreate"
+      class="border border-dashed border-gray-300 dark:border-gray-700 rounded-md p-3 bg-gray-50 dark:bg-gray-900"
+    >
+      <p class="text-sm font-medium mb-3 text-gray-700 dark:text-gray-300">
+        Nouvel ingrédient
+      </p>
+      <IngredientsIngredientForm
+        compact
+        :loading="submitting"
+        @submit="onQuickCreate"
+        @cancel="showQuickCreate = false"
+      />
+    </div>
   </div>
 </template>
