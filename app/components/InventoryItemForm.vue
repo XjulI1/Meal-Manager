@@ -46,6 +46,7 @@ watch(selectedIngredient, (ing, prev) => {
 const locationOptions = [
   { label: 'Placard', value: 'pantry' },
   { label: 'Frigo', value: 'fridge' },
+  { label: 'Congélateur', value: 'freezer' },
 ]
 
 function onSubmit() {

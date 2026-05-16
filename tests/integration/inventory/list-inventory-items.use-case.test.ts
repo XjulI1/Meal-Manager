@@ -20,6 +20,7 @@ describe('ListInventoryItemsUseCase', () => {
     lookup.add(HH, { id: 'ing-lentils', name: 'Lentilles', category: 'grocery', canonicalUnit: 'g', storage: 'pantry', archived: false })
     lookup.add(HH, { id: 'ing-milk', name: 'Lait', category: 'dairy', canonicalUnit: 'ml', storage: 'fridge', archived: false })
     lookup.add(HH, { id: 'ing-butter', name: 'Beurre', category: 'dairy', canonicalUnit: 'g', storage: 'fridge', archived: false })
+    lookup.add(HH, { id: 'ing-peas', name: 'Petits pois surgelés', category: 'frozen', canonicalUnit: 'g', storage: 'freezer', archived: false })
     lookup.add('hh-2', { id: 'ing-other', name: 'Other', category: 'other', canonicalUnit: 'g', storage: 'pantry', archived: false })
 
     let counter = 0
@@ -31,12 +32,13 @@ describe('ListInventoryItemsUseCase', () => {
     await add.execute({ householdId: HH, ingredientId: 'ing-lentils', quantity: { value: 250, unit: 'g' } })
     await add.execute({ householdId: HH, ingredientId: 'ing-milk', quantity: { value: 1, unit: 'l' } })
     await add.execute({ householdId: HH, ingredientId: 'ing-butter', quantity: { value: 250, unit: 'g' } })
+    await add.execute({ householdId: HH, ingredientId: 'ing-peas', quantity: { value: 1, unit: 'kg' } })
     await add.execute({ householdId: 'hh-2', ingredientId: 'ing-other', quantity: { value: 100, unit: 'g' } })
   })
 
   it('lists every item of the household with resolved name and category', async () => {
     const items = await list.execute({ householdId: HH })
-    expect(items).toHaveLength(5)
+    expect(items).toHaveLength(6)
     expect(items.find((i) => i.name === 'Pâtes')?.category).toBe('grocery')
     expect(items.find((i) => i.name === 'Lait')?.category).toBe('dairy')
   })
@@ -44,6 +46,12 @@ describe('ListInventoryItemsUseCase', () => {
   it('filters by location', async () => {
     const items = await list.execute({ householdId: HH, location: 'pantry' })
     expect(items.map((i) => i.name).sort()).toEqual(['Lentilles', 'Pâtes', 'Riz'])
+  })
+
+  it('filters by freezer location', async () => {
+    const items = await list.execute({ householdId: HH, location: 'freezer' })
+    expect(items.map((i) => i.name)).toEqual(['Petits pois surgelés'])
+    expect(items[0]?.quantity).toEqual({ value: 1000, unit: 'g' })
   })
 
   it('returns canonical units', async () => {

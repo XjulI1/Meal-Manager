@@ -5,7 +5,7 @@ export interface IngredientSummary {
   name: string
   category: string
   canonicalUnit: CanonicalUnit
-  storage: 'pantry' | 'fridge'
+  storage: 'pantry' | 'fridge' | 'freezer'
   archived: boolean
 }
 

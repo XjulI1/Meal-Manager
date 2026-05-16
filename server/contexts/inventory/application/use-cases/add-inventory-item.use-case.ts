@@ -20,7 +20,7 @@ export interface InventoryItemView {
   name: string
   category: string
   quantity: { value: number, unit: string }
-  location: 'pantry' | 'fridge'
+  location: 'pantry' | 'fridge' | 'freezer'
   updatedAt: string
 }
 

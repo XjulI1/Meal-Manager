@@ -8,7 +8,7 @@ The system SHALL allow a household member to add an item to the household invent
 
 An item has:
 - An `ingredientId` referencing a non-archived ingredient that belongs to the same household. The field is **required**; HTTP 400 if missing, HTTP 400 if the ingredient is from another household or archived.
-- A storage location: `pantry` or `fridge`. The field is **optional** at the API level; if omitted, the system fills it from `ingredient.storage`. A submitted value MAY differ from `ingredient.storage` (legitimate override).
+- A storage location: `pantry`, `fridge` or `freezer`. The field is **optional** at the API level; if omitted, the system fills it from `ingredient.storage`. A submitted value MAY differ from `ingredient.storage` (legitimate override).
 - A quantity (positive number) and a unit. The unit MUST convert to the ingredient's `canonicalUnit`; HTTP 400 otherwise (incompatible dimension).
 
 The quantity MUST be normalized to canonical units (g, ml, unit) before persistence.
@@ -67,16 +67,22 @@ The item does NOT carry a free-text name in v1 — the displayed name is always 
 - THEN the system returns HTTP 400 Bad Request
 - AND no item is created
 
+#### Scenario: Add a freezer item
+- GIVEN an ingredient `ing-peas` with `storage: "freezer", canonicalUnit: "g"` in the household
+- WHEN a member submits `POST /api/inventory` with `{ ingredientId: "ing-peas", quantity: 1, unit: "kg" }`
+- THEN the system fills `location: "freezer"` from the ingredient
+- AND the stored quantity is `{ value: 1000, unit: "g" }`
+
 #### Scenario: Invalid location
 - GIVEN an authenticated household member
-- WHEN they submit an item with `location` other than `pantry` or `fridge`
+- WHEN they submit an item with `location` other than `pantry`, `fridge` or `freezer`
 - THEN the system returns HTTP 400 Bad Request
 - AND no item is created
 
 ### Requirement: Listing Inventory Items
 The system SHALL return the list of inventory items belonging to the user's household.
 
-The list MAY be filtered by location via query parameter `?location=pantry|fridge`. Without a filter, all items are returned, grouped or sortable by location.
+The list MAY be filtered by location via query parameter `?location=pantry|fridge|freezer`. Without a filter, all items are returned, grouped or sortable by location.
 
 Each returned item MUST include the resolved ingredient `name` and the ingredient `category` (so the client can render and group without a second request).
 
@@ -162,7 +168,7 @@ export interface BarcodeResolution {
   defaultUnit?: CanonicalUnit;
   ingredientId?: string;
   productId?: string;
-  storage?: 'pantry' | 'fridge';
+  storage?: 'pantry' | 'fridge' | 'freezer';
   category?: IngredientCategory;
 }
 ```

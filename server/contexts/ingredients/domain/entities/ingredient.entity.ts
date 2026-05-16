@@ -2,7 +2,7 @@ import type { CanonicalUnit } from '../../../../../shared/units/conversions'
 import { type AllergenValue, parseAllergenSet } from '../value-objects/allergen.vo'
 import { IngredientCategory, type IngredientCategoryValue } from '../value-objects/ingredient-category.vo'
 
-export type IngredientStorage = 'pantry' | 'fridge'
+export type IngredientStorage = 'pantry' | 'fridge' | 'freezer'
 
 export const INGREDIENT_NAME_MAX_LENGTH = 100
 export const INGREDIENT_ALIAS_MAX_LENGTH = 100

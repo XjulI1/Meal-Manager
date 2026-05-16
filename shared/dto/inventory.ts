@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { IngredientCategorySchema } from './ingredient'
 import { QuantityInputSchema } from './units'
 
-export const StorageLocationSchema = z.enum(['pantry', 'fridge'])
+export const StorageLocationSchema = z.enum(['pantry', 'fridge', 'freezer'])
 export type StorageLocation = z.infer<typeof StorageLocationSchema>
 
 export const CreateInventoryItemSchema = z.object({

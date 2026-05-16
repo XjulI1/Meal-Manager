@@ -99,12 +99,22 @@ describe('AddInventoryItemUseCase', () => {
     })).rejects.toBeInstanceOf(InvalidIngredientReferenceError)
   })
 
+  it('accepts an explicit freezer location', async () => {
+    const result = await useCase.execute({
+      householdId: HH,
+      ingredientId: 'ing-pasta',
+      quantity: { value: 500, unit: 'g' },
+      location: 'freezer',
+    })
+    expect(result.location).toBe('freezer')
+  })
+
   it('rejects an invalid explicit location', async () => {
     await expect(useCase.execute({
       householdId: HH,
       ingredientId: 'ing-pasta',
       quantity: { value: 1, unit: 'g' },
-      location: 'freezer',
+      location: 'basement',
     })).rejects.toBeInstanceOf(InvalidStorageLocationError)
   })
 

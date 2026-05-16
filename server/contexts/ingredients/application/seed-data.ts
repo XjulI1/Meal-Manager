@@ -3,7 +3,7 @@ import type { IngredientCategoryValue } from '../domain/value-objects/ingredient
 
 export interface SeedIngredient {
   name: string
-  storage: 'pantry' | 'fridge'
+  storage: 'pantry' | 'fridge' | 'freezer'
   category: IngredientCategoryValue
   canonicalUnit: CanonicalUnit
   defaultPackSize?: number
@@ -49,8 +49,8 @@ export const DEFAULT_SEED: readonly SeedIngredient[] = [
   { name: 'Fromage râpé', storage: 'fridge', category: 'dairy', canonicalUnit: 'g', defaultPackSize: 200, shelfLifeDays: 21 },
   { name: 'Mozzarella', storage: 'fridge', category: 'dairy', canonicalUnit: 'g', defaultPackSize: 125, shelfLifeDays: 14 },
   // frozen
-  { name: 'Petits pois surgelés', storage: 'fridge', category: 'frozen', canonicalUnit: 'g', defaultPackSize: 1000 },
-  { name: 'Épinards surgelés', storage: 'fridge', category: 'frozen', canonicalUnit: 'g', defaultPackSize: 1000 },
+  { name: 'Petits pois surgelés', storage: 'freezer', category: 'frozen', canonicalUnit: 'g', defaultPackSize: 1000 },
+  { name: 'Épinards surgelés', storage: 'freezer', category: 'frozen', canonicalUnit: 'g', defaultPackSize: 1000 },
   // grocery
   { name: 'Pâtes', storage: 'pantry', category: 'grocery', canonicalUnit: 'g', defaultPackSize: 500 },
   { name: 'Riz', storage: 'pantry', category: 'grocery', canonicalUnit: 'g', defaultPackSize: 1000 },
