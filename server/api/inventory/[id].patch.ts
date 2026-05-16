@@ -1,4 +1,5 @@
 import { UpdateInventoryItemSchema } from '../../../shared/dto/inventory'
+import { InvalidIngredientReferenceError } from '../../contexts/inventory/domain/errors/invalid-ingredient-reference.error'
 import { ItemNotFoundError } from '../../contexts/inventory/domain/errors/item-not-found.error'
 import { requireHouseholdMember } from '../../utils/require-household'
 
@@ -17,7 +18,6 @@ export default defineEventHandler(async (event) => {
     return await event.context.container.updateInventoryItem.execute({
       householdId,
       id,
-      name: body.data.name,
       quantity: body.data.quantity,
       location: body.data.location,
     })
@@ -25,6 +25,9 @@ export default defineEventHandler(async (event) => {
   catch (error) {
     if (error instanceof ItemNotFoundError) {
       throw createError({ statusCode: 404, statusMessage: 'Inventory item not found.' })
+    }
+    if (error instanceof InvalidIngredientReferenceError) {
+      throw createError({ statusCode: 400, statusMessage: error.message })
     }
     throw error
   }

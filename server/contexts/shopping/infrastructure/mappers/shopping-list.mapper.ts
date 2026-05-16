@@ -16,7 +16,9 @@ export const ShoppingListMapper = {
     const items = itemRows.map((r) =>
       ShoppingListItem.rehydrate({
         id: r.id,
+        ingredientId: r.ingredientId,
         ingredientName: r.ingredientName,
+        category: r.category,
         quantity: Quantity.fromCanonical(r.quantityValue, r.quantityUnit),
         isChecked: r.isChecked,
       }),
@@ -43,7 +45,9 @@ export const ShoppingListMapper = {
     return snapshot.items.map((item) => ({
       id: item.id,
       snapshotId: snapshot.id,
+      ingredientId: item.ingredientId,
       ingredientName: item.ingredientName,
+      category: item.category as NewShoppingListItemRow['category'],
       quantityValue: item.quantity.value,
       quantityUnit: item.quantity.unit,
       isChecked: item.isChecked,

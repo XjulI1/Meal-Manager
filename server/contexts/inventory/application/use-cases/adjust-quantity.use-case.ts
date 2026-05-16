@@ -1,5 +1,7 @@
 import { Quantity } from '../../../../../shared/units/quantity'
+import { InvalidIngredientReferenceError } from '../../domain/errors/invalid-ingredient-reference.error'
 import { ItemNotFoundError } from '../../domain/errors/item-not-found.error'
+import type { IIngredientLookup } from '../../domain/ports/ingredient-lookup.port'
 import type { IInventoryItemRepository } from '../../domain/ports/inventory-item-repository.port'
 import { toView, type InventoryItemView } from './add-inventory-item.use-case'
 
@@ -20,6 +22,7 @@ export type AdjustQuantityResult =
 export class AdjustQuantityUseCase {
   constructor(
     private readonly items: IInventoryItemRepository,
+    private readonly ingredients: IIngredientLookup,
     private readonly clock: () => Date = () => new Date(),
   ) {}
 
@@ -28,9 +31,16 @@ export class AdjustQuantityUseCase {
     if (!existing) {
       throw new ItemNotFoundError(input.id)
     }
+    const ingredient = await this.ingredients.findById(existing.ingredientId, input.householdId)
+    if (!ingredient) {
+      throw new InvalidIngredientReferenceError(existing.ingredientId, 'not-found')
+    }
 
     const magnitude = Math.abs(input.delta.value)
     const deltaQty = Quantity.fromUserInput(magnitude, input.delta.unit)
+    if (deltaQty.unit !== ingredient.canonicalUnit) {
+      throw new InvalidIngredientReferenceError(existing.ingredientId, 'unit-incompatible')
+    }
     const newQuantity = input.delta.value >= 0
       ? existing.quantity.add(deltaQty)
       : existing.quantity.subtractClamped(deltaQty)
@@ -42,6 +52,6 @@ export class AdjustQuantityUseCase {
 
     const updated = existing.withQuantity(newQuantity, this.clock())
     await this.items.save(updated)
-    return { removed: false, item: toView(updated) }
+    return { removed: false, item: toView(updated, ingredient) }
   }
 }

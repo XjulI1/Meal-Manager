@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { QuantityInputSchema } from './units'
 
 export const RecipeIngredientInputSchema = z.object({
-  name: z.string().min(1).max(120).trim(),
+  ingredientId: z.string().uuid(),
   quantity: QuantityInputSchema,
 })
 export type RecipeIngredientInput = z.infer<typeof RecipeIngredientInputSchema>
@@ -24,6 +24,8 @@ export const RecipeViewSchema = z.object({
   instructions: z.string(),
   servings: z.number().int().min(1),
   ingredients: z.array(z.object({
+    ingredientId: z.string().uuid(),
+    /** Resolved from the ingredient catalog at read time. */
     name: z.string(),
     quantity: z.object({ value: z.number().int().nonnegative(), unit: z.string() }),
   })),

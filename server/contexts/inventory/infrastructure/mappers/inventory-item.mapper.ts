@@ -8,7 +8,7 @@ export const InventoryItemMapper = {
     return InventoryItem.rehydrate({
       id: row.id,
       householdId: row.householdId,
-      name: row.name,
+      ingredientId: row.ingredientId,
       quantity: Quantity.fromCanonical(row.quantityValue, row.quantityUnit),
       location: StorageLocation.fromString(row.location),
       createdAt: row.createdAt,
@@ -20,7 +20,7 @@ export const InventoryItemMapper = {
     return {
       id: item.id,
       householdId: item.householdId,
-      name: item.name,
+      ingredientId: item.ingredientId,
       quantityValue: item.quantity.value,
       quantityUnit: item.quantity.unit,
       location: item.location.value,

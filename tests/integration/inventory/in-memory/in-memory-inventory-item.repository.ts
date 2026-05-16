@@ -23,7 +23,7 @@ export class InMemoryInventoryItemRepository implements IInventoryItemRepository
       if (filter.location && !item.location.equals(filter.location)) continue
       out.push(item)
     }
-    return out.sort((a, b) => a.name.localeCompare(b.name))
+    return out.sort((a, b) => a.ingredientId.localeCompare(b.ingredientId))
   }
 
   async save(item: InventoryItem): Promise<void> {

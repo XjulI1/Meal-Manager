@@ -12,9 +12,6 @@ export class CatalogRecipeSnapshotFinder implements IRecipeSnapshotFinder {
     householdId: string,
   ): Promise<Map<string, RecipeSnapshotInfo>> {
     const out = new Map<string, RecipeSnapshotInfo>()
-    // Drizzle's `inArray` could fetch all in one query, but keeping the port
-    // narrow and the implementation simple — recipe counts per menu are
-    // bounded by 21 slots, so this stays well under any practical limit.
     await Promise.all(ids.map(async (id) => {
       const recipe = await this.recipes.findById(id, householdId)
       if (recipe) {
@@ -22,7 +19,7 @@ export class CatalogRecipeSnapshotFinder implements IRecipeSnapshotFinder {
           id: recipe.id,
           servings: recipe.servings,
           ingredients: recipe.ingredients.map((ing) => ({
-            name: ing.name,
+            ingredientId: ing.ingredientId,
             quantity: ing.quantity,
           })),
         })

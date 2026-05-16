@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { GenerateShoppingListUseCase } from '../../../server/contexts/shopping/application/use-cases/generate-shopping-list.use-case'
 import { GetShoppingListByMenuUseCase } from '../../../server/contexts/shopping/application/use-cases/get-shopping-list-by-menu.use-case'
 import { ShoppingListNotFoundError } from '../../../server/contexts/shopping/domain/errors/shopping-list-not-found.error'
-import { FakeInventoryFinder, FakeMenuFinder, FakeRecipeFinder } from './in-memory/fake-finders'
+import { FakeIngredientSummaryFinder, FakeInventoryFinder, FakeMenuFinder, FakeRecipeFinder } from './in-memory/fake-finders'
 import { InMemoryShoppingListRepository } from './in-memory/in-memory-shopping-list.repository'
 
 describe('GetShoppingListByMenuUseCase', () => {
@@ -17,11 +17,12 @@ describe('GetShoppingListByMenuUseCase', () => {
       householdId: 'hh-1',
       slots: [{ recipeId: 'r1', servings: 1 }],
     })
-    const recipes = new FakeRecipeFinder().register('r1', 'hh-1', 1, [{ name: 'X', value: 10, unit: 'g' }])
+    const recipes = new FakeRecipeFinder().register('r1', 'hh-1', 1, [{ ingredientId: 'ing-x', value: 10, unit: 'g' }])
     const inventory = new FakeInventoryFinder()
+    const summaries = new FakeIngredientSummaryFinder().add('ing-x', 'X', 'grocery')
     let counter = 0
     generate = new GenerateShoppingListUseCase(
-      snapshots, menus, recipes, inventory,
+      snapshots, menus, recipes, inventory, summaries,
       () => `id-${++counter}`,
       () => new Date('2026-05-15T10:00:00Z'),
     )

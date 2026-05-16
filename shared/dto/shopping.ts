@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { IngredientCategorySchema } from './ingredient'
 
 export const GenerateShoppingListSchema = z.object({
   menuId: z.string().uuid(),
@@ -13,7 +14,11 @@ export type ToggleShoppingListItemDto = z.infer<typeof ToggleShoppingListItemSch
 
 export const ShoppingListItemViewSchema = z.object({
   id: z.string().uuid(),
+  ingredientId: z.string().uuid(),
+  /** Denormalized at generation time so a later ingredient rename does not rewrite history. */
   ingredientName: z.string(),
+  /** Denormalized at generation time. */
+  category: IngredientCategorySchema,
   quantity: z.object({ value: z.number().int().nonnegative(), unit: z.string() }),
   isChecked: z.boolean(),
 })
@@ -25,3 +30,4 @@ export const ShoppingListViewSchema = z.object({
   items: z.array(ShoppingListItemViewSchema),
 })
 export type ShoppingListView = z.infer<typeof ShoppingListViewSchema>
+export type ShoppingListItemView = z.infer<typeof ShoppingListItemViewSchema>

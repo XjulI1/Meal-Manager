@@ -2,12 +2,12 @@ import {
   mysqlTable,
   mysqlEnum,
   char,
-  varchar,
   int,
   timestamp,
   index,
 } from 'drizzle-orm/mysql-core'
 import { households } from './households'
+import { ingredients } from './ingredients'
 
 export const inventoryItems = mysqlTable(
   'inventory_items',
@@ -16,7 +16,9 @@ export const inventoryItems = mysqlTable(
     householdId: char('household_id', { length: 36 })
       .notNull()
       .references(() => households.id, { onDelete: 'cascade' }),
-    name: varchar('name', { length: 120 }).notNull(),
+    ingredientId: char('ingredient_id', { length: 36 })
+      .notNull()
+      .references(() => ingredients.id, { onDelete: 'restrict' }),
     /** Quantity in canonical unit (g, ml, unit). */
     quantityValue: int('quantity_value', { unsigned: true }).notNull(),
     quantityUnit: mysqlEnum('quantity_unit', ['g', 'ml', 'unit']).notNull(),
@@ -27,6 +29,7 @@ export const inventoryItems = mysqlTable(
   (t) => ({
     householdIdx: index('inventory_items_household_idx').on(t.householdId),
     locationIdx: index('inventory_items_location_idx').on(t.householdId, t.location),
+    ingredientIdx: index('inventory_items_ingredient_idx').on(t.ingredientId),
   }),
 )
 

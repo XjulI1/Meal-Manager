@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { CanonicalUnit, Dimension } from '../../shared/units/conversions'
 import type { CreateRecipeDto, RecipeView } from '../../shared/dto/recipes'
 
 const props = defineProps<{
@@ -11,17 +12,46 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
-const state = reactive<CreateRecipeDto>({
+const CANONICAL_TO_DIMENSION: Record<CanonicalUnit, Dimension> = {
+  g: 'mass',
+  ml: 'volume',
+  unit: 'discrete',
+}
+
+const api = useApiIngredients()
+const { data: ingredients } = api.list()
+
+interface RowState {
+  ingredientId: string | null
+  quantity: { value: number, unit: string }
+}
+
+const state = reactive<{
+  title: string
+  instructions: string
+  servings: number
+  ingredients: RowState[]
+}>({
   title: props.initial?.title ?? '',
   instructions: props.initial?.instructions ?? '',
   servings: props.initial?.servings ?? 2,
   ingredients: props.initial?.ingredients?.length
-    ? props.initial.ingredients.map((i) => ({ name: i.name, quantity: { ...i.quantity } }))
-    : [{ name: '', quantity: { value: 0, unit: 'g' } }],
+    ? props.initial.ingredients.map((i) => ({ ingredientId: i.ingredientId, quantity: { ...i.quantity } }))
+    : [{ ingredientId: null, quantity: { value: 0, unit: 'g' } }],
 })
 
+function ingredientById(id: string | null) {
+  if (!id) return null
+  return (ingredients.value ?? []).find((i) => i.id === id) ?? null
+}
+
+function dimensionOf(id: string | null): Dimension | undefined {
+  const ing = ingredientById(id)
+  return ing ? CANONICAL_TO_DIMENSION[ing.canonicalUnit] : undefined
+}
+
 function addIngredient() {
-  state.ingredients.push({ name: '', quantity: { value: 0, unit: 'g' } })
+  state.ingredients.push({ ingredientId: null, quantity: { value: 0, unit: 'g' } })
 }
 
 function removeIngredient(idx: number) {
@@ -31,13 +61,17 @@ function removeIngredient(idx: number) {
 
 function onSubmit() {
   if (!state.title.trim() || !state.instructions.trim()) return
+  const filtered = state.ingredients.filter((i) => i.ingredientId !== null)
+  if (filtered.length === 0) return
+
   emit('submit', {
     title: state.title.trim(),
     instructions: state.instructions,
     servings: Number(state.servings),
-    ingredients: state.ingredients
-      .filter((i) => i.name.trim().length > 0)
-      .map((i) => ({ name: i.name.trim(), quantity: i.quantity })),
+    ingredients: filtered.map((i) => ({
+      ingredientId: i.ingredientId!,
+      quantity: i.quantity,
+    })),
   })
 }
 </script>
@@ -67,9 +101,11 @@ function onSubmit() {
           :key="idx"
           class="flex gap-2 items-start"
         >
-          <UInput v-model="ing.name" placeholder="Nom" class="flex-1" />
+          <div class="flex-1">
+            <IngredientsIngredientPicker v-model="ing.ingredientId" />
+          </div>
           <div class="w-64">
-            <QuantityInput v-model="ing.quantity" />
+            <QuantityInput v-model="ing.quantity" :dimension="dimensionOf(ing.ingredientId)" />
           </div>
           <UButton
             icon="i-lucide-trash-2"

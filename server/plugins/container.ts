@@ -11,6 +11,22 @@ import { JoinHouseholdUseCase } from '../contexts/family/application/use-cases/j
 import { LeaveHouseholdUseCase } from '../contexts/family/application/use-cases/leave-household.use-case'
 import { CryptoInviteCodeGenerator } from '../contexts/family/infrastructure/crypto-invite-code-generator'
 import { DrizzleHouseholdRepository } from '../contexts/family/infrastructure/repositories/drizzle-household.repository'
+import { AddProductUseCase } from '../contexts/ingredients/application/use-cases/add-product.use-case'
+import { CreateIngredientUseCase } from '../contexts/ingredients/application/use-cases/create-ingredient.use-case'
+import { DeleteIngredientUseCase } from '../contexts/ingredients/application/use-cases/delete-ingredient.use-case'
+import { GetIngredientUseCase } from '../contexts/ingredients/application/use-cases/get-ingredient.use-case'
+import { GetProductUseCase } from '../contexts/ingredients/application/use-cases/get-product.use-case'
+import { ListIngredientsUseCase } from '../contexts/ingredients/application/use-cases/list-ingredients.use-case'
+import { RemoveProductUseCase } from '../contexts/ingredients/application/use-cases/remove-product.use-case'
+import { ResolveByBarcodeUseCase } from '../contexts/ingredients/application/use-cases/resolve-by-barcode.use-case'
+import { SeedDefaultIngredientsUseCase } from '../contexts/ingredients/application/use-cases/seed-default-ingredients.use-case'
+import { UpdateIngredientUseCase } from '../contexts/ingredients/application/use-cases/update-ingredient.use-case'
+import { UpdateProductUseCase } from '../contexts/ingredients/application/use-cases/update-product.use-case'
+import { IngredientBarcodeResolver } from '../contexts/ingredients/infrastructure/ingredient-barcode-resolver.adapter'
+import { IngredientLookupAdapter } from '../contexts/ingredients/infrastructure/ingredient-lookup.adapter'
+import { DrizzleIngredientRepository } from '../contexts/ingredients/infrastructure/repositories/drizzle-ingredient.repository'
+import { DrizzleProductRepository } from '../contexts/ingredients/infrastructure/repositories/drizzle-product.repository'
+import { SeedDefaultIngredientsInitializer } from '../contexts/ingredients/infrastructure/seed-default-ingredients.initializer'
 import { AddInventoryItemUseCase } from '../contexts/inventory/application/use-cases/add-inventory-item.use-case'
 import { AdjustQuantityUseCase } from '../contexts/inventory/application/use-cases/adjust-quantity.use-case'
 import { ListInventoryItemsUseCase } from '../contexts/inventory/application/use-cases/list-inventory-items.use-case'
@@ -31,6 +47,7 @@ import { GenerateShoppingListUseCase } from '../contexts/shopping/application/us
 import { GetShoppingListByMenuUseCase } from '../contexts/shopping/application/use-cases/get-shopping-list-by-menu.use-case'
 import { RegenerateShoppingListUseCase } from '../contexts/shopping/application/use-cases/regenerate-shopping-list.use-case'
 import { ToggleShoppingListItemUseCase } from '../contexts/shopping/application/use-cases/toggle-shopping-list-item.use-case'
+import { IngredientsCatalogSummaryFinder } from '../contexts/shopping/infrastructure/adapters/ingredient-summary-finder.adapter'
 import { InventoryAdapter } from '../contexts/shopping/infrastructure/adapters/inventory-snapshot-finder.adapter'
 import { MealPlanningMenuSnapshotFinder } from '../contexts/shopping/infrastructure/adapters/menu-snapshot-finder.adapter'
 import { CatalogRecipeSnapshotFinder } from '../contexts/shopping/infrastructure/adapters/recipe-snapshot-finder.adapter'
@@ -55,7 +72,26 @@ function buildContainer(): Container {
   const userRepo = new DrizzleUserRepository(db)
   const hasher = new Argon2PasswordHasher()
 
-  // family
+  // ingredients
+  const ingredientRepo = new DrizzleIngredientRepository(db)
+  const productRepo = new DrizzleProductRepository(db)
+  const createIngredient = new CreateIngredientUseCase(ingredientRepo)
+  const updateIngredient = new UpdateIngredientUseCase(ingredientRepo, productRepo)
+  const deleteIngredient = new DeleteIngredientUseCase(ingredientRepo)
+  const listIngredients = new ListIngredientsUseCase(ingredientRepo)
+  const getIngredient = new GetIngredientUseCase(ingredientRepo, productRepo)
+  const addProduct = new AddProductUseCase(ingredientRepo, productRepo)
+  const getProduct = new GetProductUseCase(productRepo)
+  const updateProduct = new UpdateProductUseCase(productRepo)
+  const removeProduct = new RemoveProductUseCase(productRepo)
+  const resolveByBarcode = new ResolveByBarcodeUseCase(ingredientRepo, productRepo)
+  const barcodeResolver = new IngredientBarcodeResolver(resolveByBarcode)
+  const seedDefaultIngredients = new SeedDefaultIngredientsUseCase(ingredientRepo)
+  const seedInitializer = new SeedDefaultIngredientsInitializer(seedDefaultIngredients)
+  /** Cross-context lookup: inventory & catalog use this to resolve ingredient metadata at read time. */
+  const ingredientLookup = new IngredientLookupAdapter(ingredientRepo)
+
+  // family — seed initializer is injected so every new household gets the default catalog.
   const householdRepo = new DrizzleHouseholdRepository(db)
   const inviteCodes = new CryptoInviteCodeGenerator()
 
@@ -74,30 +110,43 @@ function buildContainer(): Container {
   const menuSnapshotFinder = new MealPlanningMenuSnapshotFinder(menuRepo)
   const recipeSnapshotFinder = new CatalogRecipeSnapshotFinder(recipeRepo)
   const inventorySnapshotFinder = new InventoryAdapter(inventoryRepo)
+  const ingredientSummaryFinder = new IngredientsCatalogSummaryFinder(ingredientRepo)
   const generateShoppingList = new GenerateShoppingListUseCase(
     shoppingRepo,
     menuSnapshotFinder,
     recipeSnapshotFinder,
     inventorySnapshotFinder,
+    ingredientSummaryFinder,
   )
 
   return {
     registerUser: new RegisterUserUseCase(userRepo, hasher),
     loginUser: new LoginUserUseCase(userRepo, hasher),
-    createHousehold: new CreateHouseholdUseCase(householdRepo, inviteCodes),
+    createHousehold: new CreateHouseholdUseCase(householdRepo, inviteCodes, [seedInitializer]),
     joinHousehold: new JoinHouseholdUseCase(householdRepo),
     leaveHousehold: new LeaveHouseholdUseCase(householdRepo),
     getCurrentHousehold: new GetCurrentHouseholdUseCase(householdRepo),
-    addInventoryItem: new AddInventoryItemUseCase(inventoryRepo),
-    updateInventoryItem: new UpdateInventoryItemUseCase(inventoryRepo),
+    createIngredient,
+    updateIngredient,
+    deleteIngredient,
+    listIngredients,
+    getIngredient,
+    addProduct,
+    getProduct,
+    updateProduct,
+    removeProduct,
+    resolveByBarcode,
+    barcodeResolver,
+    addInventoryItem: new AddInventoryItemUseCase(inventoryRepo, ingredientLookup),
+    updateInventoryItem: new UpdateInventoryItemUseCase(inventoryRepo, ingredientLookup),
     removeInventoryItem: new RemoveInventoryItemUseCase(inventoryRepo),
-    listInventoryItems: new ListInventoryItemsUseCase(inventoryRepo),
-    adjustInventoryQuantity: new AdjustQuantityUseCase(inventoryRepo),
-    createRecipe: new CreateRecipeUseCase(recipeRepo),
-    updateRecipe: new UpdateRecipeUseCase(recipeRepo),
+    listInventoryItems: new ListInventoryItemsUseCase(inventoryRepo, ingredientLookup),
+    adjustInventoryQuantity: new AdjustQuantityUseCase(inventoryRepo, ingredientLookup),
+    createRecipe: new CreateRecipeUseCase(recipeRepo, ingredientLookup),
+    updateRecipe: new UpdateRecipeUseCase(recipeRepo, ingredientLookup),
     deleteRecipe: new DeleteRecipeUseCase(recipeRepo),
     listRecipes: new ListRecipesUseCase(recipeRepo),
-    getRecipeById: new GetRecipeByIdUseCase(recipeRepo),
+    getRecipeById: new GetRecipeByIdUseCase(recipeRepo, ingredientLookup),
     createMenu: new CreateMenuUseCase(menuRepo),
     getMenuByWeek: new GetMenuByWeekUseCase(menuRepo),
     assignRecipeToSlot: new AssignRecipeToSlotUseCase(menuRepo, recipeFinder),
