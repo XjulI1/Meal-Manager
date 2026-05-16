@@ -1,0 +1,19 @@
+# Meal Manager
+
+Meal Manager is a self-hosted family meal management app (inventory, recipes, weekly menus, shopping lists). It exposes an MCP (Model Context Protocol) endpoint so LLM agents can read a household's data on the user's behalf.
+
+## How an LLM agent talks to Meal Manager
+
+The app exposes a remote MCP server at `/mcp` (e.g. `https://your-domain.example/mcp`). Authentication is by Personal Access Token in the `Authorization: Bearer` header. Tokens are scoped to a single household and revocable.
+
+Read-only in v1. Eight tools cover inventory, recipes, weekly menus, shopping lists, ingredients catalog, and household info. All tools are prefixed `mealmanager_`.
+
+## Get a token
+
+A user creates a token from `/settings/tokens` after signing in. The plaintext is shown once and never persisted in clear (only its SHA-256 hash is stored).
+
+## Pointers
+
+- Full agent-facing doc: [/llms-full.txt](/llms-full.txt)
+- MCP endpoint: [/mcp](/mcp)
+- Source: spec-driven via OpenSpec, hexagonal architecture per bounded context.
