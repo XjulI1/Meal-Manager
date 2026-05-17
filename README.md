@@ -190,6 +190,26 @@ Huit tools préfixés `mealmanager_` : `list_inventory`, `list_recipes`, `get_re
 }
 ```
 
+### Tester à la main avec curl
+
+Le transport StreamableHTTP exige que le client envoie un `Accept` qui inclut **les deux** types `application/json` ET `text/event-stream` (sinon 406 « Not Acceptable »). Les vrais clients MCP le font automatiquement ; en curl :
+
+```bash
+# Lister les outils
+curl -X POST https://your-domain.example/mcp \
+  -H "Authorization: Bearer mm_pat_xxxxxxxxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+
+# Appeler un outil
+curl -X POST https://your-domain.example/mcp \
+  -H "Authorization: Bearer mm_pat_xxxxxxxxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"mealmanager_list_inventory","arguments":{}}}'
+```
+
 ### Voix sur Google Home / Nest
 
 Aujourd'hui (mai 2026) un Nest ne peut pas appeler directement un serveur MCP tiers. Le chemin pragmatique pour la voix : **Home Assistant comme bridge** — HA supporte les serveurs MCP en client et expose ses entités à Google Assistant via l'intégration officielle.

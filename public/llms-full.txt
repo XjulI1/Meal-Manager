@@ -37,6 +37,14 @@ WWW-Authenticate: Bearer realm="meal-manager-mcp"
 
 OAuth 2.1 is on the roadmap — both schemes will coexist when added.
 
+### Required request headers
+
+Every MCP request MUST carry:
+
+- `Authorization: Bearer <plaintext PAT>` — covered above.
+- `Content-Type: application/json` — JSON-RPC payload.
+- `Accept: application/json, text/event-stream` — **both** media types, per the StreamableHTTP transport spec. A request that accepts only one will be rejected with HTTP 406 ("Not Acceptable: Client must accept both application/json and text/event-stream"). Real MCP clients (Claude Desktop, Cursor, Home Assistant) set this automatically — you only need to think about it when testing by hand with curl.
+
 ### Tools available (read-only in v1)
 
 All eight tools are read-only. None accept `householdId` as input — it is always derived from the PAT.
@@ -78,6 +86,30 @@ Conversions (kg ↔ g, L ↔ ml, cl ↔ ml, mg ↔ g) happen at the API boundary
   }
 }
 ```
+
+## Example: testing by hand with curl
+
+List the available tools:
+
+```bash
+curl -X POST https://your-domain.example/mcp \
+  -H "Authorization: Bearer mm_pat_xxxxxxxxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
+
+Call a tool (here, list the inventory):
+
+```bash
+curl -X POST https://your-domain.example/mcp \
+  -H "Authorization: Bearer mm_pat_xxxxxxxxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"mealmanager_list_inventory","arguments":{}}}'
+```
+
+The `Accept: application/json, text/event-stream` header is mandatory — see "Required request headers" above.
 
 ## Example: Home Assistant (for voice via Google Nest / Gemini)
 
