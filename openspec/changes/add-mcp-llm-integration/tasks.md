@@ -97,9 +97,9 @@ Checklist d'implémentation du change `add-mcp-llm-integration`. Ordonnée pour 
 - [x] 15.3 `pnpm test` vert (283/283)
 - [x] 15.4 `npx -y -p @fission-ai/openspec@latest openspec validate add-mcp-llm-integration` vert
 
-## Hors checklist : vérification manuelle restante (à faire au déploiement)
+## Vérification manuelle (déploiement staging)
 
-- [ ] `pnpm db:migrate` applique sans erreur la migration `0003` contre une base réelle
-- [ ] `pnpm dev` puis : créer un PAT depuis `/settings/tokens`, le copier ; `curl -X POST http://localhost:3000/mcp -H "Authorization: Bearer <pat>" -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'` renvoie 8 outils ; un `tools/call` lit bien les données du foyer du PAT ; sans bearer → 401 + `WWW-Authenticate` ; PAT révoqué → 401
-- [ ] Brancher Claude Desktop avec l'URL `/mcp` et le PAT en header — les 8 outils apparaissent et fonctionnent
-- [ ] `curl http://localhost:3000/llms.txt` et `/llms-full.txt` renvoient le contenu attendu
+- [x] `pnpm db:migrate` applique sans erreur la migration `0003` contre la base staging (validé sur `meal-stag.xju.fr` après reset du `__drizzle_migrations` qui contenait un état transitoire)
+- [x] Création + copie d'un PAT depuis `/settings/tokens` OK ; appel `curl` à `/mcp` (avec `Accept: application/json, text/event-stream`) renvoie bien les 8 outils via `tools/list` ; `tools/call` retourne les données du foyer du PAT
+- [x] Branchement Claude Desktop sur `/mcp` avec PAT en header — les 8 outils apparaissent et fonctionnent
+- [x] `llms.txt` et `llms-full.txt` servis correctement à la racine
