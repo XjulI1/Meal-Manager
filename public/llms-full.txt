@@ -1,0 +1,134 @@
+# Meal Manager — full agent guide
+
+This document tells an LLM client (or its operator) how to interact with a Meal Manager instance.
+
+## What Meal Manager is
+
+A self-hosted family app to manage:
+- **Inventory** (pantry + fridge), with quantities in canonical units (`g`, `ml`, `unit`).
+- **Recipes**, each with an ingredient list, servings, instructions.
+- **Weekly menus** (breakfast/lunch/dinner × 7 days).
+- **Shopping lists** derived from a menu (menu × servings − current inventory).
+- **Ingredients catalog** (the master list referenced by inventory, recipes, shopping).
+
+All data is scoped to a **household**. A user belongs to at most one household at a time, and can share it with other family members.
+
+## Integration: MCP HTTP/SSE
+
+Meal Manager exposes a **Model Context Protocol** server at `POST /mcp` (with `GET /mcp` and `DELETE /mcp` per the StreamableHTTP transport spec). Operates in stateless mode: each POST is self-contained.
+
+### Authentication
+
+Bearer Personal Access Token (PAT) in the `Authorization` header:
+
+```
+Authorization: Bearer mm_pat_<22 base64url chars>
+```
+
+- Tokens are created from `/settings/tokens` in the web UI.
+- Each token is **bound to a specific (user, household)** at issuance time and cannot be retargeted.
+- The plaintext is shown **once** at creation. Only its SHA-256 hash is persisted. If lost, create a new one.
+- Tokens are revocable from the same UI. Revocation takes effect immediately.
+
+On any auth failure, the server responds `401 Unauthorized` with:
+```
+WWW-Authenticate: Bearer realm="meal-manager-mcp"
+```
+
+OAuth 2.1 is on the roadmap — both schemes will coexist when added.
+
+### Required request headers
+
+Every MCP request MUST carry:
+
+- `Authorization: Bearer <plaintext PAT>` — covered above.
+- `Content-Type: application/json` — JSON-RPC payload.
+- `Accept: application/json, text/event-stream` — **both** media types, per the StreamableHTTP transport spec. A request that accepts only one will be rejected with HTTP 406 ("Not Acceptable: Client must accept both application/json and text/event-stream"). Real MCP clients (Claude Desktop, Cursor, Home Assistant) set this automatically — you only need to think about it when testing by hand with curl.
+
+### Tools available (read-only in v1)
+
+All eight tools are read-only. None accept `householdId` as input — it is always derived from the PAT.
+
+| Tool | Purpose | Arguments |
+|---|---|---|
+| `mealmanager_list_inventory` | List current inventory items (id, ingredient name, category, quantity, location). | `{ location?: "pantry" \| "fridge" }` |
+| `mealmanager_list_recipes` | List household recipes (id, title, servings, updatedAt). | `{ query?: string }` (title substring) |
+| `mealmanager_get_recipe` | Full recipe details with ingredient list. | `{ recipeId: string }` (UUID) |
+| `mealmanager_get_menu_for_week` | Menu for a given week. Creates an empty menu if none exists (idempotent — matches the web behavior). | `{ weekStart: string }` (ISO date `YYYY-MM-DD` of a Monday) |
+| `mealmanager_get_shopping_list` | Shopping list snapshot for a menu. | `{ menuId: string }` (UUID) |
+| `mealmanager_list_ingredients` | Ingredients catalog (master list). | `{ query?: string, category?: string, storage?: "pantry"\|"fridge", includeArchived?: boolean }` |
+| `mealmanager_get_ingredient` | Full ingredient details with products attached. | `{ ingredientId: string }` (UUID) |
+| `mealmanager_get_household` | Current household (id, name, members). | `{}` |
+
+Each tool returns a single `text` content block containing the JSON-pretty-printed result of the underlying use case.
+
+### Units
+
+All quantities are stored in canonical units:
+- Mass → `g` (grams)
+- Volume → `ml` (millilitres)
+- Discrete → `unit`
+
+Conversions (kg ↔ g, L ↔ ml, cl ↔ ml, mg ↔ g) happen at the API boundary, not inside tool responses. The agent receives values in the canonical unit and can convert for display.
+
+## Example: Claude Desktop config
+
+```json
+{
+  "mcpServers": {
+    "meal-manager": {
+      "type": "http",
+      "url": "https://your-domain.example/mcp",
+      "headers": {
+        "Authorization": "Bearer mm_pat_xxxxxxxxxxxxxxxxxxxxxx"
+      }
+    }
+  }
+}
+```
+
+## Example: testing by hand with curl
+
+List the available tools:
+
+```bash
+curl -X POST https://your-domain.example/mcp \
+  -H "Authorization: Bearer mm_pat_xxxxxxxxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
+
+Call a tool (here, list the inventory):
+
+```bash
+curl -X POST https://your-domain.example/mcp \
+  -H "Authorization: Bearer mm_pat_xxxxxxxxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"mealmanager_list_inventory","arguments":{}}}'
+```
+
+The `Accept: application/json, text/event-stream` header is mandatory — see "Required request headers" above.
+
+## Example: Home Assistant (for voice via Google Nest / Gemini)
+
+Today (May 2026) a Google Nest device cannot natively call third-party MCP servers. The pragmatic path for voice control is:
+
+1. Install **Home Assistant** with the MCP client integration.
+2. Add Meal Manager as an MCP server in HA (same URL + Bearer PAT as above).
+3. Expose the resulting HA entities to Google Assistant via the official HA → Google Assistant integration.
+4. "Hey Google, ask Home Assistant what's in the fridge" → HA proxies to Meal Manager via MCP.
+
+Alternative: write a custom Gemini API client that uses MCP as a tool source.
+
+## Architecture notes (for LLMs that read code)
+
+- Hexagonal per bounded context under `server/contexts/<context>/{domain,application,infrastructure}`.
+- The MCP transport layer is at `server/routes/mcp/`.
+- The PAT domain lives in `server/contexts/platform/` alongside `User`.
+- Hexagonal boundary rule: `domain` MUST NOT import frameworks. ESLint enforces this.
+
+## Spec source
+
+Read-only spec snapshots live under `openspec/specs/<capability>/spec.md`. The MCP integration was introduced by change `add-mcp-llm-integration`. Look at `openspec/changes/archive/` for archived proposals once shipped.

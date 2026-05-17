@@ -58,7 +58,7 @@ server/contexts/<context>/
     └── mappers/             # row Drizzle ↔ entité de domaine
 ```
 
-Contextes : `platform` (auth, sessions), `family` (foyers, membres, invitations), `inventory` (stocks placard + frigo), `catalog` (recettes), `meal-planning` (menus hebdomadaires), `shopping` (listes de courses dérivées).
+Contextes : `platform` (auth, sessions, **Personal Access Tokens**), `family` (foyers, membres, invitations), `inventory` (stocks placard + frigo), `catalog` (recettes), `meal-planning` (menus hebdomadaires), `shopping` (listes de courses dérivées). Le **transport MCP** vit sous `server/routes/mcp/` (pas un bounded context — c'est un adapter d'entrée qui réutilise les use cases via le container).
 
 **Règle de dépendance : `infrastructure → application → domain`.** Le domaine n'importe **rien** d'externe — pas de `drizzle-orm`, `mysql2`, `h3`, `nuxt`, `vue`, ni `~/server/database/*`. Cette règle est *enforced* par ESLint (`eslint.config.mjs`, pattern `server/contexts/*/domain/**`). Quand le domaine a besoin d'I/O, déclare un **port** (interface) dans `domain/ports/` et fournis l'implémentation dans `infrastructure/`.
 
@@ -69,6 +69,8 @@ Contextes : `platform` (auth, sessions), `family` (foyers, membres, invitations)
 ### Isolation foyer
 
 Toutes les routes scoped-foyer doivent passer par le helper `requireHouseholdMember()` (dans `server/utils/`). Il hydrate le `householdId` à partir de la session et l'injecte dans le use case. Aucun use case ne doit retourner des données sans `householdId` explicite.
+
+Pour les routes appelées par des **agents LLM** (endpoint `/mcp`), utiliser `requireHouseholdFromPAT()` (même fichier) — auth par Bearer Personal Access Token, jamais par cookie. La gestion des PATs vit dans `server/contexts/platform/` ; UI sous `/settings/tokens`. Voir le change `openspec/changes/add-mcp-llm-integration/`.
 
 ### Unités canoniques
 

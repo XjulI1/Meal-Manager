@@ -22,6 +22,13 @@
       "when": 1779148800000,
       "tag": "0002_add_freezer_storage",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1779235200000,
+      "tag": "0003_add_personal_access_tokens",
+      "breakpoints": true
     }
   ]
 }

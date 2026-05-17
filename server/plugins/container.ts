@@ -39,10 +39,17 @@ import { CreateMenuUseCase } from '../contexts/meal-planning/application/use-cas
 import { GetMenuByWeekUseCase } from '../contexts/meal-planning/application/use-cases/get-menu-by-week.use-case'
 import { CatalogRecipeFinder } from '../contexts/meal-planning/infrastructure/adapters/recipe-finder.adapter'
 import { DrizzleMenuRepository } from '../contexts/meal-planning/infrastructure/repositories/drizzle-menu.repository'
+import { AuthenticatePersonalAccessTokenUseCase } from '../contexts/platform/application/use-cases/authenticate-personal-access-token.use-case'
+import { CreatePersonalAccessTokenUseCase } from '../contexts/platform/application/use-cases/create-personal-access-token.use-case'
+import { ListPersonalAccessTokensUseCase } from '../contexts/platform/application/use-cases/list-personal-access-tokens.use-case'
 import { LoginUserUseCase } from '../contexts/platform/application/use-cases/login-user.use-case'
 import { RegisterUserUseCase } from '../contexts/platform/application/use-cases/register-user.use-case'
+import { RevokePersonalAccessTokenUseCase } from '../contexts/platform/application/use-cases/revoke-personal-access-token.use-case'
+import { CryptoTokenGenerator } from '../contexts/platform/infrastructure/crypto-token-generator'
 import { Argon2PasswordHasher } from '../contexts/platform/infrastructure/hashers/argon2-password-hasher'
+import { DrizzlePersonalAccessTokenRepository } from '../contexts/platform/infrastructure/repositories/drizzle-personal-access-token.repository'
 import { DrizzleUserRepository } from '../contexts/platform/infrastructure/repositories/drizzle-user.repository'
+import { FamilyUserHouseholdResolverAdapter } from '../contexts/family/infrastructure/family-user-household-resolver.adapter'
 import { GenerateShoppingListUseCase } from '../contexts/shopping/application/use-cases/generate-shopping-list.use-case'
 import { GetShoppingListByMenuUseCase } from '../contexts/shopping/application/use-cases/get-shopping-list-by-menu.use-case'
 import { RegenerateShoppingListUseCase } from '../contexts/shopping/application/use-cases/regenerate-shopping-list.use-case'
@@ -71,6 +78,8 @@ function buildContainer(): Container {
   // platform
   const userRepo = new DrizzleUserRepository(db)
   const hasher = new Argon2PasswordHasher()
+  const patRepo = new DrizzlePersonalAccessTokenRepository(db)
+  const tokenGenerator = new CryptoTokenGenerator()
 
   // ingredients
   const ingredientRepo = new DrizzleIngredientRepository(db)
@@ -94,6 +103,8 @@ function buildContainer(): Container {
   // family — seed initializer is injected so every new household gets the default catalog.
   const householdRepo = new DrizzleHouseholdRepository(db)
   const inviteCodes = new CryptoInviteCodeGenerator()
+  /** Cross-context: implements platform's `IUserHouseholdResolver` via family's household repo. */
+  const userHouseholdResolver = new FamilyUserHouseholdResolverAdapter(householdRepo)
 
   // inventory
   const inventoryRepo = new DrizzleInventoryItemRepository(db)
@@ -122,6 +133,10 @@ function buildContainer(): Container {
   return {
     registerUser: new RegisterUserUseCase(userRepo, hasher),
     loginUser: new LoginUserUseCase(userRepo, hasher),
+    createPersonalAccessToken: new CreatePersonalAccessTokenUseCase(patRepo, userHouseholdResolver, tokenGenerator),
+    listPersonalAccessTokens: new ListPersonalAccessTokensUseCase(patRepo),
+    revokePersonalAccessToken: new RevokePersonalAccessTokenUseCase(patRepo),
+    authenticatePersonalAccessToken: new AuthenticatePersonalAccessTokenUseCase(patRepo, tokenGenerator),
     createHousehold: new CreateHouseholdUseCase(householdRepo, inviteCodes, [seedInitializer]),
     joinHousehold: new JoinHouseholdUseCase(householdRepo),
     leaveHousehold: new LeaveHouseholdUseCase(householdRepo),

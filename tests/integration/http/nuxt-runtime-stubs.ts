@@ -24,11 +24,32 @@ interface MockH3Error extends Error {
 ;(globalThis as any).getRouterParam = (event: { _params?: Record<string, string> }, name: string) =>
   event._params?.[name]
 
+;(globalThis as any).getHeader = (event: { _headers?: Record<string, string> }, name: string) => {
+  if (!event._headers) return undefined
+  const lower = name.toLowerCase()
+  for (const k of Object.keys(event._headers)) {
+    if (k.toLowerCase() === lower) return event._headers[k]
+  }
+  return undefined
+}
+
 ;(globalThis as any).setResponseStatus = (event: { _status?: number }, status: number) => {
   event._status = status
 }
 
-;(globalThis as any).createError = (opts: { statusCode: number, statusMessage?: string }): MockH3Error => {
+;(globalThis as any).setResponseHeader = (
+  event: { _responseHeaders?: Record<string, string> },
+  name: string,
+  value: string,
+) => {
+  if (!event._responseHeaders) event._responseHeaders = {}
+  event._responseHeaders[name] = value
+}
+
+;(globalThis as any).createError = (opts: {
+  statusCode: number
+  statusMessage?: string
+}): MockH3Error => {
   const err = new Error(opts.statusMessage ?? 'Error') as MockH3Error
   err.statusCode = opts.statusCode
   err.statusMessage = opts.statusMessage
@@ -60,6 +81,8 @@ export interface MockEvent<TBody = unknown> {
   _body?: TBody
   _query?: Record<string, unknown>
   _params?: Record<string, string>
+  _headers?: Record<string, string>
+  _responseHeaders?: Record<string, string>
   _session?: { user?: { id: string, email: string } }
   _status?: number
   context: {
@@ -72,6 +95,7 @@ export function makeEvent<TBody>(opts: {
   body?: TBody
   query?: Record<string, unknown>
   params?: Record<string, string>
+  headers?: Record<string, string>
   session?: { user?: { id: string, email: string } }
   container: any
 }): MockEvent<TBody> {
@@ -79,6 +103,7 @@ export function makeEvent<TBody>(opts: {
     _body: opts.body,
     _query: opts.query,
     _params: opts.params,
+    _headers: opts.headers,
     _session: opts.session,
     context: { container: opts.container },
   }

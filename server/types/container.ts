@@ -27,8 +27,12 @@ import type { AdjustQuantityUseCase } from '../contexts/inventory/application/us
 import type { ListInventoryItemsUseCase } from '../contexts/inventory/application/use-cases/list-inventory-items.use-case'
 import type { RemoveInventoryItemUseCase } from '../contexts/inventory/application/use-cases/remove-inventory-item.use-case'
 import type { UpdateInventoryItemUseCase } from '../contexts/inventory/application/use-cases/update-inventory-item.use-case'
+import type { AuthenticatePersonalAccessTokenUseCase } from '../contexts/platform/application/use-cases/authenticate-personal-access-token.use-case'
+import type { CreatePersonalAccessTokenUseCase } from '../contexts/platform/application/use-cases/create-personal-access-token.use-case'
+import type { ListPersonalAccessTokensUseCase } from '../contexts/platform/application/use-cases/list-personal-access-tokens.use-case'
 import type { LoginUserUseCase } from '../contexts/platform/application/use-cases/login-user.use-case'
 import type { RegisterUserUseCase } from '../contexts/platform/application/use-cases/register-user.use-case'
+import type { RevokePersonalAccessTokenUseCase } from '../contexts/platform/application/use-cases/revoke-personal-access-token.use-case'
 import type { GenerateShoppingListUseCase } from '../contexts/shopping/application/use-cases/generate-shopping-list.use-case'
 import type { GetShoppingListByMenuUseCase } from '../contexts/shopping/application/use-cases/get-shopping-list-by-menu.use-case'
 import type { RegenerateShoppingListUseCase } from '../contexts/shopping/application/use-cases/regenerate-shopping-list.use-case'
@@ -38,6 +42,10 @@ export interface Container {
   // platform
   registerUser: RegisterUserUseCase
   loginUser: LoginUserUseCase
+  createPersonalAccessToken: CreatePersonalAccessTokenUseCase
+  listPersonalAccessTokens: ListPersonalAccessTokensUseCase
+  revokePersonalAccessToken: RevokePersonalAccessTokenUseCase
+  authenticatePersonalAccessToken: AuthenticatePersonalAccessTokenUseCase
   // family
   createHousehold: CreateHouseholdUseCase
   joinHousehold: JoinHouseholdUseCase

@@ -159,6 +159,71 @@ Pour les détails d'architecture, voir [`docs/ARCHITECTURE.md`](./docs/ARCHITECT
 
 Voir `.env.example`.
 
+## Intégration LLM (MCP)
+
+Meal Manager expose un endpoint **Model Context Protocol** sur `POST /mcp` (avec `GET`/`DELETE` pour le transport StreamableHTTP) qui permet à un client LLM (Claude Desktop, Cursor, Home Assistant, scripts Gemini) d'interroger un foyer en **lecture seule**.
+
+### Obtenir un token
+
+1. Se connecter au front, ouvrir le menu utilisateur → **Paramètres**.
+2. **Nouveau token** → donner un nom (« Claude Desktop », « Home Assistant »…).
+3. Le plaintext `mm_pat_…` est affiché **une seule fois**. Le copier maintenant — il ne sera plus jamais ré-affiché. Seul son hash SHA-256 est persisté.
+4. Un token est lié au foyer courant de l'utilisateur ; révocable à tout moment.
+
+### Outils disponibles (v1, lecture seule)
+
+Huit tools préfixés `mealmanager_` : `list_inventory`, `list_recipes`, `get_recipe`, `get_menu_for_week`, `get_shopping_list`, `list_ingredients`, `get_ingredient`, `get_household`. Aucun n'accepte de `householdId` en input — il est dérivé du token.
+
+### Exemple : Claude Desktop
+
+```json
+{
+  "mcpServers": {
+    "meal-manager": {
+      "type": "http",
+      "url": "https://your-domain.example/mcp",
+      "headers": {
+        "Authorization": "Bearer mm_pat_xxxxxxxxxxxxxxxxxxxxxx"
+      }
+    }
+  }
+}
+```
+
+### Tester à la main avec curl
+
+Le transport StreamableHTTP exige que le client envoie un `Accept` qui inclut **les deux** types `application/json` ET `text/event-stream` (sinon 406 « Not Acceptable »). Les vrais clients MCP le font automatiquement ; en curl :
+
+```bash
+# Lister les outils
+curl -X POST https://your-domain.example/mcp \
+  -H "Authorization: Bearer mm_pat_xxxxxxxxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+
+# Appeler un outil
+curl -X POST https://your-domain.example/mcp \
+  -H "Authorization: Bearer mm_pat_xxxxxxxxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"mealmanager_list_inventory","arguments":{}}}'
+```
+
+### Voix sur Google Home / Nest
+
+Aujourd'hui (mai 2026) un Nest ne peut pas appeler directement un serveur MCP tiers. Le chemin pragmatique pour la voix : **Home Assistant comme bridge** — HA supporte les serveurs MCP en client et expose ses entités à Google Assistant via l'intégration officielle.
+
+### Discoverabilité
+
+Deux fichiers servis statiquement :
+- [`/llms.txt`](./public/llms.txt) — sommaire pour découverte LLM.
+- [`/llms-full.txt`](./public/llms-full.txt) — guide complet (outils, auth, exemples).
+
+### Détails
+
+Voir le change [`add-mcp-llm-integration`](./openspec/changes/add-mcp-llm-integration/) (proposal, design, tasks) pour le rationale technique (transport stateless, hash SHA-256 plutôt qu'argon2id, futur OAuth 2.1).
+
 ## Workflow OpenSpec
 
 1. Toute évolution significative passe par un **change OpenSpec** dans `openspec/changes/<slug>/`.
