@@ -96,67 +96,35 @@ Checklist d'implémentation du change `add-product-scanning`. Ordonnée pour per
 
 ## 13. Front — dépendances et composables
 
-- [ ] 13.1 Ajouter `@zxing/browser` comme dépendance front (`pnpm add @zxing/browser`)
-- [ ] 13.2 Créer `app/composables/useBarcodeScanner.ts` :
-  - état réactif : `state: 'idle' | 'initializing' | 'ready' | 'scanning' | 'scanned' | 'error'`, `permission: 'granted' | 'denied' | 'prompt'`, `error?: 'insecure-context' | 'permission-denied' | 'no-camera' | 'detector-failed'`
-  - méthodes `start(videoEl: HTMLVideoElement)` et `stop()`
-  - détection `window.isSecureContext` avant tout ; émet `error: 'insecure-context'` si false (mais autorise localhost via la propriété native)
-  - détection `'BarcodeDetector' in window` :
-    - si oui → instancier `new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a'] })`, lancer un loop `requestAnimationFrame` qui appelle `detect(videoEl)`
-    - si non → `const { BrowserMultiFormatReader } = await import('@zxing/browser')` puis `decodeFromVideoDevice(...)`
-  - `getUserMedia({ video: { facingMode: { exact: 'environment' } } })` avec fallbacks
-  - dé-doublonnage : émettre uniquement après 2 lectures consécutives du même code (cf. design D8)
-  - exposer `onScan(callback: (code: string) => void)`
-- [ ] 13.3 Test unitaire ou story manuelle du composable (vitest jsdom : mock `BarcodeDetector` + mock `getUserMedia`). Au minimum : un test qui prouve que le path zxing **n'est PAS chargé** si `BarcodeDetector` est défini.
-- [ ] 13.4 Créer `app/composables/useApiBarcodes.ts` :
-  - `resolve(code: string)` → `GET /api/barcodes/:code` (retourne `ScanResult | null`)
-  - `addFromScan(input: AddFromScanInput)` → `POST /api/inventory/from-scan`
-  - `consumeByBarcode(input: ConsumeByBarcodeInput)` → `POST /api/inventory/consume-by-barcode`
-  - typage strict via les schémas Zod de `shared/dto/scan.dto.ts`
+- [x] 13.1 `pnpm add @zxing/browser` + `pnpm add -D jsdom` (env tests browser)
+- [x] 13.2 `app/composables/useBarcodeScanner.ts` (BarcodeDetector natif + fallback dynamique zxing, gestion permissions/HTTPS, dé-doublonnage 2 lectures consécutives)
+- [x] 13.3 Test unitaire (jsdom) : le path zxing n'est **pas** importé si BarcodeDetector est défini + cas insecure-context / permission-denied
+- [x] 13.4 `app/composables/useApiBarcodes.ts` (resolve / addFromScan / consumeByBarcode typés via DTO)
 
 ## 14. Front — composants
 
-- [ ] 14.1 Créer `app/components/scan/ScanModal.vue` :
-  - modal Nuxt UI plein écran avec `<video>` autoplay + viewfinder (cadre + ligne laser)
-  - intègre `useBarcodeScanner`, démarre au mount, stoppe au unmount
-  - émet `@scan="code"` quand un code est détecté
-  - affiche des états : initialisation / prêt à scanner / scan réussi / erreur (avec message contextualisé : permission refusée, HTTPS requis, caméra introuvable)
-  - aucun champ `<input>` pour saisie manuelle (vérifier au snapshot)
-- [ ] 14.2 Créer `app/components/scan/ScanResultDialog.vue` :
-  - props : `barcode: string`, `mode: 'enrich' | 'stock-in' | 'consume'`, `preselectedIngredientId?: string`
-  - au mount : appelle `useApiBarcodes().resolve(barcode)`
-  - mode `enrich` :
-    - inconnu → embarque `ProductForm` avec barcode pré-rempli + `IngredientPicker` (option `preselectedIngredientId` si fournie)
-    - connu → affiche le produit existant + bouton "Modifier ce produit" (réutilise `ProductForm` en édition)
-  - mode `stock-in` :
-    - inconnu → affiche "Produit inconnu" + bouton "Le créer d'abord" qui bascule en mode `enrich`
-    - connu → formulaire d'ajout pré-rempli (quantité = `product.packSize`/`packUnit`, location = `ingredient.storage`). Submit appelle `addFromScan`. Affiche un toast distinct selon `created: true` ("Nouvelle ligne créée") ou `created: false` ("Quantité incrémentée").
-  - mode `consume` :
-    - inconnu → 404 → message "Produit inconnu"
-    - connu : sur ouverture, lister via `GET /api/inventory` (déjà chargé sur la page parente) si l'ingrédient résolu a `> 1` ligne. Si 1 seule ligne → formulaire direct, submit appelle `consumeByBarcode` (sans preview). Si N > 1 → appel `consumeByBarcode({ preview: true, quantity })` à la saisie de quantité, affichage des candidats (location, quantité retirée par ligne), confirmation déclenche l'appel sans preview.
+- [x] 14.1 `app/components/scan/ScanModal.vue` (vidéo plein écran + viewfinder + états contextualisés, pas de champ texte EAN)
+- [x] 14.2 `app/components/scan/ScanResultDialog.vue` (3 modes enrich / stock-in / consume avec inconnus → bascule enrich, multi-locations → preview)
 
 ## 15. Front — intégrations dans les pages
 
-- [ ] 15.1 Modifier `app/pages/inventory/index.vue` :
-  - ajouter deux boutons "Scanner pour ranger" (`mode: 'stock-in'`) et "Scanner pour consommer" (`mode: 'consume'`)
-  - orchestration : ouvrir `ScanModal` ; sur `@scan`, fermer la modal et ouvrir `ScanResultDialog` avec le bon mode
-  - sur succès du dialog : rafraîchir la liste d'inventaire
-- [ ] 15.2 Modifier `app/pages/ingredients/index.vue` : ajouter le bouton "Scanner un nouveau produit" (`mode: 'enrich'`, pas d'ingrédient présélectionné)
-- [ ] 15.3 Modifier `app/pages/ingredients/[id].vue` : ajouter le bouton "Scanner un nouveau produit pour cet ingrédient" (`mode: 'enrich'`, `preselectedIngredientId` = id de la page)
+- [x] 15.1 `app/pages/inventory/index.vue` : boutons "Scanner pour ranger" + "Scanner pour consommer", toast différencié created/incrément
+- [x] 15.2 `app/pages/ingredients/index.vue` : bouton "Scanner un produit" (mode enrich)
+- [x] 15.3 `app/pages/ingredients/[id].vue` : bouton "Scanner un produit pour cet ingrédient" (mode enrich + preselectedIngredientId)
 
 ## 16. Tests, lint, doc
 
-- [ ] 16.1 `pnpm typecheck` vert
-- [ ] 16.2 `pnpm lint` vert (vérifier qu'aucune violation de la règle d'isolation domain n'a été introduite)
-- [ ] 16.3 `pnpm test` vert (unit + integration + smoke HTTP)
-- [ ] 16.4 Vérifier manuellement en dev (`pnpm dev`, HTTPS via tunnel ou localhost) :
-  - scan d'un EAN connu en mode `stock-in` sur un ingrédient sans ligne d'inventaire → nouvelle ligne créée (toast "créée")
-  - scan d'un EAN connu en mode `stock-in` sur un ingrédient avec une ligne existante au même emplacement → ligne incrémentée (toast "incrémentée")
+- [x] 16.1 `pnpm typecheck` vert
+- [x] 16.2 `pnpm lint` vert (isolation domain respectée)
+- [x] 16.3 `pnpm test` vert (289 tests : unit + integration + smoke HTTP)
+- [ ] 16.4 **Vérification manuelle en dev** non exécutée dans ce sandbox (pas de caméra, pas d'instance MariaDB). À faire localement par l'utilisateur — checklist :
+  - scan d'un EAN connu en mode `stock-in` sur ingrédient sans ligne → nouvelle ligne créée (toast "créée")
+  - scan d'un EAN connu en mode `stock-in` sur ingrédient avec ligne existante au même emplacement → ligne incrémentée (toast "incrémentée")
   - scan d'un EAN connu en mode `consume` avec une seule ligne → décrément direct
-  - scan d'un EAN connu en mode `consume` avec lignes dans 2 locations → preview affiché avec ordre default-first
-  - scan d'un EAN inconnu en mode `enrich` → formulaire de création produit
+  - scan d'un EAN connu en mode `consume` avec lignes dans 2 locations → preview affiché, ordre default-first
+  - scan d'un EAN inconnu en mode `enrich` → formulaire création produit (avec l'EAN pré-rempli)
   - refus de permission caméra → message clair, pas de fallback texte
   - tentative de changer la location d'un item vers une location déjà occupée → erreur 409 visible
-- [ ] 16.5 Mettre à jour `README.md` : section "Permissions navigateur" mentionnant que le scan caméra nécessite HTTPS (sauf localhost) + note migration "db:reset si doublons"
-- [ ] 16.6 Vérifier que `CLAUDE.md` reste à jour (devrait l'être : pas de nouveau bounded context, pas de nouvelle commande)
-- [ ] 16.7 `npx -y -p @fission-ai/openspec@latest openspec validate add-product-scanning` vert avant de soumettre la PR
+- [x] 16.5 README mis à jour (migration `db:reset si doublons` + section "Scan caméra : permissions navigateur" HTTPS)
+- [x] 16.6 CLAUDE.md reste à jour (pas de nouveau bounded context, pas de nouvelle commande, pas de nouvelle convention structurante)
+- [x] 16.7 `openspec validate add-product-scanning` vert

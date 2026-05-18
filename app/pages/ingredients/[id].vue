@@ -116,6 +116,27 @@ function openEditProduct(productId: string) {
   editingProductId.value = productId
   showProductForm.value = true
 }
+
+// Scan flow (enrich mode, ingredient pre-selected).
+const showScanModal = ref(false)
+const showScanResult = ref(false)
+const scannedBarcode = ref<string | null>(null)
+
+function openScan() {
+  scannedBarcode.value = null
+  showScanModal.value = true
+}
+
+function onScan(code: string) {
+  scannedBarcode.value = code
+  showScanModal.value = false
+  showScanResult.value = true
+}
+
+async function onScanResultDone() {
+  showScanResult.value = false
+  await refresh()
+}
 </script>
 
 <template>
@@ -133,6 +154,9 @@ function openEditProduct(productId: string) {
         </p>
       </div>
       <div class="flex gap-2">
+        <UButton color="primary" variant="soft" icon="i-lucide-scan-barcode" @click="openScan">
+          Scanner un produit
+        </UButton>
         <UButton color="neutral" variant="ghost" icon="i-lucide-pencil" @click="showEdit = true">
           Modifier
         </UButton>
@@ -209,6 +233,21 @@ function openEditProduct(productId: string) {
           :loading="submitting"
           @submit="onProductSubmit"
           @cancel="showProductForm = false"
+        />
+      </template>
+    </UModal>
+
+    <ScanScanModal v-model:open="showScanModal" @scan="onScan" />
+
+    <UModal v-model:open="showScanResult" :title="`Scanner un produit pour « ${ingredient.name} »`">
+      <template #body>
+        <ScanScanResultDialog
+          v-if="scannedBarcode"
+          :barcode="scannedBarcode"
+          mode="enrich"
+          :preselected-ingredient-id="ingredient.id"
+          @done="onScanResultDone"
+          @cancel="showScanResult = false"
         />
       </template>
     </UModal>

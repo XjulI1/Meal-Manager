@@ -45,6 +45,27 @@ const submitting = ref(false)
 const showProductForm = ref(false)
 const productTarget = ref<IngredientView | null>(null)
 
+// Scan flow state (enrich mode).
+const showScanModal = ref(false)
+const showScanResult = ref(false)
+const scannedBarcode = ref<string | null>(null)
+
+function openScan() {
+  scannedBarcode.value = null
+  showScanModal.value = true
+}
+
+function onScan(code: string) {
+  scannedBarcode.value = code
+  showScanModal.value = false
+  showScanResult.value = true
+}
+
+async function onScanResultDone() {
+  showScanResult.value = false
+  await refresh()
+}
+
 function openCreate() {
   editing.value = null
   showForm.value = true
@@ -150,7 +171,12 @@ const grouped = computed<ItemsByCategory[]>(() => {
   <div class="space-y-4">
     <div class="flex items-center justify-between gap-4 flex-wrap">
       <h1 class="text-2xl font-semibold">Ingrédients</h1>
-      <UButton icon="i-lucide-plus" @click="openCreate">Nouveau</UButton>
+      <div class="flex gap-2">
+        <UButton icon="i-lucide-scan-barcode" color="primary" variant="soft" @click="openScan">
+          Scanner un produit
+        </UButton>
+        <UButton icon="i-lucide-plus" @click="openCreate">Nouveau</UButton>
+      </div>
     </div>
 
     <UCard>
@@ -241,6 +267,20 @@ const grouped = computed<ItemsByCategory[]>(() => {
           :loading="submitting"
           @submit="onProductSubmit"
           @cancel="showProductForm = false"
+        />
+      </template>
+    </UModal>
+
+    <ScanScanModal v-model:open="showScanModal" @scan="onScan" />
+
+    <UModal v-model:open="showScanResult" title="Enrichir le catalogue">
+      <template #body>
+        <ScanScanResultDialog
+          v-if="scannedBarcode"
+          :barcode="scannedBarcode"
+          mode="enrich"
+          @done="onScanResultDone"
+          @cancel="showScanResult = false"
         />
       </template>
     </UModal>
