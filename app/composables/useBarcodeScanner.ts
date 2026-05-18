@@ -18,15 +18,37 @@ interface ZxingControls {
 }
 
 interface ZxingReader {
-  decodeFromVideoDevice: (
-    deviceId: string | undefined,
+  scan: (
     videoEl: HTMLVideoElement,
     callback: (result: { getText: () => string } | undefined) => void,
-  ) => Promise<ZxingControls>
+  ) => ZxingControls
+  possibleFormats?: number[]
   reset?: () => void
 }
 
 const FORMATS = ['ean_13', 'ean_8', 'upc_a']
+// @zxing/library BarcodeFormat enum values for the same set.
+const ZXING_FORMATS = [7, 6, 14]
+
+async function waitForVideoDimensions(video: HTMLVideoElement, timeoutMs = 3000): Promise<void> {
+  if (video.videoWidth > 0 && video.videoHeight > 0) return
+  await new Promise<void>((resolve) => {
+    const cleanup = () => {
+      video.removeEventListener('loadedmetadata', check)
+      video.removeEventListener('loadeddata', check)
+      clearTimeout(timer)
+    }
+    const check = () => {
+      if (video.videoWidth > 0 && video.videoHeight > 0) {
+        cleanup()
+        resolve()
+      }
+    }
+    const timer = setTimeout(() => { cleanup(); resolve() }, timeoutMs)
+    video.addEventListener('loadedmetadata', check)
+    video.addEventListener('loadeddata', check)
+  })
+}
 
 /**
  * Browser-camera barcode scanner. Prefers the native `BarcodeDetector` API
@@ -77,10 +99,15 @@ export function useBarcodeScanner() {
   }
 
   async function acquireStream(): Promise<MediaStream> {
+    // Cap at 1280×720 — plenty for EAN-13 and roughly halves the work the
+    // zxing JS decoder does per frame vs the 1080p stream Safari hands out
+    // by default. Soft `ideal` constraint so we don't get rejected if the
+    // device can't honour it exactly.
+    const resolution = { width: { ideal: 1280 }, height: { ideal: 720 } }
     const constraints: MediaStreamConstraints[] = [
-      { video: { facingMode: { exact: 'environment' } } },
-      { video: { facingMode: 'environment' } },
-      { video: true },
+      { video: { facingMode: { exact: 'environment' }, ...resolution } },
+      { video: { facingMode: 'environment', ...resolution } },
+      { video: { ...resolution } },
     ]
     let lastErr: unknown = null
     for (const c of constraints) {
@@ -128,6 +155,10 @@ export function useBarcodeScanner() {
 
     target.srcObject = stream.value
     await target.play().catch(() => {})
+    // Safari can resolve play() before the video has metadata; without
+    // dimensions, zxing's capture canvas is created at 0×0 and the decode
+    // loop forever returns NotFound.
+    await waitForVideoDimensions(target)
 
     const Detector = (window as unknown as { BarcodeDetector?: BarcodeDetectorCtor }).BarcodeDetector
     if (Detector) {
@@ -154,13 +185,25 @@ export function useBarcodeScanner() {
       }
     }
 
-    // Fallback: dynamic import keeps zxing out of the initial bundle.
+    // Fallback (Safari, Firefox…). We bypass zxing's stream/play helpers
+    // (decodeFromVideoDevice would grab a 2nd MediaStream — refused by Safari;
+    // decodeFromVideoElement re-tries play() and waits 5s on a canplay event
+    // that already fired) and feed the decode loop directly via scan().
     try {
       const mod = await import('@zxing/browser')
-      const reader = new mod.BrowserMultiFormatReader() as unknown as ZxingReader
+      // zxing defaults to 500ms between attempts (≈2 fps) — feels sluggish vs
+      // Chrome's native BarcodeDetector. Drop to 80ms (~12 fps), enough to
+      // keep up with hand-held framing without saturating the main thread.
+      const reader = new mod.BrowserMultiFormatReader(undefined, {
+        delayBetweenScanAttempts: 80,
+        delayBetweenScanSuccess: 80,
+      }) as unknown as ZxingReader
+      // Restrict the readers list to EAN/UPC so we don't waste CPU on QR,
+      // Aztec, PDF417… on every frame.
+      reader.possibleFormats = ZXING_FORMATS
       zxingReader.value = reader
       state.value = 'scanning'
-      zxingControls.value = await reader.decodeFromVideoDevice(undefined, target, (result) => {
+      zxingControls.value = reader.scan(target, (result) => {
         if (!result) return
         consider(result.getText())
       })
