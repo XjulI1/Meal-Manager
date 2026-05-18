@@ -1,6 +1,7 @@
 import { UpdateInventoryItemSchema } from '../../../shared/dto/inventory'
 import { InvalidIngredientReferenceError } from '../../contexts/inventory/domain/errors/invalid-ingredient-reference.error'
 import { ItemNotFoundError } from '../../contexts/inventory/domain/errors/item-not-found.error'
+import { LocationConflictError } from '../../contexts/inventory/domain/errors/location-conflict.error'
 import { requireHouseholdMember } from '../../utils/require-household'
 
 export default defineEventHandler(async (event) => {
@@ -25,6 +26,18 @@ export default defineEventHandler(async (event) => {
   catch (error) {
     if (error instanceof ItemNotFoundError) {
       throw createError({ statusCode: 404, statusMessage: 'Inventory item not found.' })
+    }
+    if (error instanceof LocationConflictError) {
+      throw createError({
+        statusCode: 409,
+        statusMessage: 'Another inventory line already holds this ingredient at the target location.',
+        data: {
+          error: 'location-conflict',
+          conflictingLineId: error.conflictingLineId,
+          ingredientId: error.ingredientId,
+          targetLocation: error.targetLocation,
+        },
+      })
     }
     if (error instanceof InvalidIngredientReferenceError) {
       throw createError({ statusCode: 400, statusMessage: error.message })

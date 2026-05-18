@@ -5,6 +5,7 @@ import {
   int,
   timestamp,
   index,
+  unique,
 } from 'drizzle-orm/mysql-core'
 import { households } from './households'
 import { ingredients } from './ingredients'
@@ -30,6 +31,11 @@ export const inventoryItems = mysqlTable(
     householdIdx: index('inventory_items_household_idx').on(t.householdId),
     locationIdx: index('inventory_items_location_idx').on(t.householdId, t.location),
     ingredientIdx: index('inventory_items_ingredient_idx').on(t.ingredientId),
+    householdIngredientLocationUq: unique('inventory_items_household_ingredient_location_uq').on(
+      t.householdId,
+      t.ingredientId,
+      t.location,
+    ),
   }),
 )
 
