@@ -99,7 +99,7 @@ async function toggle(itemId: string, isChecked: boolean) {
 </script>
 
 <template>
-  <div class="space-y-4 max-w-3xl">
+  <div class="space-y-4">
     <div class="flex items-center justify-between gap-3 flex-wrap">
       <h1 class="text-2xl font-semibold">Liste de courses</h1>
       <div class="flex items-center gap-2">
