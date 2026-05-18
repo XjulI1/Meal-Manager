@@ -8,54 +8,64 @@ Le change `add-ingredients-catalog` a livré toute la fondation produit + code-b
 - Port `IBarcodeResolver` (déclaré dans `inventory/domain/ports/`) câblé à l'adapter `IngredientBarcodeResolver` (impl. côté `ingredients`).
 - Endpoint `GET /api/barcodes/[code]` qui retourne `{ ingredient, product }`.
 
-Côté inventaire, `InventoryItem` reste pour l'instant minimaliste : `ingredientId`, `quantity`, `location`, `createdAt`, `updatedAt`. **Pas de DLC** — ce qui bloque à la fois l'usage « ranger ses courses » (où la DLC est l'info que l'utilisateur veut saisir en priorité) et le FIFO « scanner ce que je consomme » (qui exige de savoir quel lot part en premier).
+Côté inventaire, `InventoryItem` reste minimaliste : `ingredientId`, `quantity`, `location`, `createdAt`, `updatedAt`. Pas de DLC (volontairement repoussé), et **pas de contrainte d'unicité** : `AddInventoryItemUseCase` crée systématiquement une nouvelle ligne, donc 2 ajouts successifs avec le même `(ingredientId, location)` produisent 2 lignes distinctes. Côté utilisateur, c'est incompréhensible : « j'ai 2 paquets de pâtes » devrait être **une ligne avec un compteur**, pas deux lignes de 500 g.
 
 Ce change s'occupe de trois choses :
-1. Combler le trou DLC sur `InventoryItem` (champ + pré-remplissage serveur depuis `ingredient.shelfLifeDays`).
-2. Ajouter deux use cases inventory qui exploitent enfin les produits du catalogue : ajout par scan, consommation par scan FIFO.
+1. Corriger le modèle inventaire : une ligne unique par `(ingredientId, location)`, sémantique upsert/increment.
+2. Ajouter deux use cases inventory qui exploitent enfin les produits du catalogue : ajout par scan, consommation par scan.
 3. Livrer toute la couche UI scan caméra (composable, modal, dialog multi-modes, intégrations).
 
-Aucun utilisateur n'est en production : on peut introduire la colonne DLC sans backfill (NULL = DLC inconnue, gérée explicitement par le FIFO).
+Aucun utilisateur n'est en production : la contrainte d'unicité peut être ajoutée sèchement, quitte à imposer un `db:reset` sur les bases de dev existantes qui auraient des doublons.
 
 ## Goals / Non-Goals
 
 **Goals :**
 - Brancher enfin la chaîne scan → résolution → action utilisateur.
 - Trois modes utilisateur clairs (`enrich`, `stock-in`, `consume`) avec une seule modal de scan partagée.
+- Modèle inventaire **simple et déterministe** : une seule ligne par `(ingredientId, location)`. Plus de question de « quelle ligne décrémenter ? » dans la majorité des cas.
 - Pas de saisie manuelle d'EAN : si la caméra ne peut pas, on ne fait pas (refus explicite côté UX).
 - Conserver l'isolation hexagonale : pas d'import direct de `~/server/contexts/ingredients/**` dans `~/server/contexts/inventory/**`.
-- FIFO sur DLC pour la consommation par scan, avec NULLs (DLC inconnue) traités en fin de file.
-- Pré-remplissage agressif côté serveur : la DLC, le storage et la quantité sont **dérivés** de l'ingrédient/produit chaque fois que possible ; l'utilisateur n'a qu'à confirmer.
+- Pré-remplissage agressif côté front : la quantité et la location sont **dérivées** du produit/ingrédient chaque fois que possible ; l'utilisateur n'a qu'à confirmer.
 - Bundle initial du front non impacté par la lib fallback (chargement dynamique).
 
 **Non-Goals :**
+- DLC sur les lignes d'inventaire (gardé pour un change futur).
 - Saisie manuelle d'EAN au clavier (UX dégradée intentionnellement).
-- Scan multi-produits en rafale (file d'attente d'EAN, validation groupée). Pertinent pour décharger un caddie entier ; gardé pour plus tard.
+- Scan multi-produits en rafale (file d'attente d'EAN, validation groupée).
 - Cocher la liste de courses au scan / ajout liste de courses au scan.
-- Lookup OpenFoodFacts (l'EAN inconnu déclenche un formulaire de création produit, point final v1). Adapter prêt à venir : le port `IBarcodeResolver` accepte déjà plusieurs implémentations chaînables.
+- Lookup OpenFoodFacts (l'EAN inconnu déclenche un formulaire de création produit, point final v1).
 - OCR de la DLC depuis la photo du produit.
 - Tests E2E (Playwright reste hors scope v1).
-- Backfill des `InventoryItem` existants avec une DLC fictive.
+- Auto-merge des lignes existantes au changement de `location` (trop magique ; on renvoie 409).
 
 ## Decisions
 
-### D1. DLC sur l'item, pas sur l'ingrédient ni sur le produit
+### D1. Sémantique upsert sur `AddInventoryItemUseCase` + contrainte DB
 
-**Décision :** ajouter `expirationDate?: Date` sur `InventoryItem` (colonne `expiration_date date NULL`). L'ingrédient garde `shelfLifeDays` (durée par défaut, utilisée pour calculer la suggestion).
+**Décision :** `AddInventoryItemUseCase` bascule de `create` à `upsert/increment`. Logique :
+
+1. Cherche une ligne `(householdId, ingredientId, location)` existante via `findByIngredientAndLocation`.
+2. Si trouvée → incrémente `quantity` (en canonical unit) et rafraîchit `updatedAt`. Retourne `{ item, created: false }`.
+3. Sinon → crée une nouvelle ligne. Retourne `{ item, created: true }`.
+
+Côté DB, on ajoute `UNIQUE INDEX inventory_items_household_ingredient_location_uq (household_id, ingredient_id, location)`. La contrainte agit comme garde-fou : si deux requêtes concurrentes tombent dans le path « créer » simultanément, MySQL en rejette une avec `ER_DUP_ENTRY` ; le repo intercepte cette erreur et relance l'upsert (1 retry max). C'est suffisant pour la concurrence v1 (foyer = ~4 personnes).
 
 **Alternatives :**
-- DLC sur le produit. Rejeté : la DLC est propre à un exemplaire physique (un yaourt acheté aujourd'hui vs un acheté demain ont des DLC différentes mais le même `productId`).
-- Pas de DLC du tout, calculer à la lecture depuis `createdAt + shelfLifeDays`. Rejeté : ne reflète pas la DLC réelle imprimée sur l'emballage, qui est souvent plus longue ou plus courte que `shelfLifeDays`.
+- *Garder `create` strict et faire l'upsert côté client.* Rejeté : duplique la logique métier, deux frontends devraient l'implémenter identiquement.
+- *Faire un vrai `INSERT … ON DUPLICATE KEY UPDATE quantity = quantity + VALUES(quantity)` en MySQL.* Plus performant (1 round-trip), mais on perd le `created: boolean` et le mapper devient plus complexe. Rejeté en v1, peut être optimisé plus tard si besoin.
+- *Auto-merger les doublons existants au moment de la migration.* Rejeté — aucun utilisateur en prod, `db:reset` est acceptable et plus prévisible.
 
-**Raison :** la DLC appartient à l'instance (le pot), pas à la classe (le produit) ni au concept (l'ingrédient). `shelfLifeDays` reste utile comme **valeur par défaut** que le serveur calcule (`today + shelfLifeDays`) quand le client n'envoie pas de DLC. L'utilisateur peut toujours saisir la vraie DLC depuis l'emballage.
+**Raison :** modèle utilisateur clair (« 1 ligne par produit dans le placard »), évite la complexité du multi-lots, contrainte DB qui empêche le drift.
 
-### D2. Pré-remplissage serveur, pas client
+### D2. Réponse HTTP : 201 vs 200, champ `created`
 
-**Décision :** le pré-calcul `today + shelfLifeDays` se fait dans **`AddInventoryItemUseCase`** (cas générique) et dans **`AddInventoryItemFromProductScanUseCase`** (cas scan). Le client envoie `expirationDate?` ; si absent et que l'ingrédient a un `shelfLifeDays`, le serveur calcule.
+**Décision :** `POST /api/inventory` et `POST /api/inventory/from-scan` retournent :
+- HTTP **201** si la ligne a été créée (`created: true`).
+- HTTP **200** si elle a été incrémentée (`created: false`).
 
-**Alternative :** pré-calculer côté client (le front a `shelfLifeDays` via `useApiBarcodes`). Rejeté — duplique la logique, plus de chances d'incohérence, et le serveur reste seul juge de l'horloge (timezone, drift).
+Dans les deux cas, le body inclut `{ item: InventoryItemView, created: boolean }`.
 
-**Raison :** cohérent avec l'architecture (les use cases sont la frontière métier). Le client est déchargé de calculer une date. Tests plus simples (un seul endroit à couvrir).
+**Alternative :** toujours 200, juste exposer `created` dans le body. Plus simple mais perd la sémantique REST. Décision : on garde la sémantique HTTP correcte, le surcoût est nul.
 
 ### D3. Port dédié `IProductLookup` côté inventory
 
@@ -82,35 +92,47 @@ L'implémentation vit dans `server/contexts/ingredients/infrastructure/product-l
 
 **Raison :** respect strict de l'isolation hexagonale (déjà ESLint-enforced), pattern cohérent avec `IIngredientLookup` existant.
 
-### D4. FIFO sur DLC, NULLs en dernier
+### D4. Consume : priorité à la `location` par défaut, débordement déterministe
 
-**Décision :** `ConsumeInventoryItemByBarcodeUseCase` ordonne les lots du même `ingredientId` par :
-1. `expirationDate ASC` (le plus proche en premier)
-2. `NULLs LAST` (DLC inconnue = on l'utilise quand on a épuisé les lots datés)
-3. `createdAt ASC` (en cas d'égalité de DLC)
+**Décision :** `ConsumeInventoryItemByBarcodeUseCase` ordonne les lignes du même `ingredientId` ainsi :
 
-Le débordement entre lots est autorisé (consommer 600 g quand le lot 1 fait 500 g → vide le lot 1 et entame le lot 2 de 100 g). Quand un lot atteint zéro, il est supprimé (cohérent avec le use case `AdjustQuantity` existant).
+1. La ligne à `ingredient.storage` (la location par défaut) en premier.
+2. Les autres lignes par `createdAt ASC` (la plus ancienne d'abord).
 
-Si la quantité totale demandée > somme des lots disponibles : HTTP 400 (sans modifier l'état).
+Le débordement entre lignes est autorisé (consommer 600 g quand la ligne pantry fait 500 g → vide pantry et entame fridge de 100 g). Quand une ligne atteint zéro, elle est supprimée (cohérent avec `Adjust Quantity` existant).
+
+Si la quantité totale demandée > somme des lignes disponibles : HTTP 400 (sans modifier l'état).
 
 **Alternatives :**
-- LIFO (le plus récent). Rejeté : ne minimise pas le gaspillage.
-- Refuser le débordement (forcer l'utilisateur à choisir un seul lot). Rejeté — UX médiocre, on rajouterait une étape pour rien dans le cas le plus courant.
-- NULLs **first** (consommer en premier ce dont la DLC est inconnue). Rejeté — l'inconnu doit servir de variable d'ajustement, pas être prioritaire.
+- *Décrémenter seulement la ligne à `ingredient.storage`, refuser le débordement.* Plus simple mais frustrant — l'utilisateur ayant exceptionnellement mis ses pâtes au frigo se retrouve coincé.
+- *Demander à l'utilisateur de choisir la location quand N > 1.* Rejeté — dans 95 % des cas il n'y a qu'une ligne (la location par défaut). Forcer un picker à chaque scan est lourd. Mode `preview` couvre le cas où l'utilisateur veut voir avant.
+- *FIFO sur `createdAt` sans priorité à `storage`.* Rejeté — moins intuitif (« pourquoi a-t-il décrémenté le pot du frigo alors que j'ai le même au placard ? »).
 
-**Raison :** comportement attendu par l'utilisateur (« on consomme d'abord ce qui périme »). Le débordement est sûr car traçable dans la réponse de l'API (liste des lots impactés).
+**Raison :** 95 % des consommations ne concernent qu'une seule ligne (le cas par défaut). L'ordre déterministe couvre proprement les 5 % restants sans saouler l'utilisateur avec un choix.
 
 ### D5. Mode `preview` sur `consume-by-barcode`
 
-**Décision :** l'endpoint `POST /api/inventory/consume-by-barcode` accepte `preview: true`. En mode preview, il **ne modifie pas l'état** mais retourne la liste candidate (lots ordonnés FIFO, quantité qui serait retirée par lot, somme totale, et un `wouldBeFullyConsumed: boolean`). Le client peut afficher cette liste et permettre une sélection explicite.
+**Décision :** l'endpoint `POST /api/inventory/consume-by-barcode` accepte `preview: true`. En mode preview, il **ne modifie pas l'état** mais retourne la liste des lignes candidates (ordonnées comme en D4, quantité qui serait retirée par ligne, somme totale, et un `fullyConsumed: boolean`). Le client peut afficher cette liste et permettre à l'utilisateur de confirmer.
 
-Sans `preview` (mode normal), si plusieurs lots correspondent à la quantité demandée, le serveur applique le FIFO automatiquement. L'utilisateur peut aussi forcer un seul lot via `lotId?: string`.
+Sans `preview` (mode normal), le serveur applique automatiquement la stratégie D4.
 
-**Alternative :** toujours forcer une sélection si N > 1. Rejeté — rend le 80 % des cas (un seul lot) inutilement verbeux.
+**Alternative :** toujours forcer une preview si N > 1. Rejeté — rend le 95 % des cas (une seule ligne) inutilement verbeux.
 
-**Raison :** le preview est la version « j'aimerais voir avant de cliquer ». Le mode normal couvre le scan rapide « je sors un yaourt, décrémente ». `lotId` couvre « je veux ce lot précis » (utile si l'utilisateur voit l'emballage et veut être explicite).
+**Raison :** le preview est la version « j'aimerais voir avant de cliquer ». Le mode normal couvre le scan rapide « je sors un yaourt, décrémente ». Le client appelle `preview: true` uniquement quand `GET /api/inventory` lui révèle plusieurs lignes pour l'ingrédient résolu.
 
-### D6. Modal unifiée + dialog multi-modes
+### D6. Update : conflit explicite sur changement de `location`
+
+**Décision :** dans `UpdateInventoryItemUseCase`, si le client demande à changer `location` vers une valeur où **une autre ligne** existe déjà pour le même `(householdId, ingredientId)`, le système retourne HTTP 409 Conflict.
+
+L'utilisateur doit alors :
+- soit consommer/supprimer manuellement l'une des deux lignes,
+- soit ajuster les quantités à la main (deux `PATCH` séparés sur les deux lignes).
+
+**Alternative :** auto-merger les deux lignes (somme des quantités, suppression de la source). Rejeté — comportement magique qui surprendrait : un `PATCH` sur une ligne supprime une autre ligne ailleurs. Trop dangereux pour la v1.
+
+**Raison :** explicite > magique. Le 409 est rare en pratique (l'utilisateur déplace rarement la location d'un item), et le message d'erreur peut guider vers l'action manuelle.
+
+### D7. Modal unifiée + dialog multi-modes
 
 **Décision :** une seule `ScanModal.vue` (vidéo + viewfinder + état) qui émet `scan(code: string)`. Au-dessus, un `ScanResultDialog.vue` reçoit le code, appelle `GET /api/barcodes/:code` et bascule sur le bon formulaire selon le `mode` reçu en prop : `enrich | stock-in | consume`. Le mode est décidé par le call site (bouton appelant).
 
@@ -118,7 +140,7 @@ Sans `preview` (mode normal), si plusieurs lots correspondent à la quantité de
 
 **Raison :** garde l'utilisateur sur sa page de travail. Une seule surface UI à maintenir pour la caméra. Le `ScanResultDialog` est petit et purement orchestration.
 
-### D7. Caméra : `BarcodeDetector` natif + fallback dynamique
+### D8. Caméra : `BarcodeDetector` natif + fallback dynamique
 
 **Décision :** `useBarcodeScanner()` :
 1. Détecte `'BarcodeDetector' in window` (Chrome Android, Chrome desktop avec flag).
@@ -132,13 +154,13 @@ Permissions : si `getUserMedia` est refusé, le composable expose un état `perm
 
 **Raison :** UX optimale sur le cas majoritaire (Android Chrome), fallback fiable sur iOS Safari. Le dynamic import résout le coût bundle.
 
-### D8. HTTPS obligatoire en production
+### D9. HTTPS obligatoire en production
 
 **Décision :** `getUserMedia` exige un contexte sécurisé. Pas de fallback ni de polyfill. La modal détecte `window.isSecureContext === false` et affiche un message « HTTPS requis ». Localhost reste considéré comme sécurisé pour le dev.
 
 **Raison :** contrainte navigateur, non négociable. Documenté dans le README.
 
-### D9. Pas de saisie manuelle d'EAN, jamais
+### D10. Pas de saisie manuelle d'EAN, jamais
 
 **Décision :** aucun champ texte « saisir un code-barre » dans l'UI scan. Si la caméra ne marche pas (permission, hardware, contexte non sécurisé), la modal affiche une erreur et l'utilisateur peut soit revenir en arrière, soit utiliser le formulaire d'ajout d'ingrédient/inventaire classique (déjà disponible).
 
@@ -146,39 +168,33 @@ Permissions : si `getUserMedia` est refusé, le composable expose un état `perm
 
 **Raison :** décision produit assumée. Le scan est un raccourci ; sans caméra, l'utilisateur a déjà tous les outils manuels par ailleurs.
 
-### D10. Endpoints dédiés vs extension des routes existantes
+### D11. Endpoints dédiés vs extension des routes existantes
 
 **Décision :** deux nouvelles routes (`POST /api/inventory/from-scan`, `POST /api/inventory/consume-by-barcode`). On **n'étend pas** `POST /api/inventory` pour accepter un `productId` à la place d'un `ingredientId`.
 
 **Alternative :** un seul `POST /api/inventory` polymorphe (productId XOR ingredientId). Rejeté — schéma Zod plus complexe (union discriminée), couplage des deux flows dans le même use case, et perte de clarté pour les clients.
 
-**Raison :** chaque endpoint a une sémantique claire (« j'ajoute par scan » vs « j'ajoute manuellement »), les schémas restent simples, les tests sont indépendants.
-
-### D11. Migration : pas de backfill, NULL = DLC inconnue
-
-**Décision :** la migration ajoute `expiration_date date NULL`. Les items existants restent NULL. Le code traite NULL comme « DLC inconnue » (affichage : « DLC inconnue », FIFO : NULLs en dernier).
-
-**Alternative :** backfill avec `created_at + ingredient.shelf_life_days`. Rejeté — fausserait l'info (un yaourt créé il y a 3 mois aurait une DLC dans le futur). Mieux vaut être honnête.
-
-**Raison :** comportement explicite > comportement deviné. Cohérent avec « pas d'utilisateurs en prod » mais évite tout risque même en cas de réutilisation.
+**Raison :** chaque endpoint a une sémantique claire (« j'ajoute par scan » vs « j'ajoute manuellement »), les schémas restent simples, les tests sont indépendants. Note : la route existante `POST /api/inventory` voit quand même sa réponse évoluer (champ `created`, statut 200 possible) en raison du passage à l'upsert — c'est un changement de contrat documenté.
 
 ## Risks / Trade-offs
 
+- **Migration de la contrainte unique sur des bases de dev avec doublons** → Mitigation : documenter `db:reset` dans le README ; ajouter un message clair si la migration échoue (`ER_DUP_ENTRY` au moment de l'`ALTER TABLE`). En prod, pas d'utilisateurs donc non concerné.
+- **Concurrence sur l'upsert** : deux scans simultanés du même produit (par deux membres du foyer) peuvent tomber dans le path `create` avant l'INSERT → MySQL en rejette un avec `ER_DUP_ENTRY` → Mitigation : le repo intercepte cette erreur et relance la logique upsert (1 retry). C'est documenté dans la requirement.
 - **`BarcodeDetector` ne reconnaît pas tous les formats sur tous les Android** → Mitigation : exposer le format `[EAN-13, EAN-8, UPC-A]` au constructeur ; si la lecture échoue 3 fois, on bascule sur le fallback zxing même quand l'API native est disponible.
 - **Caméra arrière mal sélectionnée sur certains téléphones** → Mitigation : tenter `facingMode: { exact: 'environment' }`, fallback `facingMode: 'environment'`, dernier recours laisser le navigateur choisir. Exposer un bouton « changer de caméra » qui itère sur `enumerateDevices()`.
 - **Lib zxing pèse même en dynamic import** → Mitigation : split déjà natif via `import()`, chargée seulement quand `BarcodeDetector` est absent. Mesurer après intégration ; si > 100 KB gzip, envisager `@zxing/library` seul (sans le wrapper browser).
-- **NULL DLC en queue FIFO peut surprendre** → Mitigation : la réponse de l'endpoint `consume-by-barcode` inclut toujours la liste ordonnée des lots impactés, donc l'utilisateur voit ce qui a été décrémenté. Le composant affiche un badge « DLC inconnue » pour les lots NULL.
 - **EAN détecté avec faux positif** (le détecteur trouve un code dans une image en arrière-plan) → Mitigation : la modal demande deux lectures consécutives identiques avant d'émettre. Coût UX : ~200 ms de latence, acceptable.
 - **Multi-tenancy** : un EAN scanné dans le foyer A ne doit jamais résoudre dans le foyer B → couvert par la requirement existante d'`ingredients`. Le port `IProductLookup.findById` MUST aussi filtrer sur `householdId`.
-- **Migration `pnpm db:generate`** peut produire un diff inattendu si des migrations locales n'ont pas été appliquées → Mitigation : tasks.md exige de partir d'une base propre, et le PR description listera explicitement la migration générée.
+- **Sémantique d'upsert peu intuitive côté API** : un client qui appelle `POST` deux fois pourrait s'attendre à 2 ressources distinctes → Mitigation : champ `created: boolean` explicite dans la réponse + code 200 vs 201 + documentation dans le DTO. Les use cases existants (recettes, ingrédients) restent en `create` strict.
 
 ## Migration Plan
 
-1. Ajouter la colonne DB via `pnpm db:generate` (devrait produire un `ALTER TABLE inventory_items ADD COLUMN expiration_date DATE NULL`).
-2. Déployer le code serveur : les routes existantes acceptent `expirationDate` optionnelle, les nouvelles routes scan deviennent disponibles.
-3. Déployer le code front : les boutons scan apparaissent. Les pages existantes continuent de fonctionner sans modification d'UX (le champ DLC apparaît comme optionnel dans le formulaire inventory).
-4. Rollback : `DROP COLUMN expiration_date` + redéploiement. Aucune donnée critique perdue (DLC peut être ressaisie). Mais : si des items ont déjà été créés avec DLC, ces données seraient perdues — préférer un déploiement en avant (forward-fix) en cas de bug.
+1. Lancer `pnpm db:generate` après modification du schéma → migration qui ajoute la contrainte unique.
+2. Sur les bases de dev existantes : `pnpm db:reset` (ou `docker compose down -v`). Documenté dans le README.
+3. Déployer le code serveur : la route existante `POST /api/inventory` change de comportement (upsert) ; les nouvelles routes scan deviennent disponibles.
+4. Déployer le code front : les boutons scan apparaissent. La page `/inventory` peut continuer de fonctionner sans modification d'UX, mais le comportement « ajouter 2 fois la même chose » crée maintenant 1 seule ligne (à signaler dans la release note).
+5. Rollback : `DROP INDEX inventory_items_household_ingredient_location_uq` + redéploiement du code antérieur. Sûr (aucune donnée perdue).
 
 ## Open Questions
 
-Aucune en suspens : tous les choix de modélisation et d'UX ont été validés par l'utilisateur en amont de la proposal (Product 1↔N Barcode, ingrédient porte `storage` et `shelfLifeDays`, pas de saisie manuelle d'EAN, FIFO sur DLC, modal unifiée). Les choix techniques ci-dessus (port `IProductLookup`, dynamic import zxing, endpoints dédiés) sont pris ici sans question ouverte ; ils peuvent être revus si une difficulté concrète émerge à l'implémentation.
+Aucune en suspens : tous les choix de modélisation ont été validés par l'utilisateur en amont de la proposal (Product 1↔N Barcode, ingrédient porte `storage`, pas de DLC, pas de saisie manuelle d'EAN, ligne unique par `(ingredientId, location)`). Les choix techniques ci-dessus (port `IProductLookup`, dynamic import zxing, endpoints dédiés, 409 sur changement de location vers un conflit) sont pris ici sans question ouverte ; ils peuvent être revus si une difficulté concrète émerge à l'implémentation.

@@ -62,8 +62,8 @@ The system SHALL provide a `ScanResultDialog` that receives a scanned barcode an
 The dialog MUST:
 - Call `GET /api/barcodes/:code` with the scanned code as soon as it opens.
 - In `enrich` mode: open a product creation form (reusing `ProductForm` and `IngredientPicker`); if the barcode is already known, propose editing the existing product instead.
-- In `stock-in` mode: open a pre-filled inventory add form (quantity = `product.packSize`, unit = `product.packUnit`, location = `ingredient.storage`, expirationDate suggested as `today + ingredient.shelfLifeDays` if defined); if the barcode is unknown, propose switching to `enrich` mode.
-- In `consume` mode: open the consumption form; if multiple inventory lots match the ingredient, render the FIFO-ordered candidate list (via the preview endpoint) and let the user select one or accept the default cascade.
+- In `stock-in` mode: open a pre-filled inventory add form (quantity = `product.packSize`, unit = `product.packUnit`, location = `ingredient.storage`); if the barcode is unknown, propose switching to `enrich` mode.
+- In `consume` mode: open the consumption form. If the ingredient has lines in a single `location` (the common case), submit directly. If the ingredient has lines in multiple locations, call `consume-by-barcode` with `preview: true` first and display the candidate list (default storage line first, then the other locations) before confirmation.
 - Never call the inventory-modifying endpoints from the dialog itself when the user has not confirmed; the dialog is a UI layer over the composables, and side-effects only happen on submit.
 
 #### Scenario: Enrich mode with unknown barcode opens product creation
@@ -79,10 +79,10 @@ The dialog MUST:
 - **AND** offers an "Edit this product" action that opens the product update form
 
 #### Scenario: Stock-in mode pre-fills from product and ingredient
-- **GIVEN** a known barcode whose product has `packSize: 500`, `packUnit: 'g'` and ingredient `storage: 'pantry'`, `shelfLifeDays: 120`
+- **GIVEN** a known barcode whose product has `packSize: 500`, `packUnit: 'g'` and ingredient `storage: 'pantry'`
 - **WHEN** the dialog opens in `stock-in` mode
-- **THEN** the inventory add form is pre-filled with quantity `500 g`, location `pantry`, expirationDate `today + 120 days`
-- **AND** the user can adjust any of these before submitting
+- **THEN** the inventory add form is pre-filled with quantity `500 g` and location `pantry`
+- **AND** the user can adjust either before submitting
 
 #### Scenario: Stock-in mode with unknown barcode proposes enrich
 - **GIVEN** the dialog is opened with `mode: 'stock-in'` and an unknown barcode
@@ -90,18 +90,18 @@ The dialog MUST:
 - **THEN** the dialog displays "This product is not in your catalog yet"
 - **AND** offers an action "Create the product first" that switches to `enrich` mode keeping the same barcode
 
-#### Scenario: Consume mode with single matching lot
-- **GIVEN** a known barcode and exactly one inventory item for the resolved ingredient
+#### Scenario: Consume mode with a single matching line
+- **GIVEN** a known barcode and exactly one inventory line for the resolved ingredient (one location)
 - **WHEN** the dialog opens in `consume` mode and the user submits a quantity
 - **THEN** the dialog calls `POST /api/inventory/consume-by-barcode` (without `preview`)
-- **AND** the lot is decremented
+- **AND** the line is decremented
 
-#### Scenario: Consume mode with multiple lots displays preview
-- **GIVEN** a known barcode and three inventory items for the resolved ingredient (different expirationDates)
+#### Scenario: Consume mode with multiple locations displays preview
+- **GIVEN** a known barcode and two inventory lines for the resolved ingredient (different locations, e.g., pantry + fridge)
 - **WHEN** the dialog opens in `consume` mode
 - **THEN** it first calls `POST /api/inventory/consume-by-barcode` with `preview: true`
-- **AND** displays the FIFO-ordered candidate list with each lot's `expirationDate` and remaining quantity
-- **AND** lets the user pick a specific lot via `lotId` or accept the cascading FIFO default
+- **AND** displays the candidate list ordered with the default storage location first, then the others
+- **AND** the user can confirm to apply the default cascade
 
 ### Requirement: Mode Triggers from Pages
 The system SHALL expose scan entry points from the relevant pages, each with a fixed `mode`:

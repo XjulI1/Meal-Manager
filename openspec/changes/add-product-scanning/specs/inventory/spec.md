@@ -7,53 +7,67 @@ An item has:
 - An `ingredientId` referencing a non-archived ingredient that belongs to the same household. The field is **required**; HTTP 400 if missing, HTTP 400 if the ingredient is from another household or archived.
 - A storage location: `pantry`, `fridge` or `freezer`. The field is **optional** at the API level; if omitted, the system fills it from `ingredient.storage`. A submitted value MAY differ from `ingredient.storage` (legitimate override).
 - A quantity (positive number) and a unit. The unit MUST convert to the ingredient's `canonicalUnit`; HTTP 400 otherwise (incompatible dimension).
-- An **optional** `expirationDate` (ISO date `YYYY-MM-DD`). If omitted and the ingredient has a `shelfLifeDays`, the system MUST compute `expirationDate = today + ingredient.shelfLifeDays` server-side. If omitted and the ingredient has no `shelfLifeDays`, the item is stored with `expirationDate = NULL` (DLC unknown).
 
 The quantity MUST be normalized to canonical units (g, ml, unit) before persistence.
 
 The item does NOT carry a free-text name in v1 — the displayed name is always resolved from the referenced ingredient at read time.
 
-#### Scenario: Add a pantry item with explicit location
+**Upsert semantics**: a household MUST have at most one inventory item per `(ingredientId, location)`. When `POST /api/inventory` is called with a `(ingredientId, location)` combination that already has a line:
+- The existing line's quantity MUST be incremented by the submitted amount (in canonical unit).
+- `updatedAt` MUST be refreshed.
+- The system MUST return HTTP **200** with `{ item, created: false }`.
+
+When the combination does not exist:
+- A new line MUST be created.
+- The system MUST return HTTP **201** with `{ item, created: true }`.
+
+A database `UNIQUE INDEX (household_id, ingredient_id, location)` MUST exist on `inventory_items` as a backstop. If a concurrent insert races and triggers `ER_DUP_ENTRY`, the repository MUST retry the upsert logic once (re-read + increment).
+
+#### Scenario: Add a pantry item for the first time (creation)
 - GIVEN an authenticated household member
 - AND an ingredient `ing-pasta` with `name: "Pâtes", storage: "pantry", canonicalUnit: "g"` in the household
+- AND no existing inventory line for `(ing-pasta, pantry)`
 - WHEN they submit `POST /api/inventory` with `{ ingredientId: "ing-pasta", location: "pantry", quantity: 500, unit: "g" }`
 - THEN a new inventory item is created in their household
 - AND the stored quantity is `{ value: 500, unit: "g" }`
-- AND the item is associated with `location: "pantry"`
+- AND the system returns HTTP 201 with `{ item, created: true }`
+
+#### Scenario: Add to an existing line (increment)
+- GIVEN an existing inventory line for `(ing-pasta, pantry)` with quantity `500 g`
+- WHEN a member submits `POST /api/inventory` with `{ ingredientId: "ing-pasta", location: "pantry", quantity: 500, unit: "g" }`
+- THEN the existing line's quantity becomes `1000 g`
+- AND no new line is created
+- AND the system returns HTTP 200 with `{ item, created: false }`
+
+#### Scenario: Add to an existing line with unit conversion
+- GIVEN an existing line for `(ing-milk, fridge)` with quantity `500 ml`
+- WHEN a member submits `POST /api/inventory` with `{ ingredientId: "ing-milk", location: "fridge", quantity: 1, unit: "L" }`
+- THEN the existing line's quantity becomes `1500 ml`
+- AND `created: false`
+
+#### Scenario: Same ingredient, different location creates a distinct line
+- GIVEN an existing line for `(ing-pasta, pantry)` with quantity `500 g`
+- WHEN a member submits `POST /api/inventory` with `{ ingredientId: "ing-pasta", location: "fridge", quantity: 100, unit: "g" }`
+- THEN a **new** line is created for `(ing-pasta, fridge)` with `100 g`
+- AND the pantry line is unchanged
+- AND the system returns HTTP 201 with `{ item, created: true }`
 
 #### Scenario: Add an item with location derived from ingredient
 - GIVEN an ingredient `ing-milk` with `storage: "fridge", canonicalUnit: "ml"`
+- AND no line for `(ing-milk, fridge)`
 - WHEN a member submits `POST /api/inventory` with `{ ingredientId: "ing-milk", quantity: 1, unit: "L" }` (no `location`)
 - THEN the system fills `location: "fridge"` from the ingredient
 - AND the stored quantity is `{ value: 1000, unit: "ml" }`
+- AND the system returns HTTP 201
 
-#### Scenario: Add with explicit unit conversion
-- GIVEN an ingredient `ing-pasta` with `canonicalUnit: "g"`
-- WHEN a member submits `{ ingredientId: "ing-pasta", quantity: 1, unit: "kg" }`
-- THEN the stored quantity is `{ value: 1000, unit: "g" }`
-
-#### Scenario: Override the default storage
-- GIVEN an ingredient `ing-pasta` with `storage: "pantry"`
-- WHEN a member submits an item with `{ ingredientId: "ing-pasta", location: "fridge", quantity: 500, unit: "g" }`
-- THEN the item is created with `location: "fridge"` (the override is accepted)
-
-#### Scenario: Add with explicit expirationDate
-- GIVEN an authenticated household member
-- AND an ingredient `ing-yogurt` with `canonicalUnit: "g"` and `shelfLifeDays: 21`
-- WHEN they submit `POST /api/inventory` with `{ ingredientId: "ing-yogurt", quantity: 125, unit: "g", expirationDate: "2026-06-30" }`
-- THEN the item is stored with `expirationDate = 2026-06-30` (the explicit value wins)
-
-#### Scenario: ExpirationDate auto-computed from shelfLifeDays
-- GIVEN an ingredient `ing-yogurt` with `shelfLifeDays: 21`
-- AND the current date is 2026-05-17
-- WHEN a member submits `POST /api/inventory` with `{ ingredientId: "ing-yogurt", quantity: 125, unit: "g" }` (no `expirationDate`)
-- THEN the system computes and stores `expirationDate = 2026-06-07`
-
-#### Scenario: ExpirationDate left NULL when ingredient has no shelfLifeDays
-- GIVEN an ingredient `ing-flour` with `shelfLifeDays: null`
-- WHEN a member submits an item without `expirationDate`
-- THEN the item is stored with `expirationDate = NULL`
-- AND list endpoints return `expirationDate: null` for that item
+#### Scenario: Concurrent upsert resolved by retry
+- GIVEN no existing line for `(ing-pasta, pantry)`
+- WHEN two concurrent `POST /api/inventory` requests both with `(ing-pasta, pantry, 500 g)` execute simultaneously
+- AND both reach the "create" path before either commits
+- THEN the second INSERT triggers `ER_DUP_ENTRY` at the DB level
+- AND the repository catches it and retries the upsert
+- AND the final state is a single line for `(ing-pasta, pantry)` with quantity `1000 g`
+- AND both HTTP responses are successful (one 201 `created: true`, one 200 `created: false`)
 
 #### Scenario: Missing ingredientId
 - GIVEN an authenticated household member
@@ -75,79 +89,45 @@ The item does NOT carry a free-text name in v1 — the displayed name is always 
 - GIVEN an ingredient `ing-pasta` with `canonicalUnit: "g"`
 - WHEN a member submits `{ ingredientId: "ing-pasta", quantity: 500, unit: "ml" }`
 - THEN the system returns HTTP 400 Bad Request
-- AND no item is created
+- AND no item is created or modified
 
 #### Scenario: Invalid quantity
 - GIVEN an authenticated household member
 - WHEN they submit an item with `quantity <= 0`
 - THEN the system returns HTTP 400 Bad Request
-- AND no item is created
-
-#### Scenario: Add a freezer item
-- GIVEN an ingredient `ing-peas` with `storage: "freezer", canonicalUnit: "g"` in the household
-- WHEN a member submits `POST /api/inventory` with `{ ingredientId: "ing-peas", quantity: 1, unit: "kg" }`
-- THEN the system fills `location: "freezer"` from the ingredient
-- AND the stored quantity is `{ value: 1000, unit: "g" }`
+- AND no item is created or modified
 
 #### Scenario: Invalid location
 - GIVEN an authenticated household member
 - WHEN they submit an item with `location` other than `pantry`, `fridge` or `freezer`
 - THEN the system returns HTTP 400 Bad Request
-- AND no item is created
-
-#### Scenario: Invalid expirationDate format
-- GIVEN an authenticated household member
-- WHEN they submit an item with `expirationDate: "not-a-date"` or any value that is not an ISO `YYYY-MM-DD`
-- THEN the system returns HTTP 400 Bad Request
-- AND no item is created
-
-### Requirement: Listing Inventory Items
-The system SHALL return the list of inventory items belonging to the user's household.
-
-The list MAY be filtered by location via query parameter `?location=pantry|fridge|freezer`. Without a filter, all items are returned, grouped or sortable by location.
-
-Each returned item MUST include the resolved ingredient `name` and the ingredient `category` (so the client can render and group without a second request), and MUST include the item's `expirationDate` (ISO date `YYYY-MM-DD` or `null`).
-
-#### Scenario: List all items
-- GIVEN a household with 3 pantry items and 2 fridge items
-- WHEN a member calls `GET /api/inventory`
-- THEN the system returns all 5 items
-- AND each item includes `id`, `ingredientId`, `name` (resolved from the ingredient), `category` (resolved from the ingredient), `location`, `quantity` (with canonical unit), `expirationDate` (ISO date or null), and `lastUpdate` timestamp
-
-#### Scenario: List only pantry items
-- GIVEN the same household
-- WHEN a member calls `GET /api/inventory?location=pantry`
-- THEN the system returns only the 3 pantry items
-- AND each returned item exposes its `expirationDate` field
+- AND no item is created or modified
 
 ### Requirement: Updating an Inventory Item
 The system SHALL allow a household member to update an inventory item belonging to their household.
 
-Updatable fields: `location`, `quantity`, `unit`, `expirationDate`. The `ingredientId` is **immutable** once the item is created (changing the ingredient effectively means deleting the item and creating a new one — explicitly required so the user notices).
+Updatable fields: `location`, `quantity`, `unit`. The `ingredientId` is **immutable** once the item is created (changing the ingredient effectively means deleting the item and creating a new one — explicitly required so the user notices).
 
 When updating `quantity`/`unit`, the unit MUST convert to the ingredient's `canonicalUnit`; HTTP 400 otherwise.
 
-`expirationDate` MAY be set to `null` explicitly to clear a previously stored DLC.
+**Location-conflict rule**: when updating `location` to a value where another line already exists for the same `(householdId, ingredientId)`, the system MUST return HTTP 409 Conflict and modify nothing. The user is expected to resolve manually (consume one of the two lines, or transfer the quantity).
 
 #### Scenario: Update quantity
 - GIVEN an existing inventory item with ingredient `ing-pasta` and quantity `500 g`
 - WHEN a member calls `PATCH /api/inventory/:id` with `{ quantity: 250, unit: "g" }`
 - THEN the item's quantity is updated to `250 g`
 
-#### Scenario: Update location (override)
-- GIVEN an existing inventory item bound to an ingredient with `storage: "pantry"` and currently `location: "pantry"`
+#### Scenario: Update location to a free location
+- GIVEN an existing inventory item for `(ing-pasta, pantry)` and no line for `(ing-pasta, fridge)`
 - WHEN a member calls `PATCH /api/inventory/:id` with `{ location: "fridge" }`
 - THEN the item's location is updated to `"fridge"`
 
-#### Scenario: Update expirationDate
-- GIVEN an existing inventory item with `expirationDate: "2026-06-30"`
-- WHEN a member calls `PATCH /api/inventory/:id` with `{ expirationDate: "2026-07-15" }`
-- THEN the item's `expirationDate` is updated to `2026-07-15`
-
-#### Scenario: Clear expirationDate
-- GIVEN an existing inventory item with an `expirationDate` set
-- WHEN a member calls `PATCH /api/inventory/:id` with `{ expirationDate: null }`
-- THEN the item's `expirationDate` becomes NULL
+#### Scenario: Update location collides with an existing line
+- GIVEN two inventory lines: `(ing-pasta, pantry)` (500 g) and `(ing-pasta, fridge)` (200 g)
+- WHEN a member calls `PATCH /api/inventory/:pantry-id` with `{ location: "fridge" }`
+- THEN the system returns HTTP 409 Conflict
+- AND both lines are unchanged
+- AND the error response indicates the conflict (existing line id, ingredient, target location)
 
 #### Scenario: Cannot change ingredientId
 - GIVEN an existing inventory item bound to `ing-pasta`
@@ -169,40 +149,43 @@ When updating `quantity`/`unit`, the unit MUST convert to the ingredient's `cano
 ## ADDED Requirements
 
 ### Requirement: Adding an Inventory Item from a Product Scan
-The system SHALL expose `POST /api/inventory/from-scan` allowing a household member to create an inventory item from a previously resolved product (typically after a barcode scan).
+The system SHALL expose `POST /api/inventory/from-scan` allowing a household member to create or increment an inventory item from a previously resolved product (typically after a barcode scan).
 
 The request body MUST include:
 - `productId` (string, required) referencing a product in the same household.
 - `quantity` (object with `value` and `unit`, required). The unit MUST convert to the ingredient's `canonicalUnit`.
-- `expirationDate` (string `YYYY-MM-DD`, optional). When omitted, the server computes `today + ingredient.shelfLifeDays` if defined, otherwise stores `NULL`.
 - `location` (`pantry | fridge | freezer`, optional). When omitted, the server fills from `ingredient.storage` (resolved via the product).
 
 The use case MUST consult the product through a port `IProductLookup` declared in `server/contexts/inventory/domain/ports/`. The inventory use case MUST NOT import directly from `server/contexts/ingredients/**`. The adapter implementation lives under `server/contexts/ingredients/infrastructure/` and is wired in the composition root.
 
-On success, the system returns HTTP 201 with the created item view (same shape as `POST /api/inventory`).
+The same **upsert semantics** as `POST /api/inventory` apply: if a line already exists for the resolved `(ingredientId, location)`, its quantity is incremented; otherwise a new line is created. Response codes follow the same convention (201 if created, 200 if incremented), with `{ item, created: boolean }` in the body.
 
-#### Scenario: Add by scan with all defaults
-- GIVEN a product `prod-1` with `packSize: 500, packUnit: "g"` bound to ingredient `ing-pasta` (`storage: "pantry", shelfLifeDays: 730`)
-- AND the current date is 2026-05-17
+#### Scenario: Add by scan with defaults (creation)
+- GIVEN a product `prod-1` with `packSize: 500, packUnit: "g"` bound to ingredient `ing-pasta` (`storage: "pantry"`)
+- AND no existing line for `(ing-pasta, pantry)`
 - WHEN a member submits `POST /api/inventory/from-scan` with `{ productId: "prod-1", quantity: { value: 500, unit: "g" } }`
 - THEN a new inventory item is created in their household
-- AND the item has `ingredientId: "ing-pasta"`, `location: "pantry"`, `expirationDate: "2028-05-17"`, quantity `{ value: 500, unit: "g" }`
+- AND the item has `ingredientId: "ing-pasta"`, `location: "pantry"`, quantity `{ value: 500, unit: "g" }`
+- AND the system returns HTTP 201 with `{ item, created: true }`
 
-#### Scenario: Add by scan with explicit DLC overrides default
-- GIVEN the same product as above
-- WHEN a member submits `{ productId: "prod-1", quantity: { value: 500, unit: "g" }, expirationDate: "2027-01-15" }`
-- THEN the stored `expirationDate` is `2027-01-15` (explicit value wins over the computed default)
+#### Scenario: Add by scan increments an existing line
+- GIVEN an existing line for `(ing-pasta, pantry)` with quantity `500 g`
+- AND a product `prod-1` with `packSize: 500, packUnit: "g"` bound to `ing-pasta` (`storage: "pantry"`)
+- WHEN a member submits `POST /api/inventory/from-scan` with `{ productId: "prod-1", quantity: { value: 500, unit: "g" } }`
+- THEN the existing line's quantity becomes `1000 g`
+- AND the system returns HTTP 200 with `{ item, created: false }`
 
 #### Scenario: Add by scan with explicit location override
 - GIVEN a product whose ingredient has `storage: "pantry"`
+- AND no line for the same ingredient in `freezer`
 - WHEN a member submits `{ productId: "...", quantity: {...}, location: "freezer" }`
-- THEN the item is created with `location: "freezer"`
+- THEN a new line is created with `location: "freezer"`
 
 #### Scenario: Unknown product
 - GIVEN no product with id `prod-unknown` in the household
 - WHEN a member submits `POST /api/inventory/from-scan` with `{ productId: "prod-unknown", ... }`
 - THEN the system returns HTTP 404 Not Found
-- AND no item is created
+- AND no inventory line is created or modified
 
 #### Scenario: Product from another household
 - GIVEN a product belonging to household A
@@ -220,70 +203,79 @@ On success, the system returns HTTP 201 with the created item view (same shape a
 - THEN it MUST depend only on ports declared under `server/contexts/inventory/domain/ports/`
 - AND it MUST NOT import from `server/contexts/ingredients/**`
 
-### Requirement: Consuming Inventory by Barcode (FIFO on DLC)
-The system SHALL expose `POST /api/inventory/consume-by-barcode` allowing a household member to decrement inventory items by scanning a barcode.
+### Requirement: Consuming Inventory by Barcode
+The system SHALL expose `POST /api/inventory/consume-by-barcode` allowing a household member to decrement inventory by scanning a barcode.
 
 The request body MUST include:
 - `barcode` (string, required). Validated and normalized via the `Barcode` VO.
 - `quantity` (object with `value` and `unit`, required). The unit MUST convert to the ingredient's `canonicalUnit`.
-- `lotId` (string, optional). When provided, the system decrements **only that specific lot** (must belong to the same household and the same resolved ingredient).
-- `preview` (boolean, optional, default false). When true, the system computes the FIFO plan but does NOT modify any state.
+- `preview` (boolean, optional, default false). When true, the system computes the consumption plan but does NOT modify any state.
 
-Resolution order:
+Resolution and drain order:
 1. The barcode is resolved through the `IBarcodeResolver` port (already specified) to obtain a product and its ingredient.
-2. All inventory items in the household with the resolved `ingredientId` are listed, sorted by `expirationDate ASC NULLS LAST, createdAt ASC` (FIFO with unknown DLCs last).
-3. If `lotId` is provided, only that lot is considered.
-4. The requested quantity is drained from the head of the queue. When a lot reaches zero, it is removed (consistent with `Adjust Quantity`). Overflow to the next lot is allowed.
-5. If the total available quantity across all candidate lots is less than the requested quantity, the system returns HTTP 400 and modifies no state.
+2. All inventory lines in the household with the resolved `ingredientId` are listed and ordered as:
+   - The line at `ingredient.storage` (the default storage location) first.
+   - Then the other lines by `createdAt ASC`.
+3. The requested quantity is drained from the head of the queue. When a line reaches zero, it is removed (consistent with `Adjust Quantity`). Overflow to the next line is allowed.
+4. If the total available quantity across all lines is less than the requested quantity, the system returns HTTP 400 and modifies no state.
 
-In `preview` mode, the response is `{ candidates: Array<{ lotId, expirationDate, currentQuantity, wouldRemove }>, totalAvailable, fullyConsumed: boolean }`. No state changes.
+In `preview` mode, the response is `{ candidates: Array<{ lineId, location, currentQuantity, wouldRemove }>, totalAvailable, fullyConsumed: boolean }`. No state changes.
 
-In normal mode, the response is `{ impactedLots: Array<{ lotId, quantityRemoved, remainingQuantity, deleted: boolean }> }`.
+In normal mode, the response is `{ impactedLines: Array<{ lineId, location, quantityRemoved, remainingQuantity, deleted: boolean }> }`.
 
 The use case MUST consult the existing `IBarcodeResolver` port (already wired). It MUST NOT import from `server/contexts/ingredients/**`.
 
-#### Scenario: Consume from a single lot
-- GIVEN one inventory item `inv-1` of ingredient `ing-yogurt` with quantity `4 unit` and `expirationDate: "2026-06-01"`
+#### Scenario: Consume from the single default line
+- GIVEN one inventory line for `(ing-yogurt, fridge)` with quantity `4 unit` (and `ing-yogurt.storage === "fridge"`)
 - AND a product with barcode `1234567890128` bound to `ing-yogurt`
 - WHEN a member submits `POST /api/inventory/consume-by-barcode` with `{ barcode: "1234567890128", quantity: { value: 1, unit: "unit" } }`
-- THEN `inv-1` is updated to `3 unit`
-- AND the response is `{ impactedLots: [{ lotId: "inv-1", quantityRemoved: 1, remainingQuantity: 3, deleted: false }] }`
+- THEN the line is updated to `3 unit`
+- AND the response is `{ impactedLines: [{ lineId, location: "fridge", quantityRemoved: 1, remainingQuantity: 3, deleted: false }] }`
 
-#### Scenario: FIFO order across multiple lots
-- GIVEN three inventory items of the same ingredient with `expirationDate` `2026-06-01`, `2026-06-15`, `null` respectively
-- WHEN listing the FIFO order
-- THEN the items appear in this order: `2026-06-01`, then `2026-06-15`, then the one with `null`
+#### Scenario: Default storage line consumed first
+- GIVEN two inventory lines for ingredient `ing-pasta` (`storage: "pantry"`):
+  - `(ing-pasta, pantry)`: 500 g
+  - `(ing-pasta, fridge)`: 300 g
+- WHEN a member submits `{ barcode: "...", quantity: { value: 200, unit: "g" } }`
+- THEN the pantry line is decremented to `300 g`
+- AND the fridge line is unchanged
+- AND the response lists only the pantry line as impacted
 
-#### Scenario: Overflow across two lots
-- GIVEN two inventory items of `ing-yogurt`: `inv-1` (4 unit, DLC 2026-06-01), `inv-2` (4 unit, DLC 2026-06-15)
-- WHEN a member submits `{ barcode: "...", quantity: { value: 5, unit: "unit" } }`
-- THEN `inv-1` is fully consumed (4 unit removed) and deleted from the inventory
-- AND `inv-2` is decremented by 1 (now 3 unit)
-- AND the response lists both impacted lots in order
+#### Scenario: Overflow from default to other locations
+- GIVEN two inventory lines for ingredient `ing-pasta` (`storage: "pantry"`):
+  - `(ing-pasta, pantry)`: 500 g
+  - `(ing-pasta, fridge)`: 300 g
+- WHEN a member submits `{ barcode: "...", quantity: { value: 600, unit: "g" } }`
+- THEN the pantry line is fully consumed (500 g removed) and deleted from the inventory
+- AND the fridge line is decremented by 100 g (now 200 g)
+- AND the response lists both impacted lines in order (pantry first, then fridge)
 
 #### Scenario: Insufficient total quantity
-- GIVEN two lots totalling 4 unit
+- GIVEN lines totalling 4 unit
 - WHEN a member requests `{ quantity: { value: 5, unit: "unit" } }`
 - THEN the system returns HTTP 400 Bad Request
-- AND no lot is modified
+- AND no line is modified
 
 #### Scenario: Preview mode does not modify state
-- GIVEN two lots totalling 6 unit
+- GIVEN two lines totalling 6 unit
 - WHEN a member submits `{ ..., preview: true, quantity: { value: 5, unit: "unit" } }`
-- THEN the system returns the FIFO candidate plan with `wouldRemove` per lot
-- AND no inventory item is modified
+- THEN the system returns the candidate plan with `wouldRemove` per line
+- AND no inventory line is modified
 
-#### Scenario: Explicit lotId targets a single lot
-- GIVEN three lots of the same ingredient
-- WHEN a member submits `{ ..., lotId: "inv-2", quantity: { value: 1, unit: "unit" } }`
-- THEN only `inv-2` is considered and decremented
-- AND the other two lots are unchanged
+#### Scenario: Non-default locations ordered by createdAt
+- GIVEN three lines for ingredient `ing-pasta` (`storage: "pantry"`):
+  - `(ing-pasta, pantry)`: 100 g, createdAt 2026-01-01
+  - `(ing-pasta, freezer)`: 100 g, createdAt 2026-02-01
+  - `(ing-pasta, fridge)`: 100 g, createdAt 2026-03-01
+- WHEN a member submits `{ ..., quantity: { value: 250, unit: "g" } }`
+- THEN the drain order is: pantry first (default), then freezer (older non-default), then fridge
+- AND pantry is consumed in full and deleted, freezer is consumed in full and deleted, fridge is decremented by 50 g
 
 #### Scenario: Unknown barcode
 - GIVEN no product with the scanned barcode in the household
 - WHEN a member submits `POST /api/inventory/consume-by-barcode`
 - THEN the system returns HTTP 404 Not Found
-- AND no inventory item is modified
+- AND no inventory line is modified
 
 #### Scenario: Invalid barcode
 - GIVEN a barcode that fails GTIN checksum validation
@@ -330,3 +322,18 @@ The port and its adapter MUST be reachable by inventory use cases via `event.con
 - GIVEN a product `prod-1` belonging to household A
 - WHEN a member of household B calls `productLookup.findById("prod-1", "household-B-id")`
 - THEN the adapter MUST return `null`
+
+### Requirement: Inventory Uniqueness Constraint
+The `inventory_items` table MUST enforce a `UNIQUE` constraint on `(household_id, ingredient_id, location)` at the database level.
+
+This constraint is the backstop that guarantees the upsert semantics of `Adding an Inventory Item` even under concurrent writes.
+
+#### Scenario: Constraint exists in schema
+- GIVEN the Drizzle schema after this change
+- WHEN inspecting `server/database/schema/inventory-items.ts`
+- THEN a unique index named `inventory_items_household_ingredient_location_uq` MUST be declared on `(householdId, ingredientId, location)`
+
+#### Scenario: Constraint is applied to the database
+- GIVEN a fresh database after running migrations
+- WHEN inspecting the `inventory_items` table indexes
+- THEN a unique index MUST exist on `(household_id, ingredient_id, location)`
