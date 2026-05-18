@@ -141,6 +141,7 @@ const EMPTY_LABELS: Record<StorageLocation, string> = {
     <UModal
       v-model:open="showForm"
       :title="editing ? 'Modifier un article' : 'Ajouter un article'"
+      :description="editing ? 'Mettre à jour la quantité et l\'emplacement de cet article.' : 'Ajouter un article à l\'inventaire.'"
     >
       <template #body>
         <InventoryItemForm
@@ -153,14 +154,15 @@ const EMPTY_LABELS: Record<StorageLocation, string> = {
       </template>
     </UModal>
 
-    <ScanScanModal v-model:open="showScanModal" @scan="onScan" />
+    <ScanModal v-model:open="showScanModal" @scan="onScan" />
 
     <UModal
       v-model:open="showScanResult"
       :title="scanMode === 'stock-in' ? 'Ranger un produit' : 'Consommer un produit'"
+      :description="scanMode === 'stock-in' ? 'Confirmez la quantité et l\'emplacement à ajouter à l\'inventaire.' : 'Confirmez la quantité à retirer de l\'inventaire.'"
     >
       <template #body>
-        <ScanScanResultDialog
+        <ScanResultDialog
           v-if="scannedBarcode"
           :barcode="scannedBarcode"
           :mode="scanMode"

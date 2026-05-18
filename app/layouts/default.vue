@@ -19,6 +19,7 @@ watch(() => route.fullPath, () => {
       v-model:open="uiStore.sidebarOpen"
       :ui="{ content: 'sm:max-w-xs' }"
       title="Navigation"
+      description="Menu principal de l'application."
     >
       <template #body>
         <AppSidebar />

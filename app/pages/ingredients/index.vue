@@ -245,7 +245,11 @@ const grouped = computed<ItemsByCategory[]>(() => {
       </section>
     </div>
 
-    <UModal v-model:open="showForm" :title="editing ? 'Modifier l\'ingrédient' : 'Nouvel ingrédient'">
+    <UModal
+      v-model:open="showForm"
+      :title="editing ? 'Modifier l\'ingrédient' : 'Nouvel ingrédient'"
+      :description="editing ? 'Mettez à jour le nom et la catégorie de cet ingrédient.' : 'Ajoutez un nouvel ingrédient au catalogue.'"
+    >
       <template #body>
         <IngredientsIngredientForm
           :initial="editing"
@@ -259,6 +263,7 @@ const grouped = computed<ItemsByCategory[]>(() => {
     <UModal
       v-model:open="showProductForm"
       :title="productTarget ? `Nouveau produit pour « ${productTarget.name} »` : 'Nouveau produit'"
+      description="Ajoutez un produit (marque, code-barres, conditionnement) pour cet ingrédient."
     >
       <template #body>
         <IngredientsProductForm
@@ -271,11 +276,15 @@ const grouped = computed<ItemsByCategory[]>(() => {
       </template>
     </UModal>
 
-    <ScanScanModal v-model:open="showScanModal" @scan="onScan" />
+    <ScanModal v-model:open="showScanModal" @scan="onScan" />
 
-    <UModal v-model:open="showScanResult" title="Enrichir le catalogue">
+    <UModal
+      v-model:open="showScanResult"
+      title="Enrichir le catalogue"
+      description="Associez le code-barres scanné à un ingrédient existant ou créez un nouveau produit."
+    >
       <template #body>
-        <ScanScanResultDialog
+        <ScanResultDialog
           v-if="scannedBarcode"
           :barcode="scannedBarcode"
           mode="enrich"

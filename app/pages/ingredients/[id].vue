@@ -214,7 +214,11 @@ async function onScanResultDone() {
       </ul>
     </UCard>
 
-    <UModal v-model:open="showEdit" title="Modifier l'ingrédient">
+    <UModal
+      v-model:open="showEdit"
+      title="Modifier l'ingrédient"
+      description="Mettez à jour le nom et la catégorie de cet ingrédient."
+    >
       <template #body>
         <IngredientsIngredientForm
           :initial="ingredient"
@@ -225,7 +229,11 @@ async function onScanResultDone() {
       </template>
     </UModal>
 
-    <UModal v-model:open="showProductForm" :title="editingProduct ? 'Modifier le produit' : 'Nouveau produit'">
+    <UModal
+      v-model:open="showProductForm"
+      :title="editingProduct ? 'Modifier le produit' : 'Nouveau produit'"
+      :description="editingProduct ? 'Mettez à jour les informations du produit (marque, code-barres, conditionnement).' : 'Ajoutez un produit (marque, code-barres, conditionnement) pour cet ingrédient.'"
+    >
       <template #body>
         <IngredientsProductForm
           :ingredient-canonical-unit="ingredient.canonicalUnit"
@@ -237,11 +245,15 @@ async function onScanResultDone() {
       </template>
     </UModal>
 
-    <ScanScanModal v-model:open="showScanModal" @scan="onScan" />
+    <ScanModal v-model:open="showScanModal" @scan="onScan" />
 
-    <UModal v-model:open="showScanResult" :title="`Scanner un produit pour « ${ingredient.name} »`">
+    <UModal
+      v-model:open="showScanResult"
+      :title="`Scanner un produit pour « ${ingredient.name} »`"
+      description="Associez le code-barres scanné à un nouveau produit pour cet ingrédient."
+    >
       <template #body>
-        <ScanScanResultDialog
+        <ScanResultDialog
           v-if="scannedBarcode"
           :barcode="scannedBarcode"
           mode="enrich"
