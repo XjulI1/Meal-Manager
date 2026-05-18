@@ -27,6 +27,11 @@ export default defineNuxtConfig({
     databaseUrl: '',
     session: {
       password: '',
+      cookie: {
+        // h3 sets `secure: true` by default, which the browser rejects over HTTP
+        // (localhost in dev). Keep Secure cookies in production only.
+        secure: process.env.NODE_ENV === 'production',
+      },
     },
   },
 
