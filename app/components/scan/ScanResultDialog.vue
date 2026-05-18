@@ -218,6 +218,7 @@ const LOCATION_LABELS: Record<StorageLocation, string> = {
           :key="pickedIngredient.id"
           :ingredient-canonical-unit="pickedIngredient.canonicalUnit"
           :initial="null as never"
+          :initial-barcodes="[barcode]"
           :loading="submitting"
           @submit="submitEnrichWithBarcode"
           @cancel="emit('cancel')"

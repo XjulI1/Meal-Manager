@@ -6,6 +6,8 @@ const props = defineProps<{
   /** Required when creating a new product — sets the locked packUnit. */
   ingredientCanonicalUnit: CanonicalUnitDto
   initial?: ProductView | null
+  /** Pre-fills the barcode textarea on creation (e.g. from a scan). Ignored when `initial` is set. */
+  initialBarcodes?: string[]
   loading?: boolean
 }>()
 
@@ -23,7 +25,7 @@ const state = reactive<{
   brand: props.initial?.brand ?? '',
   packSize: props.initial?.packSize ?? 500,
   imageUrl: props.initial?.imageUrl ?? '',
-  barcodesText: (props.initial?.barcodes ?? []).join('\n'),
+  barcodesText: (props.initial?.barcodes ?? props.initialBarcodes ?? []).join('\n'),
 })
 
 function onSubmit() {
