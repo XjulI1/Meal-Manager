@@ -46,6 +46,18 @@ interface MockH3Error extends Error {
   event._responseHeaders[name] = value
 }
 
+;(globalThis as any).getResponseHeader = (
+  event: { _responseHeaders?: Record<string, string> },
+  name: string,
+) => {
+  if (!event._responseHeaders) return undefined
+  const lower = name.toLowerCase()
+  for (const k of Object.keys(event._responseHeaders)) {
+    if (k.toLowerCase() === lower) return event._responseHeaders[k]
+  }
+  return undefined
+}
+
 ;(globalThis as any).createError = (opts: {
   statusCode: number
   statusMessage?: string
@@ -85,6 +97,7 @@ export interface MockEvent<TBody = unknown> {
   _responseHeaders?: Record<string, string>
   _session?: { user?: { id: string, email: string } }
   _status?: number
+  path?: string
   context: {
     container: any
     user?: { id: string, email: string }
@@ -96,15 +109,19 @@ export function makeEvent<TBody>(opts: {
   query?: Record<string, unknown>
   params?: Record<string, string>
   headers?: Record<string, string>
+  responseHeaders?: Record<string, string>
   session?: { user?: { id: string, email: string } }
-  container: any
+  path?: string
+  container?: any
 }): MockEvent<TBody> {
   return {
     _body: opts.body,
     _query: opts.query,
     _params: opts.params,
     _headers: opts.headers,
+    _responseHeaders: opts.responseHeaders,
     _session: opts.session,
+    path: opts.path,
     context: { container: opts.container },
   }
 }
