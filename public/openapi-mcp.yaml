@@ -1,0 +1,295 @@
+openapi: 3.1.0
+
+info:
+  title: Meal Manager — MCP endpoint
+  version: "0.1.0"
+  summary: Model Context Protocol (Streamable HTTP) endpoint for Meal Manager.
+  description: |
+    Describes the single MCP endpoint exposed by Meal Manager (`/mcp`) and the
+    eight read-only tools registered on it. Authentication is by Personal Access
+    Token in the `Authorization: Bearer` header.
+
+    This document is **not** a description of the household-facing HTTP API
+    (`/api/*`) — those routes are cookie-authenticated and not intended to be
+    consumed by agents. Agents should only consume `/mcp`.
+
+    See `/llms-full.txt` for an English prose guide aimed at LLM operators,
+    and `/.well-known/api-catalog` (RFC 9727) for a machine-readable catalog.
+
+servers:
+  - url: "/"
+    description: Same origin as the document is served from.
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: mcp
+    description: |
+      JSON-RPC 2.0 endpoint conforming to the MCP Streamable HTTP transport
+      specification. Each `POST /mcp` is self-contained (stateless mode).
+
+paths:
+  /mcp:
+    post:
+      operationId: mcp_dispatch
+      tags: [mcp]
+      summary: Dispatch a JSON-RPC 2.0 MCP request.
+      description: |
+        Standard MCP entry point. Supported methods include `initialize`,
+        `tools/list`, `tools/call`, and the lifecycle messages defined by the
+        MCP specification. The set of registered tools is described below via
+        the `x-mcp-tool` extension on dedicated `operationId`s. They are NOT
+        REST paths — they are MCP tools dispatched through `tools/call`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JsonRpcRequest"
+      parameters:
+        - $ref: "#/components/parameters/AcceptStreamable"
+      responses:
+        "200":
+          description: JSON-RPC response (either application/json or text/event-stream).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JsonRpcResponse"
+            text/event-stream: {}
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "406":
+          description: |
+            Client must accept both application/json and text/event-stream.
+    get:
+      operationId: mcp_open_stream
+      tags: [mcp]
+      summary: Open a server-to-client stream (Streamable HTTP transport).
+      parameters:
+        - $ref: "#/components/parameters/AcceptStreamable"
+      responses:
+        "200":
+          description: Stream opened.
+          content:
+            text/event-stream: {}
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    delete:
+      operationId: mcp_terminate_session
+      tags: [mcp]
+      summary: Terminate the MCP session (no-op in stateless v1).
+      responses:
+        "200":
+          description: Acknowledged.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: mm_pat_*
+      description: |
+        Personal Access Token in the form `mm_pat_<22 base64url chars>`.
+        Created from the web UI at `/settings/tokens`. Scoped to a single
+        `(user, household)` pair. Revocable. Only the SHA-256 hash is stored
+        server-side.
+
+  parameters:
+    AcceptStreamable:
+      in: header
+      name: Accept
+      required: true
+      schema:
+        type: string
+        const: "application/json, text/event-stream"
+      description: |
+        Per the MCP Streamable HTTP transport spec, the client MUST accept
+        BOTH `application/json` and `text/event-stream`. Requests that accept
+        only one are rejected with HTTP 406.
+
+  responses:
+    Unauthorized:
+      description: Missing, malformed, unknown, or revoked Bearer token.
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+            const: 'Bearer realm="meal-manager-mcp"'
+
+  schemas:
+    JsonRpcRequest:
+      type: object
+      required: [jsonrpc, method]
+      properties:
+        jsonrpc:
+          type: string
+          const: "2.0"
+        id:
+          oneOf:
+            - { type: string }
+            - { type: integer }
+        method:
+          type: string
+        params:
+          type: object
+          additionalProperties: true
+
+    JsonRpcResponse:
+      type: object
+      required: [jsonrpc]
+      properties:
+        jsonrpc:
+          type: string
+          const: "2.0"
+        id:
+          oneOf:
+            - { type: string }
+            - { type: integer }
+            - { type: "null" }
+        result: {}
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: integer }
+            message: { type: string }
+            data: {}
+
+    StorageLocation:
+      type: string
+      enum: [pantry, fridge, freezer]
+
+    IngredientCategory:
+      type: string
+      enum:
+        - produce
+        - bakery
+        - meat-fish
+        - dairy
+        - frozen
+        - grocery
+        - beverages
+        - household
+        - other
+
+    IngredientStorage:
+      type: string
+      enum: [pantry, fridge, freezer]
+
+    UUID:
+      type: string
+      format: uuid
+
+    WeekStart:
+      type: string
+      pattern: "^\\d{4}-\\d{2}-\\d{2}$"
+      description: ISO date YYYY-MM-DD of the Monday of the target week.
+
+# ─────────────────────────────────────────────────────────────────────────────
+# x-mcp-tools: MCP tools exposed via tools/list and tools/call on POST /mcp.
+# These are NOT REST resources; they are dispatched through JSON-RPC and listed
+# here as `operationId`s for machine-readable discovery.
+# ─────────────────────────────────────────────────────────────────────────────
+
+x-mcp-tools:
+
+  - operationId: mealmanager_list_inventory
+    summary: List current inventory items (pantry + fridge + freezer).
+    description: |
+      Returns the current inventory of the household. Each item has its
+      ingredient name, category, quantity (canonical unit: g, ml, or unit)
+      and storage location. Optional `location` filter.
+    inputSchema:
+      type: object
+      additionalProperties: false
+      properties:
+        location:
+          $ref: "#/components/schemas/StorageLocation"
+
+  - operationId: mealmanager_list_recipes
+    summary: List household recipes.
+    inputSchema:
+      type: object
+      additionalProperties: false
+      properties:
+        query:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Optional title substring (case-insensitive).
+
+  - operationId: mealmanager_get_recipe
+    summary: Get full recipe details.
+    inputSchema:
+      type: object
+      additionalProperties: false
+      required: [recipeId]
+      properties:
+        recipeId:
+          $ref: "#/components/schemas/UUID"
+
+  - operationId: mealmanager_get_menu_for_week
+    summary: Get the weekly menu (creates an empty one if none exists).
+    description: |
+      Returns the menu (breakfast/lunch/dinner × 7 days) for the given week.
+      IMPORTANT: if no menu exists for that week yet, an empty menu is
+      created and returned (idempotent, matches the existing web behavior).
+    inputSchema:
+      type: object
+      additionalProperties: false
+      required: [weekStart]
+      properties:
+        weekStart:
+          $ref: "#/components/schemas/WeekStart"
+
+  - operationId: mealmanager_get_shopping_list
+    summary: Get the shopping list snapshot for a menu.
+    description: |
+      Returns the shopping list snapshot generated from a given weekly menu
+      (menu ingredients × servings − current inventory). Each item carries
+      `isChecked` indicating whether it has been purchased.
+    inputSchema:
+      type: object
+      additionalProperties: false
+      required: [menuId]
+      properties:
+        menuId:
+          $ref: "#/components/schemas/UUID"
+
+  - operationId: mealmanager_list_ingredients
+    summary: List the household ingredients catalog (master list).
+    inputSchema:
+      type: object
+      additionalProperties: false
+      properties:
+        query:
+          type: string
+          minLength: 1
+          maxLength: 100
+        category:
+          $ref: "#/components/schemas/IngredientCategory"
+        storage:
+          $ref: "#/components/schemas/IngredientStorage"
+        includeArchived:
+          type: boolean
+
+  - operationId: mealmanager_get_ingredient
+    summary: Get full ingredient details (with products attached).
+    inputSchema:
+      type: object
+      additionalProperties: false
+      required: [ingredientId]
+      properties:
+        ingredientId:
+          $ref: "#/components/schemas/UUID"
+
+  - operationId: mealmanager_get_household
+    summary: Get the current household this PAT is bound to.
+    inputSchema:
+      type: object
+      additionalProperties: false
+      properties: {}
