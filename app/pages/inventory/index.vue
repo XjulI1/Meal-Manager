@@ -13,6 +13,29 @@ const showForm = ref(false)
 const editing = ref<InventoryItemView | null>(null)
 const submitting = ref(false)
 
+// Scan flow state.
+const showScanModal = ref(false)
+const showScanResult = ref(false)
+const scanMode = ref<'stock-in' | 'consume'>('stock-in')
+const scannedBarcode = ref<string | null>(null)
+
+function openScan(mode: 'stock-in' | 'consume') {
+  scanMode.value = mode
+  scannedBarcode.value = null
+  showScanModal.value = true
+}
+
+function onScan(code: string) {
+  scannedBarcode.value = code
+  showScanModal.value = false
+  showScanResult.value = true
+}
+
+async function onScanResultDone() {
+  showScanResult.value = false
+  await refresh()
+}
+
 function openCreate() {
   editing.value = null
   showForm.value = true
@@ -31,8 +54,11 @@ async function onSubmit(payload: CreateInventoryItemDto) {
       toast.add({ title: 'Article mis à jour', color: 'success' })
     }
     else {
-      await api.create(payload)
-      toast.add({ title: 'Article ajouté', color: 'success' })
+      const result = await api.create(payload)
+      toast.add({
+        title: result.created ? 'Article ajouté' : 'Quantité incrémentée',
+        color: 'success',
+      })
     }
     showForm.value = false
     await refresh()
@@ -80,7 +106,15 @@ const EMPTY_LABELS: Record<StorageLocation, string> = {
   <div class="space-y-4">
     <div class="flex items-center justify-between gap-4 flex-wrap">
       <h1 class="text-2xl font-semibold">Inventaire</h1>
-      <UButton icon="i-lucide-plus" @click="openCreate">Ajouter un article</UButton>
+      <div class="flex gap-2 flex-wrap">
+        <UButton icon="i-lucide-scan-barcode" color="primary" variant="soft" @click="openScan('stock-in')">
+          Scanner pour ranger
+        </UButton>
+        <UButton icon="i-lucide-scan-line" color="warning" variant="soft" @click="openScan('consume')">
+          Scanner pour consommer
+        </UButton>
+        <UButton icon="i-lucide-plus" @click="openCreate">Ajouter un article</UButton>
+      </div>
     </div>
 
     <UTabs v-model="location" :items="tabItems" />
@@ -107,6 +141,7 @@ const EMPTY_LABELS: Record<StorageLocation, string> = {
     <UModal
       v-model:open="showForm"
       :title="editing ? 'Modifier un article' : 'Ajouter un article'"
+      :description="editing ? 'Mettre à jour la quantité et l\'emplacement de cet article.' : 'Ajouter un article à l\'inventaire.'"
     >
       <template #body>
         <InventoryItemForm
@@ -115,6 +150,24 @@ const EMPTY_LABELS: Record<StorageLocation, string> = {
           :loading="submitting"
           @submit="onSubmit"
           @cancel="showForm = false"
+        />
+      </template>
+    </UModal>
+
+    <ScanModal v-model:open="showScanModal" @scan="onScan" />
+
+    <UModal
+      v-model:open="showScanResult"
+      :title="scanMode === 'stock-in' ? 'Ranger un produit' : 'Consommer un produit'"
+      :description="scanMode === 'stock-in' ? 'Confirmez la quantité et l\'emplacement à ajouter à l\'inventaire.' : 'Confirmez la quantité à retirer de l\'inventaire.'"
+    >
+      <template #body>
+        <ScanResultDialog
+          v-if="scannedBarcode"
+          :barcode="scannedBarcode"
+          :mode="scanMode"
+          @done="onScanResultDone"
+          @cancel="showScanResult = false"
         />
       </template>
     </UModal>

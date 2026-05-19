@@ -50,6 +50,22 @@ pnpm db:generate   # (re)génère une migration depuis les schémas Drizzle
 pnpm db:migrate    # applique les migrations
 ```
 
+#### Migration `0003_add_inventory_items_unique_constraint`
+
+Cette migration ajoute une contrainte d'unicité sur `inventory_items (household_id, ingredient_id, location)` afin de garantir qu'**une ligne d'inventaire = un couple (ingrédient, emplacement)** (cf. sémantique upsert de `POST /api/inventory`). Si une base de dev contient déjà des doublons sur ce triplet, la migration échouera avec `ER_DUP_ENTRY`. Solution : repartir d'une base propre via `pnpm db:migrate` après reset, ou en environnement Docker :
+
+```bash
+docker compose down -v   # purge le volume MariaDB
+docker compose up --build
+```
+
+### Scan caméra (permissions navigateur)
+
+Les flows de scan code-barre (`/inventory` → "Scanner pour ranger / consommer", `/ingredients` → "Scanner un nouveau produit") utilisent l'API `BarcodeDetector` (Chrome Android) avec fallback `@zxing/browser` (Safari iOS, desktop). L'accès caméra exige un **contexte sécurisé** :
+
+- En dev : `http://localhost:3000` est accepté par les navigateurs.
+- En production : **HTTPS obligatoire**. Sans HTTPS, la modal de scan affiche un message « HTTPS requis » et la caméra ne démarre pas.
+
 ## Lancer en dev
 
 ```bash

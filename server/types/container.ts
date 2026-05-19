@@ -18,12 +18,15 @@ import type { ResolveByBarcodeUseCase } from '../contexts/ingredients/applicatio
 import type { UpdateIngredientUseCase } from '../contexts/ingredients/application/use-cases/update-ingredient.use-case'
 import type { UpdateProductUseCase } from '../contexts/ingredients/application/use-cases/update-product.use-case'
 import type { IBarcodeResolver } from '../contexts/inventory/domain/ports/barcode-resolver'
+import type { IProductLookup } from '../contexts/inventory/domain/ports/product-lookup.port'
 import type { AssignRecipeToSlotUseCase } from '../contexts/meal-planning/application/use-cases/assign-recipe-to-slot.use-case'
 import type { ClearSlotUseCase } from '../contexts/meal-planning/application/use-cases/clear-slot.use-case'
 import type { CreateMenuUseCase } from '../contexts/meal-planning/application/use-cases/create-menu.use-case'
 import type { GetMenuByWeekUseCase } from '../contexts/meal-planning/application/use-cases/get-menu-by-week.use-case'
+import type { AddInventoryItemFromProductScanUseCase } from '../contexts/inventory/application/use-cases/add-inventory-item-from-product-scan.use-case'
 import type { AddInventoryItemUseCase } from '../contexts/inventory/application/use-cases/add-inventory-item.use-case'
 import type { AdjustQuantityUseCase } from '../contexts/inventory/application/use-cases/adjust-quantity.use-case'
+import type { ConsumeInventoryItemByBarcodeUseCase } from '../contexts/inventory/application/use-cases/consume-inventory-item-by-barcode.use-case'
 import type { ListInventoryItemsUseCase } from '../contexts/inventory/application/use-cases/list-inventory-items.use-case'
 import type { RemoveInventoryItemUseCase } from '../contexts/inventory/application/use-cases/remove-inventory-item.use-case'
 import type { UpdateInventoryItemUseCase } from '../contexts/inventory/application/use-cases/update-inventory-item.use-case'
@@ -64,8 +67,12 @@ export interface Container {
   resolveByBarcode: ResolveByBarcodeUseCase
   /** Implements the inventory IBarcodeResolver port, bound to the in-household catalog. */
   barcodeResolver: IBarcodeResolver
+  /** Implements the inventory IProductLookup port, bound to the in-household catalog. */
+  productLookup: IProductLookup
   // inventory
   addInventoryItem: AddInventoryItemUseCase
+  addInventoryItemFromProductScan: AddInventoryItemFromProductScanUseCase
+  consumeInventoryItemByBarcode: ConsumeInventoryItemByBarcodeUseCase
   updateInventoryItem: UpdateInventoryItemUseCase
   removeInventoryItem: RemoveInventoryItemUseCase
   listInventoryItems: ListInventoryItemsUseCase

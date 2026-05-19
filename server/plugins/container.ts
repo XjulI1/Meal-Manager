@@ -24,11 +24,14 @@ import { UpdateIngredientUseCase } from '../contexts/ingredients/application/use
 import { UpdateProductUseCase } from '../contexts/ingredients/application/use-cases/update-product.use-case'
 import { IngredientBarcodeResolver } from '../contexts/ingredients/infrastructure/ingredient-barcode-resolver.adapter'
 import { IngredientLookupAdapter } from '../contexts/ingredients/infrastructure/ingredient-lookup.adapter'
+import { ProductLookupAdapter } from '../contexts/ingredients/infrastructure/product-lookup.adapter'
 import { DrizzleIngredientRepository } from '../contexts/ingredients/infrastructure/repositories/drizzle-ingredient.repository'
 import { DrizzleProductRepository } from '../contexts/ingredients/infrastructure/repositories/drizzle-product.repository'
 import { SeedDefaultIngredientsInitializer } from '../contexts/ingredients/infrastructure/seed-default-ingredients.initializer'
+import { AddInventoryItemFromProductScanUseCase } from '../contexts/inventory/application/use-cases/add-inventory-item-from-product-scan.use-case'
 import { AddInventoryItemUseCase } from '../contexts/inventory/application/use-cases/add-inventory-item.use-case'
 import { AdjustQuantityUseCase } from '../contexts/inventory/application/use-cases/adjust-quantity.use-case'
+import { ConsumeInventoryItemByBarcodeUseCase } from '../contexts/inventory/application/use-cases/consume-inventory-item-by-barcode.use-case'
 import { ListInventoryItemsUseCase } from '../contexts/inventory/application/use-cases/list-inventory-items.use-case'
 import { RemoveInventoryItemUseCase } from '../contexts/inventory/application/use-cases/remove-inventory-item.use-case'
 import { UpdateInventoryItemUseCase } from '../contexts/inventory/application/use-cases/update-inventory-item.use-case'
@@ -99,6 +102,8 @@ function buildContainer(): Container {
   const seedInitializer = new SeedDefaultIngredientsInitializer(seedDefaultIngredients)
   /** Cross-context lookup: inventory & catalog use this to resolve ingredient metadata at read time. */
   const ingredientLookup = new IngredientLookupAdapter(ingredientRepo)
+  /** Cross-context lookup: inventory uses this to resolve a productId on `POST /api/inventory/from-scan`. */
+  const productLookup = new ProductLookupAdapter(productRepo)
 
   // family — seed initializer is injected so every new household gets the default catalog.
   const householdRepo = new DrizzleHouseholdRepository(db)
@@ -108,6 +113,7 @@ function buildContainer(): Container {
 
   // inventory
   const inventoryRepo = new DrizzleInventoryItemRepository(db)
+  const addInventoryItem = new AddInventoryItemUseCase(inventoryRepo, ingredientLookup)
 
   // catalog
   const recipeRepo = new DrizzleRecipeRepository(db)
@@ -152,7 +158,10 @@ function buildContainer(): Container {
     removeProduct,
     resolveByBarcode,
     barcodeResolver,
-    addInventoryItem: new AddInventoryItemUseCase(inventoryRepo, ingredientLookup),
+    productLookup,
+    addInventoryItem,
+    addInventoryItemFromProductScan: new AddInventoryItemFromProductScanUseCase(productLookup, addInventoryItem),
+    consumeInventoryItemByBarcode: new ConsumeInventoryItemByBarcodeUseCase(inventoryRepo, barcodeResolver, ingredientLookup),
     updateInventoryItem: new UpdateInventoryItemUseCase(inventoryRepo, ingredientLookup),
     removeInventoryItem: new RemoveInventoryItemUseCase(inventoryRepo),
     listInventoryItems: new ListInventoryItemsUseCase(inventoryRepo, ingredientLookup),

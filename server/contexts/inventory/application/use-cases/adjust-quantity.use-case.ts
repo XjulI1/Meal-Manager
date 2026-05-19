@@ -51,7 +51,7 @@ export class AdjustQuantityUseCase {
     }
 
     const updated = existing.withQuantity(newQuantity, this.clock())
-    await this.items.save(updated)
+    await this.items.update(updated)
     return { removed: false, item: toView(updated, ingredient) }
   }
 }

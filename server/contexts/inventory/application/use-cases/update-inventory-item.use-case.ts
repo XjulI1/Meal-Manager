@@ -1,6 +1,7 @@
 import { Quantity } from '../../../../../shared/units/quantity'
 import { InvalidIngredientReferenceError } from '../../domain/errors/invalid-ingredient-reference.error'
 import { ItemNotFoundError } from '../../domain/errors/item-not-found.error'
+import { LocationConflictError } from '../../domain/errors/location-conflict.error'
 import type { IIngredientLookup } from '../../domain/ports/ingredient-lookup.port'
 import type { IInventoryItemRepository } from '../../domain/ports/inventory-item-repository.port'
 import { StorageLocation } from '../../domain/value-objects/storage-location.vo'
@@ -42,10 +43,21 @@ export class UpdateInventoryItemUseCase {
       updated = updated.withQuantity(quantity, now)
     }
     if (input.location !== undefined) {
-      updated = updated.withLocation(StorageLocation.fromString(input.location), now)
+      const target = StorageLocation.fromString(input.location)
+      if (!target.equals(existing.location)) {
+        const collision = await this.items.findByIngredientAndLocation(
+          existing.ingredientId,
+          target,
+          input.householdId,
+        )
+        if (collision && collision.id !== existing.id) {
+          throw new LocationConflictError(collision.id, existing.ingredientId, target.value)
+        }
+        updated = updated.withLocation(target, now)
+      }
     }
 
-    await this.items.save(updated)
+    await this.items.update(updated)
     return toView(updated, ingredient)
   }
 }

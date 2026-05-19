@@ -36,3 +36,14 @@ export const InventoryItemViewSchema = z.object({
   updatedAt: z.string().datetime(),
 })
 export type InventoryItemView = z.infer<typeof InventoryItemViewSchema>
+
+/**
+ * Response of POST /api/inventory and POST /api/inventory/from-scan.
+ * `created: true` → HTTP 201 (new line). `created: false` → HTTP 200 (the
+ * existing `(ingredientId, location)` line was incremented).
+ */
+export const InventoryUpsertResponseSchema = z.object({
+  item: InventoryItemViewSchema,
+  created: z.boolean(),
+})
+export type InventoryUpsertResponse = z.infer<typeof InventoryUpsertResponseSchema>

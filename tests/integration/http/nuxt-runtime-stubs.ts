@@ -7,6 +7,7 @@ import { vi } from 'vitest'
 interface MockH3Error extends Error {
   statusCode: number
   statusMessage?: string
+  data?: unknown
 }
 
 ;(globalThis as any).defineEventHandler = (handler: unknown) => handler
@@ -49,10 +50,12 @@ interface MockH3Error extends Error {
 ;(globalThis as any).createError = (opts: {
   statusCode: number
   statusMessage?: string
+  data?: unknown
 }): MockH3Error => {
   const err = new Error(opts.statusMessage ?? 'Error') as MockH3Error
   err.statusCode = opts.statusCode
   err.statusMessage = opts.statusMessage
+  if (opts.data !== undefined) err.data = opts.data
   return err
 }
 

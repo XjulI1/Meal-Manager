@@ -34,6 +34,7 @@ function confirm() {
   <UModal
     :open="open"
     title="Choisir une recette"
+    description="Sélectionnez une recette à placer dans ce créneau du menu."
     @update:open="emit('update:open', $event)"
   >
     <template #body>

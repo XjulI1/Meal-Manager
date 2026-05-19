@@ -3,6 +3,7 @@ import { AddInventoryItemUseCase } from '../../../server/contexts/inventory/appl
 import { UpdateInventoryItemUseCase } from '../../../server/contexts/inventory/application/use-cases/update-inventory-item.use-case'
 import { InvalidIngredientReferenceError } from '../../../server/contexts/inventory/domain/errors/invalid-ingredient-reference.error'
 import { ItemNotFoundError } from '../../../server/contexts/inventory/domain/errors/item-not-found.error'
+import { LocationConflictError } from '../../../server/contexts/inventory/domain/errors/location-conflict.error'
 import { InMemoryIngredientLookup } from '../_shared/in-memory-ingredient-lookup'
 import { InMemoryInventoryItemRepository } from './in-memory/in-memory-inventory-item.repository'
 
@@ -38,10 +39,23 @@ describe('UpdateInventoryItemUseCase', () => {
     expect(result.name).toBe('Pâtes')
   })
 
-  it('updates the location independently', async () => {
+  it('updates the location independently (free target)', async () => {
     const result = await update.execute({ householdId: HH, id: 'item-1', location: 'fridge' })
     expect(result.location).toBe('fridge')
     expect(result.quantity).toEqual({ value: 500, unit: 'g' })
+  })
+
+  it('rejects a location update that collides with another line for the same ingredient', async () => {
+    // Seed a second line in fridge for the same ingredient.
+    await add.execute({ householdId: HH, ingredientId: 'ing-pasta', quantity: { value: 200, unit: 'g' }, location: 'fridge' })
+
+    await expect(update.execute({ householdId: HH, id: 'item-1', location: 'fridge' }))
+      .rejects.toBeInstanceOf(LocationConflictError)
+
+    // Neither line is modified.
+    const pantry = await repo.findById('item-1', HH)
+    expect(pantry?.location.value).toBe('pantry')
+    expect(pantry?.quantity.value).toBe(500)
   })
 
   it('rejects an update with incompatible unit dimension', async () => {

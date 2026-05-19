@@ -1,6 +1,7 @@
 import type {
   CreateInventoryItemDto,
   InventoryItemView,
+  InventoryUpsertResponse,
   StorageLocation,
   UpdateInventoryItemDto,
 } from '../../shared/dto/inventory'
@@ -13,8 +14,8 @@ export function useApiInventory() {
     })
   }
 
-  async function create(payload: CreateInventoryItemDto): Promise<InventoryItemView> {
-    return $fetch<InventoryItemView>('/api/inventory', {
+  async function create(payload: CreateInventoryItemDto): Promise<InventoryUpsertResponse> {
+    return $fetch<InventoryUpsertResponse>('/api/inventory', {
       method: 'POST',
       body: payload,
     })
