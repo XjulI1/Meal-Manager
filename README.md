@@ -214,15 +214,22 @@ curl -X POST https://your-domain.example/mcp \
 
 Aujourd'hui (mai 2026) un Nest ne peut pas appeler directement un serveur MCP tiers. Le chemin pragmatique pour la voix : **Home Assistant comme bridge** — HA supporte les serveurs MCP en client et expose ses entités à Google Assistant via l'intégration officielle.
 
-### Discoverabilité
+### Discoverabilité (« agent-ready »)
 
-Deux fichiers servis statiquement :
-- [`/llms.txt`](./public/llms.txt) — sommaire pour découverte LLM.
-- [`/llms-full.txt`](./public/llms-full.txt) — guide complet (outils, auth, exemples).
+Quatre ressources publiques laissent un agent ou un scanner découvrir Meal Manager sans configuration préalable :
+
+| Endpoint | Rôle | Format |
+|---|---|---|
+| [`/robots.txt`](./public/robots.txt) | Bot Access Control — disallow `/` pour tous les crawlers IA (GPTBot, ClaudeBot, PerplexityBot, etc.) **et** wildcard. Cohérent avec une app privée — le seul canal agent est `/mcp` avec PAT. | `text/plain` |
+| `/.well-known/api-catalog` | Catalogue RFC 9727 — annonce l'endpoint `/mcp` et pointe vers sa description OpenAPI. | `application/linkset+json` |
+| [`/openapi-mcp.yaml`](./public/openapi-mcp.yaml) | OpenAPI 3.1 du `/mcp` — `securityScheme bearerAuth` + les 8 tools `mealmanager_*` documentés sous l'extension `x-mcp-tools`. | `application/yaml` |
+| [`/llms.txt`](./public/llms.txt) et [`/llms-full.txt`](./public/llms-full.txt) | Guides en prose pour opérateurs de LLM. | `text/plain` |
+
+De plus, chaque réponse HTTP (sauf `/mcp`) porte un header `Link` (RFC 8288) annonçant ces ressources — un `HEAD /` suffit à découvrir tout.
 
 ### Détails
 
-Voir le change [`add-mcp-llm-integration`](./openspec/changes/add-mcp-llm-integration/) (proposal, design, tasks) pour le rationale technique (transport stateless, hash SHA-256 plutôt qu'argon2id, futur OAuth 2.1).
+Voir les changes [`add-mcp-llm-integration`](./openspec/changes/archive/2026-05-17-add-mcp-llm-integration/) (transport stateless, hash SHA-256, futur OAuth 2.1) et [`add-agent-discoverability`](./openspec/changes/add-agent-discoverability/) (RFC 9727, robots.txt, OpenAPI MCP).
 
 ## Workflow OpenSpec
 
