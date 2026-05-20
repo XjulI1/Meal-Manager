@@ -13,7 +13,7 @@ Ce projet suit la spécification [Conventional Commits 1.0](https://www.conventi
 ```
 
 - **Type** : obligatoire, en minuscules.
-- **Scope** : optionnel, entre parenthèses. Pour ce projet, le scope correspond généralement au *bounded context* (`platform`, `family`, `inventory`, `catalog`, `meal-planning`, `shopping`) ou à une zone transverse (`deploy`, `db`, `ui`, `shared`, `docs`).
+- **Scope** : optionnel, entre parenthèses. Pour ce projet, le scope correspond généralement au *bounded context* (`platform`, `family`, `inventory`, `catalog`, `meal-planning`, `shopping`) ou à une zone transverse (`deploy`, `db`, `ui`, `shared`, `docs`, `discoverability`).
 - **`!`** : indique un *breaking change* (équivalent au footer `BREAKING CHANGE:`).
 - **Résumé** : à l'impératif présent (« ajoute », « corrige », pas « ajouté » ni « ajout »). Pas de point final.
 

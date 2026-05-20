@@ -126,7 +126,7 @@ Pas de tests Drizzle réels en v1 (acceptable pour la taille du projet ; pourra 
 ## Conventions
 
 - TypeScript strict (`strict`, `noUncheckedIndexedAccess`, `noImplicitOverride`).
-- Conventional Commits — détails et scopes (`platform`, `family`, `inventory`, `catalog`, `meal-planning`, `shopping`, `deploy`, `db`, `ui`, `shared`, `docs`) dans [`docs/COMMITS.md`](./docs/COMMITS.md). Référence le tasks.md d'un change en footer : `Refs: <change-slug> §<n.m>`.
+- Conventional Commits — détails et scopes (`platform`, `family`, `inventory`, `catalog`, `meal-planning`, `shopping`, `deploy`, `db`, `ui`, `shared`, `docs`, `discoverability`) dans [`docs/COMMITS.md`](./docs/COMMITS.md). Référence le tasks.md d'un change en footer : `Refs: <change-slug> §<n.m>`.
 - Une PR = un change OpenSpec ou un sous-ensemble cohérent de tasks.
 - Locale `fr-FR` (français uniquement en v1).
 - Auth : argon2id, paramètres OWASP 2024 (m=19456 KiB, t=2, p=1). `LoginUserUseCase` doit utiliser un dummy hash quand l'email est inconnu (neutralisation du timing attack) — ne pas l'enlever.

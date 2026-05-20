@@ -132,3 +132,22 @@ Alternative: write a custom Gemini API client that uses MCP as a tool source.
 ## Spec source
 
 Read-only spec snapshots live under `openspec/specs/<capability>/spec.md`. The MCP integration was introduced by change `add-mcp-llm-integration`. Look at `openspec/changes/archive/` for archived proposals once shipped.
+
+## Discovery endpoints
+
+Four publicly-served resources let an agent or a scanner discover Meal Manager's capabilities without prior knowledge:
+
+| Endpoint | Purpose | Format |
+|---|---|---|
+| `/robots.txt` | Bot Access Control — disallows AI crawlers from HTML pages. The legitimate agent channel is `/mcp` with a Bearer PAT. | `text/plain` |
+| `/.well-known/api-catalog` | RFC 9727 API catalog — single entry point listing the available APIs (currently just `/mcp`) and pointing to their descriptions. | `application/linkset+json` |
+| `/openapi-mcp.yaml` | OpenAPI 3.1 description of `/mcp` — declares the `bearerAuth` security scheme and the 8 `mealmanager_*` tools (each documented under the `x-mcp-tools` extension with its input schema). | `application/yaml` |
+| `/llms.txt` and `/llms-full.txt` | Prose, human-readable guides for LLM operators. You are reading the latter. | `text/plain` |
+
+In addition, every non-MCP HTTP response carries a `Link` header (RFC 8288) advertising these three resources, so a one-shot `HEAD /` lets an agent discover everything in a single round trip:
+
+```
+Link: </.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json",
+      </llms.txt>; rel="llms-txt"; type="text/plain",
+      </openapi-mcp.yaml>; rel="service-desc"; type="application/yaml"
+```

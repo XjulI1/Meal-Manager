@@ -1,0 +1,65 @@
+# Meal Manager — application familiale privée.
+# Aucune page HTML n'est destinée aux crawlers (tout est derrière authentification).
+# Les agents LLM passent par l'endpoint MCP /mcp avec un Personal Access Token.
+# Voir /.well-known/api-catalog (RFC 9727) pour la discoverabilité programmatique.
+
+# --- Crawlers IA explicitement bloqués ---
+
+User-agent: GPTBot
+Disallow: /
+
+User-agent: OAI-SearchBot
+Disallow: /
+
+User-agent: ChatGPT-User
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: Claude-SearchBot
+Disallow: /
+
+User-agent: Claude-User
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: PerplexityBot
+Disallow: /
+
+User-agent: Perplexity-User
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: Meta-ExternalAgent
+Disallow: /
+
+User-agent: Meta-ExternalFetcher
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: Applebot-Extended
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: cohere-ai
+Disallow: /
+
+User-agent: Diffbot
+Disallow: /
+
+User-agent: ImagesiftBot
+Disallow: /
+
+# --- Wildcard : tout le reste ---
+
+User-agent: *
+Disallow: /

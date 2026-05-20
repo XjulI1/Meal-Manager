@@ -16,4 +16,7 @@ A user creates a token from `/settings/tokens` after signing in. The plaintext i
 
 - Full agent-facing doc: [/llms-full.txt](/llms-full.txt)
 - MCP endpoint: [/mcp](/mcp)
+- API catalog (RFC 9727): [/.well-known/api-catalog](/.well-known/api-catalog)
+- OpenAPI 3.1 of the MCP endpoint: [/openapi-mcp.yaml](/openapi-mcp.yaml)
+- Bot policy: [/robots.txt](/robots.txt) — all AI crawlers are disallowed on HTML pages; the only legitimate agent channel is `/mcp` with a Bearer PAT.
 - Source: spec-driven via OpenSpec, hexagonal architecture per bounded context.
