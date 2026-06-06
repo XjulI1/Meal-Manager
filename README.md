@@ -169,11 +169,29 @@ Pour les détails d'architecture, voir [`docs/ARCHITECTURE.md`](./docs/ARCHITECT
 |---|---|---|
 | `DATABASE_URL` | oui | URL MariaDB au format `mysql://user:pass@host:port/db` |
 | `NUXT_SESSION_PASSWORD` | oui | Secret de signature des cookies de session (≥ 32 caractères) |
+| `NUXT_ANTHROPIC_API_KEY` | non | Clé serveur de l'API Claude pour l'assistant recettes IA (lue via `runtimeConfig`, préfixe `NUXT_` requis). Vide ⇒ IA inactive. Jamais exposée au client. |
+| `NUXT_ANTHROPIC_MODEL` | non | Modèle Claude utilisé (défaut `claude-sonnet-4-6`). |
+| `NUXT_ANTHROPIC_CHAT_EFFORT` | non | Effort du chat : `low`/`medium`/`high`/`max` (défaut `medium`). |
+| `NUXT_ANTHROPIC_IMPORT_EFFORT` | non | Effort de l'extraction d'import (défaut `low`). |
 | `NODE_ENV` | non | `development` / `production` |
 | `HOST` / `PORT` | non | Bind du serveur Nitro (défaut image Docker : `0.0.0.0:3000`) |
 | `MARIADB_USER` / `MARIADB_PASSWORD` / `MARIADB_DATABASE` / `MARIADB_ROOT_PASSWORD` | compose uniquement | Initialisent le service `db` du `docker-compose.yml` |
 
 Voir `.env.example`.
+
+## Assistant recettes (IA)
+
+Un assistant conversationnel (Claude) aide à trouver, co-construire ou importer une recette, puis pré-remplit le formulaire de création (`/recipes/chat`). Recherche web intégrée + import depuis une URL (JSON-LD, repli extraction Claude).
+
+- Nécessite `ANTHROPIC_API_KEY` côté serveur.
+- **Désactivé par défaut, par compte** : la colonne `users.ai_enabled` vaut `false` à la création. Tant qu'elle n'est pas activée, les routes IA renvoient `403` et aucun appel à l'API n'est fait (pas de consommation subie).
+- **Activer un compte** (paramètre administrateur en v1) via `pnpm db:studio`, ou en SQL :
+
+```sql
+UPDATE users SET ai_enabled = 1 WHERE email = 'utilisateur@example.com';
+```
+
+L'utilisateur retrouve alors l'entrée « Assistant IA » dans Recettes.
 
 ## Intégration LLM (MCP)
 

@@ -1,9 +1,15 @@
 import { useDb } from '../database/client'
+import { ChatRecipeUseCase } from '../contexts/catalog/application/use-cases/chat-recipe.use-case'
 import { CreateRecipeUseCase } from '../contexts/catalog/application/use-cases/create-recipe.use-case'
+import { ImportRecipeFromUrlUseCase } from '../contexts/catalog/application/use-cases/import-recipe-from-url.use-case'
+import { ResolveRecipeDraftUseCase } from '../contexts/catalog/application/use-cases/resolve-recipe-draft.use-case'
 import { DeleteRecipeUseCase } from '../contexts/catalog/application/use-cases/delete-recipe.use-case'
 import { GetRecipeByIdUseCase } from '../contexts/catalog/application/use-cases/get-recipe-by-id.use-case'
 import { ListRecipesUseCase } from '../contexts/catalog/application/use-cases/list-recipes.use-case'
 import { UpdateRecipeUseCase } from '../contexts/catalog/application/use-cases/update-recipe.use-case'
+import { AnthropicRecipeChatService } from '../contexts/catalog/infrastructure/adapters/anthropic-recipe-chat.service'
+import { AnthropicRecipeImporter } from '../contexts/catalog/infrastructure/adapters/anthropic-recipe-importer'
+import { DEFAULT_CHAT_EFFORT, DEFAULT_IMPORT_EFFORT, parseEffort } from '../contexts/catalog/infrastructure/anthropic-config'
 import { DrizzleRecipeRepository } from '../contexts/catalog/infrastructure/repositories/drizzle-recipe.repository'
 import { CreateHouseholdUseCase } from '../contexts/family/application/use-cases/create-household.use-case'
 import { GetCurrentHouseholdUseCase } from '../contexts/family/application/use-cases/get-current-household.use-case'
@@ -43,6 +49,7 @@ import { GetMenuByWeekUseCase } from '../contexts/meal-planning/application/use-
 import { CatalogRecipeFinder } from '../contexts/meal-planning/infrastructure/adapters/recipe-finder.adapter'
 import { DrizzleMenuRepository } from '../contexts/meal-planning/infrastructure/repositories/drizzle-menu.repository'
 import { AuthenticatePersonalAccessTokenUseCase } from '../contexts/platform/application/use-cases/authenticate-personal-access-token.use-case'
+import { GetUserAiAccessUseCase } from '../contexts/platform/application/use-cases/get-user-ai-access.use-case'
 import { CreatePersonalAccessTokenUseCase } from '../contexts/platform/application/use-cases/create-personal-access-token.use-case'
 import { ListPersonalAccessTokensUseCase } from '../contexts/platform/application/use-cases/list-personal-access-tokens.use-case'
 import { LoginUserUseCase } from '../contexts/platform/application/use-cases/login-user.use-case'
@@ -117,6 +124,19 @@ function buildContainer(): Container {
 
   // catalog
   const recipeRepo = new DrizzleRecipeRepository(db)
+  // AI recipe assistant — config from runtimeConfig (server-only). Key, model
+  // and effort are overridable via NUXT_ANTHROPIC_* env vars; gated per account.
+  const aiConfig = useRuntimeConfig()
+  const recipeChatAssistant = new AnthropicRecipeChatService(
+    aiConfig.anthropicApiKey,
+    aiConfig.anthropicModel,
+    parseEffort(aiConfig.anthropicChatEffort, DEFAULT_CHAT_EFFORT),
+  )
+  const recipeImporter = new AnthropicRecipeImporter(
+    aiConfig.anthropicApiKey,
+    aiConfig.anthropicModel,
+    parseEffort(aiConfig.anthropicImportEffort, DEFAULT_IMPORT_EFFORT),
+  )
 
   // meal-planning
   const menuRepo = new DrizzleMenuRepository(db)
@@ -143,6 +163,7 @@ function buildContainer(): Container {
     listPersonalAccessTokens: new ListPersonalAccessTokensUseCase(patRepo),
     revokePersonalAccessToken: new RevokePersonalAccessTokenUseCase(patRepo),
     authenticatePersonalAccessToken: new AuthenticatePersonalAccessTokenUseCase(patRepo, tokenGenerator),
+    getUserAiAccess: new GetUserAiAccessUseCase(userRepo),
     createHousehold: new CreateHouseholdUseCase(householdRepo, inviteCodes, [seedInitializer]),
     joinHousehold: new JoinHouseholdUseCase(householdRepo),
     leaveHousehold: new LeaveHouseholdUseCase(householdRepo),
@@ -171,6 +192,9 @@ function buildContainer(): Container {
     deleteRecipe: new DeleteRecipeUseCase(recipeRepo),
     listRecipes: new ListRecipesUseCase(recipeRepo),
     getRecipeById: new GetRecipeByIdUseCase(recipeRepo, ingredientLookup),
+    chatRecipe: new ChatRecipeUseCase(recipeChatAssistant),
+    importRecipeFromUrl: new ImportRecipeFromUrlUseCase(recipeImporter),
+    resolveRecipeDraft: new ResolveRecipeDraftUseCase(ingredientLookup),
     createMenu: new CreateMenuUseCase(menuRepo),
     getMenuByWeek: new GetMenuByWeekUseCase(menuRepo),
     assignRecipeToSlot: new AssignRecipeToSlotUseCase(menuRepo, recipeFinder),

@@ -24,6 +24,13 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     databaseUrl: '',
+    // Anthropic Claude API config (recipe AI assistant) — server-only, never
+    // under `public`. Overridable at runtime via NUXT_ANTHROPIC_* env vars;
+    // defaults below are the current values.
+    anthropicApiKey: '',
+    anthropicModel: 'claude-sonnet-4-6',
+    anthropicChatEffort: 'medium',
+    anthropicImportEffort: 'low',
     session: {
       password: '',
       cookie: {

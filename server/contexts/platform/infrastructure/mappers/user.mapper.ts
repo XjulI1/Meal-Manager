@@ -7,6 +7,7 @@ export const UserMapper = {
       id: row.id,
       email: row.email,
       passwordHash: row.passwordHash,
+      aiEnabled: row.aiEnabled,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     })
@@ -17,6 +18,7 @@ export const UserMapper = {
       id: user.id,
       email: user.email,
       passwordHash: user.passwordHash,
+      aiEnabled: user.aiEnabled,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     }

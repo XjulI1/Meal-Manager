@@ -7,6 +7,11 @@ const toast = useToast()
 const api = useApiRecipes()
 const submitting = ref(false)
 
+// Consume the one-shot AI assistant hand-off (if the user arrived from the chat).
+const prefillState = useRecipePrefill()
+const prefill = prefillState.value
+prefillState.value = null
+
 async function onSubmit(payload: CreateRecipeDto) {
   submitting.value = true
   try {
@@ -33,7 +38,7 @@ async function onSubmit(payload: CreateRecipeDto) {
       <h1 class="text-2xl font-semibold">Nouvelle recette</h1>
     </div>
     <UCard>
-      <RecipeForm :loading="submitting" @submit="onSubmit" @cancel="navigateTo('/recipes')" />
+      <RecipeForm :prefill="prefill" :loading="submitting" @submit="onSubmit" @cancel="navigateTo('/recipes')" />
     </UCard>
   </div>
 </template>

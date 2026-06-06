@@ -1,4 +1,7 @@
+import type { ChatRecipeUseCase } from '../contexts/catalog/application/use-cases/chat-recipe.use-case'
 import type { CreateRecipeUseCase } from '../contexts/catalog/application/use-cases/create-recipe.use-case'
+import type { ImportRecipeFromUrlUseCase } from '../contexts/catalog/application/use-cases/import-recipe-from-url.use-case'
+import type { ResolveRecipeDraftUseCase } from '../contexts/catalog/application/use-cases/resolve-recipe-draft.use-case'
 import type { DeleteRecipeUseCase } from '../contexts/catalog/application/use-cases/delete-recipe.use-case'
 import type { GetRecipeByIdUseCase } from '../contexts/catalog/application/use-cases/get-recipe-by-id.use-case'
 import type { ListRecipesUseCase } from '../contexts/catalog/application/use-cases/list-recipes.use-case'
@@ -33,6 +36,7 @@ import type { UpdateInventoryItemUseCase } from '../contexts/inventory/applicati
 import type { AuthenticatePersonalAccessTokenUseCase } from '../contexts/platform/application/use-cases/authenticate-personal-access-token.use-case'
 import type { CreatePersonalAccessTokenUseCase } from '../contexts/platform/application/use-cases/create-personal-access-token.use-case'
 import type { ListPersonalAccessTokensUseCase } from '../contexts/platform/application/use-cases/list-personal-access-tokens.use-case'
+import type { GetUserAiAccessUseCase } from '../contexts/platform/application/use-cases/get-user-ai-access.use-case'
 import type { LoginUserUseCase } from '../contexts/platform/application/use-cases/login-user.use-case'
 import type { RegisterUserUseCase } from '../contexts/platform/application/use-cases/register-user.use-case'
 import type { RevokePersonalAccessTokenUseCase } from '../contexts/platform/application/use-cases/revoke-personal-access-token.use-case'
@@ -49,6 +53,8 @@ export interface Container {
   listPersonalAccessTokens: ListPersonalAccessTokensUseCase
   revokePersonalAccessToken: RevokePersonalAccessTokenUseCase
   authenticatePersonalAccessToken: AuthenticatePersonalAccessTokenUseCase
+  /** Authoritative AI-access check for the AI route guard (reads the DB flag). */
+  getUserAiAccess: GetUserAiAccessUseCase
   // family
   createHousehold: CreateHouseholdUseCase
   joinHousehold: JoinHouseholdUseCase
@@ -83,6 +89,10 @@ export interface Container {
   deleteRecipe: DeleteRecipeUseCase
   listRecipes: ListRecipesUseCase
   getRecipeById: GetRecipeByIdUseCase
+  /** AI recipe assistant (chat / import / draft resolution) — gated per account. */
+  chatRecipe: ChatRecipeUseCase
+  importRecipeFromUrl: ImportRecipeFromUrlUseCase
+  resolveRecipeDraft: ResolveRecipeDraftUseCase
   // meal-planning
   createMenu: CreateMenuUseCase
   getMenuByWeek: GetMenuByWeekUseCase
@@ -98,7 +108,7 @@ export interface Container {
 declare module 'h3' {
   interface H3EventContext {
     container: Container
-    user?: { id: string, email: string }
+    user?: { id: string, email: string, aiEnabled?: boolean }
   }
 }
 
@@ -106,6 +116,8 @@ declare module '#auth-utils' {
   interface User {
     id: string
     email: string
+    /** UI hint for AI feature access; the server gate is authoritative (DB). */
+    aiEnabled: boolean
   }
 }
 

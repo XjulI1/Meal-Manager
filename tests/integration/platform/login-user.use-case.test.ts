@@ -23,7 +23,7 @@ describe('LoginUserUseCase', () => {
       email: 'ALICE@example.com',
       password: 'strongPassword123!',
     })
-    expect(result).toEqual({ userId: 'user-1', email: 'alice@example.com' })
+    expect(result).toEqual({ userId: 'user-1', email: 'alice@example.com', aiEnabled: false })
   })
 
   it('rejects when the password does not match', async () => {
