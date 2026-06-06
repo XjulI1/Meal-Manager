@@ -6,16 +6,15 @@ export default defineNuxtConfig({
   ssr: false,
 
   future: {
-    compatibilityVersion: 4,
+    compatibilityVersion: 5,
   },
 
-  modules: [
-    '@nuxt/ui',
-    '@nuxt/eslint',
-    '@pinia/nuxt',
-    'nuxt-auth-utils',
-  ],
-
+  modules: ['@nuxt/ui', '@nuxt/eslint', '@pinia/nuxt', 'nuxt-auth-utils'],
+  vite: {
+    optimizeDeps: {
+      include: ['zod'],
+    },
+  },
   css: ['~/assets/css/main.css'],
 
   typescript: {
@@ -54,5 +53,9 @@ export default defineNuxtConfig({
       htmlAttrs: { lang: 'fr-FR' },
       title: 'Meal Manager',
     },
+  },
+
+  experimental: {
+    viteEnvironmentApi: true,
   },
 })
