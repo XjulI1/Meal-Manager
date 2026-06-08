@@ -77,6 +77,30 @@ Les flows de scan code-barre (`/inventory` → "Scanner pour ranger / consommer"
 pnpm dev   # http://localhost:3000
 ```
 
+## PWA (application installable)
+
+Meal Manager est une **Progressive Web App** (module `@vite-pwa/nuxt`) :
+installable sur mobile/desktop (icône d'écran d'accueil, affichage `standalone`)
+avec un service worker qui précache le *shell* applicatif (JS/CSS/HTML/icônes).
+
+- **Manifest** : `/manifest.webmanifest` (généré au build). Thème vert `#16a34a`.
+- **Service worker** : `registerType: 'autoUpdate'`. Une notification « Mise à jour
+  disponible » invite l'utilisateur à recharger (pas de reload silencieux).
+- **Hors-ligne** : **shell uniquement**. Les appels `/api/*`, `/mcp` et
+  `/.well-known/*` restent _network-only_ (données par foyer jamais servies
+  périmées). Le fonctionnement déconnecté des données est hors scope v1.
+- **Dev** : le SW est désactivé en `pnpm dev` (`devOptions.enabled: false`).
+  Pour le tester : `pnpm build && pnpm preview`, puis DevTools → Application.
+
+### Régénérer les icônes
+
+Les icônes (`public/pwa-*.png`, `maskable-icon-512x512.png`,
+`apple-touch-icon-180x180.png`) sont produites sans dépendance externe :
+
+```bash
+node scripts/generate-pwa-icons.mjs
+```
+
 ## Lancer via Docker
 
 L'image embarque le bundle Nitro standalone (`.output/`) + l'outillage Drizzle.

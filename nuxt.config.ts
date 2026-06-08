@@ -9,7 +9,13 @@ export default defineNuxtConfig({
     compatibilityVersion: 5,
   },
 
-  modules: ['@nuxt/ui', '@nuxt/eslint', '@pinia/nuxt', 'nuxt-auth-utils'],
+  modules: [
+    '@nuxt/ui',
+    '@nuxt/eslint',
+    '@pinia/nuxt',
+    'nuxt-auth-utils',
+    '@vite-pwa/nuxt',
+  ],
   vite: {
     optimizeDeps: {
       include: ['zod'],
@@ -59,6 +65,78 @@ export default defineNuxtConfig({
     head: {
       htmlAttrs: { lang: 'fr-FR' },
       title: 'Meal Manager',
+      meta: [
+        {
+          name: 'description',
+          content:
+            "Gérez l'inventaire, les recettes, les menus et la liste de courses de votre foyer.",
+        },
+        { name: 'theme-color', content: '#16a34a' },
+        { name: 'apple-mobile-web-app-capable', content: 'yes' },
+        { name: 'mobile-web-app-capable', content: 'yes' },
+        {
+          name: 'apple-mobile-web-app-status-bar-style',
+          content: 'black-translucent',
+        },
+        { name: 'apple-mobile-web-app-title', content: 'Meal Manager' },
+      ],
+      link: [
+        { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
+        {
+          rel: 'apple-touch-icon',
+          href: '/apple-touch-icon-180x180.png',
+          sizes: '180x180',
+        },
+      ],
+    },
+  },
+
+  // PWA : application installable (manifest + service worker). L'app étant en
+  // SPA (`ssr: false`), le SW précache le shell ; les appels `/api` et `/mcp`
+  // restent network-only (données par foyer, offline non supporté en v1 —
+  // voir openspec/project.md).
+  pwa: {
+    registerType: 'autoUpdate',
+    manifest: {
+      name: 'Meal Manager',
+      short_name: 'Meal Manager',
+      description:
+        "Gérez l'inventaire, les recettes, les menus et la liste de courses de votre foyer.",
+      lang: 'fr-FR',
+      dir: 'ltr',
+      theme_color: '#16a34a',
+      background_color: '#ffffff',
+      display: 'standalone',
+      orientation: 'portrait',
+      start_url: '/',
+      scope: '/',
+      categories: ['food', 'lifestyle', 'productivity'],
+      icons: [
+        { src: 'pwa-64x64.png', sizes: '64x64', type: 'image/png' },
+        { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+        { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+        {
+          src: 'maskable-icon-512x512.png',
+          sizes: '512x512',
+          type: 'image/png',
+          purpose: 'maskable',
+        },
+      ],
+    },
+    workbox: {
+      globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+      navigateFallback: '/',
+      navigateFallbackDenylist: [/^\/api\//, /^\/mcp/, /^\/\.well-known\//],
+      cleanupOutdatedCaches: true,
+      clientsClaim: true,
+      skipWaiting: true,
+    },
+    client: {
+      installPrompt: true,
+    },
+    devOptions: {
+      enabled: false,
+      type: 'module',
     },
   },
 
