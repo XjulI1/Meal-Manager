@@ -23,6 +23,19 @@ export class IngredientLookupAdapter implements InventoryLookup, CatalogLookup {
     }
   }
 
+  async findActiveByNameInHousehold(name: string, householdId: string): Promise<IngredientSummary | null> {
+    const ing = await this.ingredients.findActiveByNameInHousehold(name, householdId)
+    if (!ing) return null
+    return {
+      id: ing.id,
+      name: ing.name,
+      category: ing.category.value,
+      canonicalUnit: ing.canonicalUnit,
+      storage: ing.storage,
+      archived: ing.archived,
+    }
+  }
+
   async findByIds(ids: readonly string[], householdId: string): Promise<Map<string, IngredientSummary>> {
     const result = new Map<string, IngredientSummary>()
     if (ids.length === 0) return result

@@ -13,4 +13,10 @@ export interface IngredientSummary {
 export interface IIngredientLookup {
   findById(id: string, householdId: string): Promise<IngredientSummary | null>
   findByIds(ids: readonly string[], householdId: string): Promise<Map<string, IngredientSummary>>
+  /**
+   * Look up an active (non-archived) ingredient by name in the household
+   * (case-insensitive, trimmed). Used by the recipe-draft resolver to match
+   * AI-generated ingredient names against the catalog.
+   */
+  findActiveByNameInHousehold(name: string, householdId: string): Promise<IngredientSummary | null>
 }

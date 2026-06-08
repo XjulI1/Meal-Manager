@@ -36,6 +36,13 @@
       "when": 1779494400000,
       "tag": "0004_add_inventory_items_unique_constraint",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1780531200000,
+      "tag": "0005_add_user_ai_enabled",
+      "breakpoints": true
     }
   ]
 }

@@ -26,4 +26,15 @@ export class InMemoryIngredientLookup implements InventoryLookup, CatalogLookup 
     }
     return result
   }
+
+  async findActiveByNameInHousehold(name: string, householdId: string): Promise<IngredientSummary | null> {
+    const needle = name.trim().toLowerCase()
+    const prefix = `${householdId}|`
+    for (const [key, summary] of this.store) {
+      if (!key.startsWith(prefix)) continue
+      if (summary.archived) continue
+      if (summary.name.trim().toLowerCase() === needle) return summary
+    }
+    return null
+  }
 }

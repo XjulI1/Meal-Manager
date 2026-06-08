@@ -2,6 +2,7 @@
 definePageMeta({ title: 'Recettes' })
 
 const api = useApiRecipes()
+const { aiEnabled } = useApiRecipeChat()
 const search = ref('')
 
 const debounced = refDebounced(search, 250)
@@ -24,7 +25,18 @@ function refDebounced<T>(source: Ref<T>, ms: number): Ref<T> {
   <div class="space-y-4">
     <div class="flex items-center justify-between gap-4 flex-wrap">
       <h1 class="text-2xl font-semibold">Recettes</h1>
-      <UButton to="/recipes/new" icon="i-lucide-plus">Nouvelle recette</UButton>
+      <div class="flex items-center gap-2">
+        <UButton v-if="aiEnabled" to="/recipes/chat" icon="i-lucide-sparkles" color="neutral" variant="soft">Assistant IA</UButton>
+        <span
+          v-else
+          class="flex items-center gap-1.5 text-sm text-gray-500"
+          title="L'accès aux outils IA n'est pas activé pour ce compte."
+        >
+          <UIcon name="i-lucide-lock" class="size-4" />
+          Ce compte n'a pas accès aux outils IA
+        </span>
+        <UButton to="/recipes/new" icon="i-lucide-plus">Nouvelle recette</UButton>
+      </div>
     </div>
 
     <UInput

@@ -12,6 +12,7 @@ export interface RegisterUserInput {
 export interface RegisterUserResult {
   userId: string
   email: string
+  aiEnabled: boolean
 }
 
 export class RegisterUserUseCase {
@@ -36,6 +37,6 @@ export class RegisterUserUseCase {
     })
     await this.users.save(user)
 
-    return { userId: user.id, email: user.email }
+    return { userId: user.id, email: user.email, aiEnabled: user.aiEnabled }
   }
 }

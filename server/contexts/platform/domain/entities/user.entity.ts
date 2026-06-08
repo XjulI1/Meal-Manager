@@ -2,6 +2,7 @@ export interface UserProps {
   id: string
   email: string
   passwordHash: string
+  aiEnabled: boolean
   createdAt: Date
   updatedAt: Date
 }
@@ -10,6 +11,8 @@ export class User {
   readonly id: string
   readonly email: string
   readonly passwordHash: string
+  /** Whether AI-powered features are enabled for this account (default false). */
+  readonly aiEnabled: boolean
   readonly createdAt: Date
   readonly updatedAt: Date
 
@@ -17,6 +20,7 @@ export class User {
     this.id = props.id
     this.email = props.email
     this.passwordHash = props.passwordHash
+    this.aiEnabled = props.aiEnabled
     this.createdAt = props.createdAt
     this.updatedAt = props.updatedAt
   }
@@ -27,6 +31,8 @@ export class User {
       id: props.id,
       email: User.normalizeEmail(props.email),
       passwordHash: props.passwordHash,
+      // AI is always off for a freshly created account — opt-in only.
+      aiEnabled: false,
       createdAt: now,
       updatedAt: now,
     })

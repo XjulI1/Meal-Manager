@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import type { CanonicalUnit, Dimension } from '../../shared/units/conversions'
 import type { CreateRecipeDto, RecipeView } from '../../shared/dto/recipes'
+import type { RecipePrefill } from '../composables/useApiRecipeChat'
 
 const props = defineProps<{
   initial?: RecipeView | null
+  /** AI-assistant pre-fill (takes precedence over `initial` when present). */
+  prefill?: RecipePrefill | null
   loading?: boolean
 }>()
 
@@ -24,6 +27,25 @@ const { data: ingredients } = api.list()
 interface RowState {
   ingredientId: string | null
   quantity: { value: number, unit: string }
+  /** Set for AI-proposed ingredients the user must pick/create before saving. */
+  hint?: string
+}
+
+function initialRows(): RowState[] {
+  if (props.prefill?.rows.length) {
+    return props.prefill.rows.map((r) => ({
+      ingredientId: r.ingredientId,
+      quantity: { ...r.quantity },
+      hint: r.hint,
+    }))
+  }
+  if (props.initial?.ingredients?.length) {
+    return props.initial.ingredients.map((i) => ({
+      ingredientId: i.ingredientId,
+      quantity: { ...i.quantity },
+    }))
+  }
+  return [{ ingredientId: null, quantity: { value: 0, unit: 'g' } }]
 }
 
 const state = reactive<{
@@ -32,12 +54,10 @@ const state = reactive<{
   servings: number
   ingredients: RowState[]
 }>({
-  title: props.initial?.title ?? '',
-  instructions: props.initial?.instructions ?? '',
-  servings: props.initial?.servings ?? 2,
-  ingredients: props.initial?.ingredients?.length
-    ? props.initial.ingredients.map((i) => ({ ingredientId: i.ingredientId, quantity: { ...i.quantity } }))
-    : [{ ingredientId: null, quantity: { value: 0, unit: 'g' } }],
+  title: props.prefill?.title ?? props.initial?.title ?? '',
+  instructions: props.prefill?.instructions ?? props.initial?.instructions ?? '',
+  servings: props.prefill?.servings ?? props.initial?.servings ?? 2,
+  ingredients: initialRows(),
 })
 
 function ingredientById(id: string | null) {
@@ -103,6 +123,9 @@ function onSubmit() {
         >
           <div class="flex-1">
             <IngredientsIngredientPicker v-model="ing.ingredientId" />
+            <p v-if="ing.hint" class="mt-1 text-xs text-amber-600 dark:text-amber-400">
+              {{ ing.hint }}
+            </p>
           </div>
           <div class="w-64">
             <QuantityInput v-model="ing.quantity" :dimension="dimensionOf(ing.ingredientId)" />

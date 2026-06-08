@@ -11,6 +11,7 @@ export interface LoginUserInput {
 export interface LoginUserResult {
   userId: string
   email: string
+  aiEnabled: boolean
 }
 
 export class LoginUserUseCase {
@@ -31,7 +32,7 @@ export class LoginUserUseCase {
       throw new InvalidCredentialsError()
     }
 
-    return { userId: user.id, email: user.email }
+    return { userId: user.id, email: user.email, aiEnabled: user.aiEnabled }
   }
 }
 

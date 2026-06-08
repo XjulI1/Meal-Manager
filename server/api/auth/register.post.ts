@@ -9,10 +9,9 @@ export default defineEventHandler(async (event) => {
 
   try {
     const result = await event.context.container.registerUser.execute(body.data)
-    await setUserSession(event, {
-      user: { id: result.userId, email: result.email },
-    })
-    return { user: { id: result.userId, email: result.email } }
+    const user = { id: result.userId, email: result.email, aiEnabled: result.aiEnabled }
+    await setUserSession(event, { user })
+    return { user }
   }
   catch (error) {
     if (error instanceof EmailAlreadyRegisteredError) {

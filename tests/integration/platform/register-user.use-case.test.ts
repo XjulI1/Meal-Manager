@@ -24,7 +24,7 @@ describe('RegisterUserUseCase', () => {
       password: 'strongPassword123!',
     })
 
-    expect(result).toEqual({ userId: 'user-1', email: 'alice@example.com' })
+    expect(result).toEqual({ userId: 'user-1', email: 'alice@example.com', aiEnabled: false })
     const stored = await users.findByEmail('alice@example.com')
     expect(stored).not.toBeNull()
     expect(stored?.passwordHash).toBe('hashed:strongPassword123!')

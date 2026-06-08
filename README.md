@@ -1,26 +1,29 @@
 # Meal Manager
 
-Application web de gestion de repas familiaux : inventaire (placard + frigo), recettes, menus hebdomadaires et liste de courses générée automatiquement.
+Application web de gestion de repas familiaux : inventaire (placard + frigo), catalogue d'ingrédients et de recettes, menus hebdomadaires et liste de courses générée automatiquement.
 
-> Statut : change OpenSpec [`init-meal-manager`](./openspec/changes/init-meal-manager/) — sections 1 à 12 implémentées (plateforme, auth, foyers, inventaire, catalogue, menus, liste de courses, front Nuxt UI, Docker). Reste la validation finale (tests, lint, build, parcours manuel) avant archivage du change.
+> Statut : fondations livrées et tous les changes OpenSpec à ce jour sont archivés (voir [`openspec/changes/archive/`](./openspec/changes/archive/)). Fonctionnalités en place : plateforme + auth, foyers, inventaire placard/frigo, catalogue d'ingrédients & produits avec **scan code-barre**, recettes, menus hebdomadaires, liste de courses dérivée, front Nuxt UI, **assistant recettes IA (Claude)**, **intégration LLM via MCP**, et **discoverabilité agent-ready**.
 
 ## Stack
 
 - **Node 24** + **pnpm 10** (voir `.nvmrc` et `package.json#packageManager`)
 - **Nuxt 4** (front + back via Nitro) + **Vue 3** + **Pinia**
-- **Nuxt UI**
-- **Drizzle ORM** + **MariaDB** (driver `mysql2`)
+- **Nuxt UI 4**
+- **Drizzle ORM** + **MariaDB 11.4** (driver `mysql2`)
 - **Zod** pour les DTO et la validation
-- **nuxt-auth-utils** pour les sessions
+- **nuxt-auth-utils** pour les sessions + **Personal Access Tokens** (auth des agents)
 - **@node-rs/argon2** pour le hash des mots de passe
+- **@anthropic-ai/sdk** pour l'assistant recettes IA (Claude)
+- **@modelcontextprotocol/sdk** pour l'endpoint MCP (`/mcp`)
+- **@zxing/browser** + `BarcodeDetector` pour le scan code-barre
 - **Vitest** pour les tests
-- **ESLint** + **Prettier** (config officielle Nuxt)
+- **ESLint** (+ `eslint-plugin-boundaries` pour l'isolation du domaine) + **Prettier**
 
 ## Prérequis
 
 - Node 24 (`nvm install` lit `.nvmrc`)
 - pnpm 10 (`corepack enable` puis `corepack prepare pnpm@10 --activate`)
-- MariaDB 10.6+ (ou compatible MySQL 8) accessible localement
+- MariaDB 11.4 (la stack Docker l'embarque ; en local, 10.6+ ou un MySQL 8 compatible suffit)
 
 ## Installation
 
@@ -50,7 +53,9 @@ pnpm db:generate   # (re)génère une migration depuis les schémas Drizzle
 pnpm db:migrate    # applique les migrations
 ```
 
-#### Migration `0003_add_inventory_items_unique_constraint`
+Les migrations `0000` → `0005` couvrent les fondations, le catalogue d'ingrédients, le stockage congélateur, les Personal Access Tokens, la contrainte d'unicité d'inventaire et le flag `users.ai_enabled`.
+
+#### Migration `0004_add_inventory_items_unique_constraint`
 
 Cette migration ajoute une contrainte d'unicité sur `inventory_items (household_id, ingredient_id, location)` afin de garantir qu'**une ligne d'inventaire = un couple (ingrédient, emplacement)** (cf. sémantique upsert de `POST /api/inventory`). Si une base de dev contient déjà des doublons sur ce triplet, la migration échouera avec `ER_DUP_ENTRY`. Solution : repartir d'une base propre via `pnpm db:migrate` après reset, ou en environnement Docker :
 
@@ -119,49 +124,57 @@ REGISTRY=dockregistry.xju.fr/meal-planning IMAGE_TAG=v0.2.0 \
 | `pnpm dev`         | Démarre Nuxt en mode développement (HMR)                     |
 | `pnpm build`       | Build production (`.output/`)                                |
 | `pnpm preview`     | Sert le build production en local                            |
-| `pnpm test`        | Lance Vitest                                                 |
+| `pnpm test`        | Lance Vitest (run unique)                                    |
+| `pnpm test:watch`  | Vitest en mode watch                                         |
 | `pnpm lint`        | ESLint (incluant la règle d'isolation du domaine)            |
+| `pnpm lint:fix`    | ESLint avec correction automatique                           |
 | `pnpm format`      | Prettier sur l'ensemble du repo                              |
 | `pnpm typecheck`   | Vérification stricte TypeScript via `nuxt typecheck`         |
 | `pnpm db:generate` | Génère une migration depuis les schémas Drizzle              |
 | `pnpm db:migrate`  | Applique les migrations à la base configurée                 |
 | `pnpm db:studio`   | Ouvre Drizzle Studio                                         |
+| `pnpm docker:up`   | Raccourci pour `docker compose up --build`                   |
 
 ## Arborescence
 
 ```
 meal-manager/
-├── app/                     # Code client (Vue/Nuxt)
+├── app/                     # Code client (Vue/Nuxt) — pages, composants, stores, composables
 ├── server/
-│   ├── api/                 # Adapters HTTP (routes Nitro) — à venir
+│   ├── api/                 # Adapters HTTP (routes Nitro)
+│   ├── routes/
+│   │   ├── mcp/             # Transport Model Context Protocol (/mcp) + tools mealmanager_*
+│   │   └── .well-known/     # Catalogue d'API (RFC 9727)
 │   ├── contexts/            # Bounded contexts (hexagonal)
-│   │   ├── platform/        # Auth, sessions
-│   │   ├── family/          # Foyers, membres
+│   │   ├── platform/        # Auth, sessions, Personal Access Tokens
+│   │   ├── family/          # Foyers, membres, invitations
 │   │   ├── inventory/       # Stocks placard + frigo
-│   │   ├── catalog/         # Recettes
+│   │   ├── ingredients/     # Catalogue d'ingrédients & produits (codes-barres)
+│   │   ├── catalog/         # Recettes (+ assistant IA, import URL)
 │   │   ├── meal-planning/   # Menus hebdomadaires
-│   │   └── shopping/        # Listes de courses
+│   │   └── shopping/        # Listes de courses dérivées
 │   ├── database/
 │   │   ├── client.ts        # Pool mysql2 + Drizzle
-│   │   ├── schema/          # Schémas Drizzle par contexte
+│   │   ├── schema/          # Schémas Drizzle par agrégat racine
 │   │   └── migrations/      # SQL générés par drizzle-kit
-│   ├── plugins/             # Composition root (DI) — à venir
+│   ├── plugins/             # Composition root (DI) — container.ts
 │   ├── middleware/
-│   └── utils/
+│   └── utils/               # requireHouseholdMember / requireHouseholdFromPAT
 ├── shared/                  # Code partagé client/serveur
 │   ├── dto/                 # Schémas Zod
 │   ├── units/               # Quantity + table de conversions
 │   └── types/
+├── public/                  # robots.txt, llms.txt, llms-full.txt, openapi-mcp.yaml
 ├── tests/
-│   ├── unit/
-│   ├── integration/
-│   └── e2e/
+│   ├── unit/                # Value Objects, services purs
+│   └── integration/         # Use cases (repos en mémoire) + smoke HTTP
 ├── docs/
-│   └── ARCHITECTURE.md
+│   ├── ARCHITECTURE.md
+│   └── COMMITS.md
 └── openspec/                # Spécifications (source de vérité fonctionnelle)
 ```
 
-Pour les détails d'architecture, voir [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md). Les conventions de commit (Conventional Commits) sont décrites dans [`docs/COMMITS.md`](./docs/COMMITS.md). La source de vérité fonctionnelle vit dans [`openspec/`](./openspec/) (change actif : [`init-meal-manager`](./openspec/changes/init-meal-manager/)).
+Pour les détails d'architecture, voir [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md). Les conventions de commit (Conventional Commits) sont décrites dans [`docs/COMMITS.md`](./docs/COMMITS.md). La source de vérité fonctionnelle vit dans [`openspec/`](./openspec/) : les specs courantes sous [`openspec/specs/`](./openspec/specs/), l'historique des changes sous [`openspec/changes/archive/`](./openspec/changes/archive/).
 
 ## Variables d'environnement
 
@@ -169,11 +182,29 @@ Pour les détails d'architecture, voir [`docs/ARCHITECTURE.md`](./docs/ARCHITECT
 |---|---|---|
 | `DATABASE_URL` | oui | URL MariaDB au format `mysql://user:pass@host:port/db` |
 | `NUXT_SESSION_PASSWORD` | oui | Secret de signature des cookies de session (≥ 32 caractères) |
+| `NUXT_ANTHROPIC_API_KEY` | non | Clé serveur de l'API Claude pour l'assistant recettes IA (lue via `runtimeConfig`, préfixe `NUXT_` requis). Vide ⇒ IA inactive. Jamais exposée au client. |
+| `NUXT_ANTHROPIC_MODEL` | non | Modèle Claude utilisé (défaut `claude-sonnet-4-6`). |
+| `NUXT_ANTHROPIC_CHAT_EFFORT` | non | Effort du chat : `low`/`medium`/`high`/`max` (défaut `medium`). |
+| `NUXT_ANTHROPIC_IMPORT_EFFORT` | non | Effort de l'extraction d'import (défaut `low`). |
 | `NODE_ENV` | non | `development` / `production` |
 | `HOST` / `PORT` | non | Bind du serveur Nitro (défaut image Docker : `0.0.0.0:3000`) |
 | `MARIADB_USER` / `MARIADB_PASSWORD` / `MARIADB_DATABASE` / `MARIADB_ROOT_PASSWORD` | compose uniquement | Initialisent le service `db` du `docker-compose.yml` |
 
 Voir `.env.example`.
+
+## Assistant recettes (IA)
+
+Un assistant conversationnel (Claude) aide à trouver, co-construire ou importer une recette, puis pré-remplit le formulaire de création (`/recipes/chat`). Recherche web intégrée + import depuis une URL (JSON-LD, repli extraction Claude).
+
+- Nécessite `NUXT_ANTHROPIC_API_KEY` côté serveur.
+- **Désactivé par défaut, par compte** : la colonne `users.ai_enabled` vaut `false` à la création. Tant qu'elle n'est pas activée, les routes IA renvoient `403` et aucun appel à l'API n'est fait (pas de consommation subie).
+- **Activer un compte** (paramètre administrateur en v1) via `pnpm db:studio`, ou en SQL :
+
+```sql
+UPDATE users SET ai_enabled = 1 WHERE email = 'utilisateur@example.com';
+```
+
+L'utilisateur retrouve alors l'entrée « Assistant IA » dans Recettes.
 
 ## Intégration LLM (MCP)
 
@@ -245,7 +276,7 @@ De plus, chaque réponse HTTP (sauf `/mcp`) porte un header `Link` (RFC 8288) an
 
 ### Détails
 
-Voir les changes [`add-mcp-llm-integration`](./openspec/changes/archive/2026-05-17-add-mcp-llm-integration/) (transport stateless, hash SHA-256, futur OAuth 2.1) et [`add-agent-discoverability`](./openspec/changes/add-agent-discoverability/) (RFC 9727, robots.txt, OpenAPI MCP).
+Voir les changes archivés [`add-mcp-llm-integration`](./openspec/changes/archive/2026-05-17-add-mcp-llm-integration/) (transport stateless, hash SHA-256, futur OAuth 2.1) et [`add-agent-discoverability`](./openspec/changes/archive/2026-06-06-add-agent-discoverability/) (RFC 9727, robots.txt, OpenAPI MCP). Le scan code-barre et l'assistant recettes IA sont documentés dans [`add-product-scanning`](./openspec/changes/archive/2026-06-06-add-product-scanning/) et [`add-recipe-chat-assistant`](./openspec/changes/archive/2026-06-06-add-recipe-chat-assistant/).
 
 ## Workflow OpenSpec
 
