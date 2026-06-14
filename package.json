@@ -45,6 +45,7 @@
     "@nuxt/eslint": "^0.7.6",
     "@nuxt/test-utils": "^4.0.3",
     "@types/node": "^24.13.1",
+    "@vite-pwa/nuxt": "^1.1.1",
     "@vitest/coverage-v8": "^2.1.9",
     "drizzle-kit": "^0.28.1",
     "eslint": "^9.39.4",

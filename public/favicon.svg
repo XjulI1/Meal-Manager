@@ -1,0 +1,41 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5BC46A"/>
+      <stop offset="0.55" stop-color="#28A24B"/>
+      <stop offset="1" stop-color="#127A38"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="512" y1="40" x2="512" y2="560" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.30"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#0a3d1c" flood-opacity="0.28"/>
+    </filter>
+    <clipPath id="sq">
+      <path d="M512 64C247 64 159 64 121 89 96 105 105 96 89 121 64 159 64 247 64 512s0 353 25 391c16 25 7 16 32 32 38 25 126 25 391 25s353 0 391-25c25-16 16-7 32-32 25-38 25-126 25-391s0-353-25-391c-16-25-7-16-32-32C865 64 777 64 512 64z"/>
+    </clipPath>
+  </defs>
+
+  <path d="M512 64C247 64 159 64 121 89 96 105 105 96 89 121 64 159 64 247 64 512s0 353 25 391c16 25 7 16 32 32 38 25 126 25 391 25s353 0 391-25c25-16 16-7 32-32 25-38 25-126 25-391s0-353-25-391c-16-25-7-16-32-32C865 64 777 64 512 64z"
+        fill="url(#bg)"/>
+  <g clip-path="url(#sq)">
+    <rect x="0" y="0" width="1024" height="560" fill="url(#sheen)"/>
+  </g>
+
+  <g filter="url(#soft)">
+    <circle cx="512" cy="528" r="290" fill="#FFFFFF"/>
+    <circle cx="512" cy="528" r="224" fill="none" stroke="#D3EEDB" stroke-width="14"/>
+    <path d="M512 600c-9 0-17-4-23-11-34-37-79-66-79-118 0-36 27-63 61-63 18 0 34 8 41 22 7-14 23-22 41-22 34 0 61 27 61 63 0 52-45 81-79 118-6 7-14 11-23 11z"
+          fill="#2EA94F"/>
+    <g fill="#2C9C4D">
+      <rect x="296" y="344" width="16" height="92" rx="8"/>
+      <rect x="324" y="344" width="16" height="92" rx="8"/>
+      <rect x="352" y="344" width="16" height="92" rx="8"/>
+      <path d="M294 424h78c0 28-19 42-30 47v217c0 16-30 16-30 0V471c-11-5-18-19-18-47z"/>
+    </g>
+    <g fill="#2C9C4D">
+      <path d="M728 344c19 15 23 73 9 126-7 23-23 31-32 31v187c0 16-30 16-30 0V344c0-14 30-14 53 0z"/>
+    </g>
+  </g>
+</svg>
