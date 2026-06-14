@@ -17,13 +17,14 @@ function readPng(file: string): { width: number; height: number } {
 
 describe('PWA — jeu d’icônes installable', () => {
   // (fichier, taille attendue) — doit rester aligné avec `pwa.manifest.icons`
-  // dans nuxt.config.ts et `app.head` (apple-touch-icon).
+  // dans nuxt.config.ts et `app.head` (apple-touch-icon + favicons).
   const icons: Array<[string, number]> = [
-    ['pwa-64x64.png', 64],
     ['pwa-192x192.png', 192],
     ['pwa-512x512.png', 512],
     ['maskable-icon-512x512.png', 512],
     ['apple-touch-icon-180x180.png', 180],
+    ['favicon-32.png', 32],
+    ['favicon-16.png', 16],
   ]
 
   it.each(icons)('%s est un PNG carré valide aux bonnes dimensions', (file, size) => {
@@ -37,6 +38,10 @@ describe('PWA — jeu d’icônes installable', () => {
     const svg = readFileSync(resolve(publicDir, 'favicon.svg'), 'utf8')
     expect(svg).toMatch(/<svg[\s>]/)
     expect(svg).toMatch(/viewBox/)
+  })
+
+  it('fournit un favicon.ico (navigateurs legacy)', () => {
+    expect(existsSync(resolve(publicDir, 'favicon.ico'))).toBe(true)
   })
 
   it('expose une icône maskable 512×512 (masquage adaptatif Android)', () => {

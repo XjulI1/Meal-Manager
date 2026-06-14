@@ -29,20 +29,21 @@ réseau au niveau navigation.
 ### 2. Web App Manifest
 
 Manifest généré : `name`, `short_name`, `description`, `lang: fr-FR`,
-`display: standalone`, `theme_color: #16a34a`, `background_color: #ffffff`,
-`start_url: /`, `scope: /`, et le jeu d'icônes (64/192/512 + maskable 512).
+`display: standalone`, `theme_color: #28a24b`, `background_color: #ffffff`,
+`start_url: /`, `scope: /`, et le jeu d'icônes (192/512 + maskable 512).
 
 ### 3. Jeu d'icônes + favicon
 
-Icônes PNG (fourchette + couteau, fond vert dégradé) générées **sans dépendance
-externe** par `scripts/generate-pwa-icons.mjs` (encodeur PNG pur Node — l'env de
-build n'a ni sharp ni imagemagick). Plus un `favicon.svg` vectoriel assorti et un
-`apple-touch-icon` 180×180.
+Jeu d'icônes fourni (asset géré) : assiette + cœur sur dégradé vert. Décliné en
+`pwa-192x192.png`, `pwa-512x512.png`, `maskable-icon-512x512.png`,
+`apple-touch-icon-180x180.png`, `favicon.svg`, `favicon.ico`, `favicon-16.png`,
+`favicon-32.png`. Master vectoriel conservé : `public/icon-master.svg`.
 
 ### 4. Meta head + injection du manifest
 
-Ajout dans `app.head` des metas `theme-color`, `description`, et des metas/lien
-Apple (`apple-touch-icon`, `apple-mobile-web-app-*`). Le lien
+Ajout dans `app.head` des metas `theme-color` (`#28a24b`), `description`, des
+liens favicon (`.ico`, `.svg`, 16/32) et des metas/lien Apple
+(`apple-touch-icon`, `apple-mobile-web-app-*`). Le lien
 `<link rel="manifest">` est injecté par le composant `<VitePwaManifest />` monté
 dans `app.vue` : en SPA le module retire tout lien manifest statique du head pour
 le gérer lui-même (évite les doublons).
@@ -79,9 +80,9 @@ fonctionnement déconnecté.
 ## Impact
 
 **Code créé :**
-- `scripts/generate-pwa-icons.mjs` (générateur d'icônes).
-- `public/pwa-64x64.png`, `pwa-192x192.png`, `pwa-512x512.png`,
-  `maskable-icon-512x512.png`, `apple-touch-icon-180x180.png`, `favicon.svg`.
+- Icônes `public/` : `pwa-192x192.png`, `pwa-512x512.png`,
+  `maskable-icon-512x512.png`, `apple-touch-icon-180x180.png`, `favicon.svg`,
+  `favicon.ico`, `favicon-16.png`, `favicon-32.png`, `icon-master.svg`.
 - `app/components/PwaPrompt.vue`.
 - `tests/integration/http/pwa-assets.test.ts`.
 

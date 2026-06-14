@@ -83,7 +83,7 @@ Meal Manager est une **Progressive Web App** (module `@vite-pwa/nuxt`) :
 installable sur mobile/desktop (icône d'écran d'accueil, affichage `standalone`)
 avec un service worker qui précache le *shell* applicatif (JS/CSS/HTML/icônes).
 
-- **Manifest** : `/manifest.webmanifest` (généré au build). Thème vert `#16a34a`.
+- **Manifest** : `/manifest.webmanifest` (généré au build). Thème vert `#28a24b`.
 - **Service worker** : `registerType: 'autoUpdate'`. Une notification « Mise à jour
   disponible » invite l'utilisateur à recharger (pas de reload silencieux).
 - **Hors-ligne** : **shell uniquement**. Les appels `/api/*`, `/mcp` et
@@ -92,14 +92,13 @@ avec un service worker qui précache le *shell* applicatif (JS/CSS/HTML/icônes)
 - **Dev** : le SW est désactivé en `pnpm dev` (`devOptions.enabled: false`).
   Pour le tester : `pnpm build && pnpm preview`, puis DevTools → Application.
 
-### Régénérer les icônes
+### Icônes
 
-Les icônes (`public/pwa-*.png`, `maskable-icon-512x512.png`,
-`apple-touch-icon-180x180.png`) sont produites sans dépendance externe :
-
-```bash
-node scripts/generate-pwa-icons.mjs
-```
+Le jeu d'icônes (assiette + cœur, dégradé vert) est un asset géré :
+`public/pwa-192x192.png`, `pwa-512x512.png`, `maskable-icon-512x512.png`,
+`apple-touch-icon-180x180.png`, `favicon.{svg,ico}`, `favicon-{16,32}.png`. Le
+master vectoriel est `public/icon-master.svg` (≈ `favicon.svg`) — repartir de là
+pour régénérer/retoucher les déclinaisons.
 
 ## Lancer via Docker
 

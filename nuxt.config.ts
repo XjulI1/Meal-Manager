@@ -71,7 +71,7 @@ export default defineNuxtConfig({
           content:
             "Gérez l'inventaire, les recettes, les menus et la liste de courses de votre foyer.",
         },
-        { name: 'theme-color', content: '#16a34a' },
+        { name: 'theme-color', content: '#28a24b' },
         { name: 'apple-mobile-web-app-capable', content: 'yes' },
         { name: 'mobile-web-app-capable', content: 'yes' },
         {
@@ -81,7 +81,20 @@ export default defineNuxtConfig({
         { name: 'apple-mobile-web-app-title', content: 'Meal Manager' },
       ],
       link: [
+        { rel: 'icon', href: '/favicon.ico', sizes: 'any' },
         { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
+        {
+          rel: 'icon',
+          href: '/favicon-32.png',
+          type: 'image/png',
+          sizes: '32x32',
+        },
+        {
+          rel: 'icon',
+          href: '/favicon-16.png',
+          type: 'image/png',
+          sizes: '16x16',
+        },
         {
           rel: 'apple-touch-icon',
           href: '/apple-touch-icon-180x180.png',
@@ -104,7 +117,7 @@ export default defineNuxtConfig({
         "Gérez l'inventaire, les recettes, les menus et la liste de courses de votre foyer.",
       lang: 'fr-FR',
       dir: 'ltr',
-      theme_color: '#16a34a',
+      theme_color: '#28a24b',
       background_color: '#ffffff',
       display: 'standalone',
       orientation: 'portrait',
@@ -112,7 +125,6 @@ export default defineNuxtConfig({
       scope: '/',
       categories: ['food', 'lifestyle', 'productivity'],
       icons: [
-        { src: 'pwa-64x64.png', sizes: '64x64', type: 'image/png' },
         { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },
         { src: 'pwa-512x512.png', sizes: '512x512', type: 'image/png' },
         {

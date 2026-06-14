@@ -9,11 +9,11 @@ Checklist d'implémentation du change `add-pwa-support`. Aucun code domaine touc
 - [x] 1.1 Ajouter `@vite-pwa/nuxt` en devDependency (`pnpm add -D`).
 - [x] 1.2 Enregistrer le module dans `nuxt.config.ts` (`modules`).
 
-## 2. Icônes
+## 2. Icônes (asset fourni)
 
-- [x] 2.1 Créer `scripts/generate-pwa-icons.mjs` (encodeur PNG pur Node, supersampling 4×).
-- [x] 2.2 Générer `public/pwa-64x64.png`, `pwa-192x192.png`, `pwa-512x512.png`, `maskable-icon-512x512.png` (safe-zone), `apple-touch-icon-180x180.png`.
-- [x] 2.3 Créer `public/favicon.svg` vectoriel assorti.
+- [x] 2.1 Installer le jeu d'icônes fourni dans `public/` : `pwa-192x192.png`, `pwa-512x512.png`, `maskable-icon-512x512.png`, `apple-touch-icon-180x180.png`.
+- [x] 2.2 Favicons navigateur : `favicon.svg`, `favicon.ico`, `favicon-16.png`, `favicon-32.png`.
+- [x] 2.3 Conserver le master vectoriel `public/icon-master.svg`.
 
 ## 3. Manifest & config PWA
 
@@ -23,7 +23,7 @@ Checklist d'implémentation du change `add-pwa-support`. Aucun code domaine touc
 
 ## 4. Head & injection du lien manifest
 
-- [x] 4.1 `app.head` : metas `description`, `theme-color`, `apple-mobile-web-app-*`, `mobile-web-app-capable` ; liens `icon` (favicon.svg) et `apple-touch-icon`.
+- [x] 4.1 `app.head` : metas `description`, `theme-color` (#28a24b), `apple-mobile-web-app-*`, `mobile-web-app-capable` ; liens favicon (`.ico`, `.svg`, 16/32) et `apple-touch-icon`.
 - [x] 4.2 Monter `<VitePwaManifest />` dans `app.vue` (injection client du lien manifest — le module retire les liens manifest statiques).
 
 ## 5. Affordances install / update

@@ -49,22 +49,21 @@ que les navigateurs prennent en compte pour les critères d'installation. Les
 metas `theme-color` / Apple, elles, restent dans `app.head` (présentes dès le
 shell) car le module n'y touche pas.
 
-### D5 — Génération des icônes sans dépendance
+### D5 — Icônes : asset fourni plutôt que génération au build
 
-L'environnement de build n'a ni `sharp`, ni ImageMagick, ni `rsvg`. Plutôt que
-d'ajouter `@vite-pwa/assets-generator` (et ses dépendances natives),
-`scripts/generate-pwa-icons.mjs` encode des PNG RGBA en **pur Node** (`zlib` +
-CRC32) et dessine l'icône (fond vert dégradé + fourchette/couteau blancs) avec un
-supersampling 4× pour des bords lisses. Les PNG sont commités dans `public/` (pas
-de génération au build) ; le script reste rejouable pour régénérer/retoucher.
-L'icône **maskable** est rendue pleine (pas de coins arrondis, contenu dans la
-safe-zone ~80 %) pour le masquage Android adaptatif.
+Le jeu d'icônes (assiette + cœur sur dégradé vert) est un **asset de design
+fourni**, commité dans `public/` ; pas de génération au build (l'env n'a de toute
+façon ni `sharp`, ni ImageMagick, ni `rsvg`). Le master vectoriel
+`public/icon-master.svg` (identique à `favicon.svg`) est conservé pour régénérer
+les déclinaisons. L'icône **maskable** réutilise le rendu plein 512×512
+(`ic_launcher_playstore` du jeu fourni) : le contenu (assiette) tient dans la
+safe-zone, OK pour le masquage Android adaptatif.
 
-### D6 — `theme_color` vert `#16a34a`
+### D6 — `theme_color` vert `#28a24b`
 
-Aligné sur la couleur primaire par défaut de Nuxt UI (gamme `green`) utilisée
-dans l'app. Le `background_color` du splash est blanc `#ffffff` (fond clair de
-l'app).
+Repris du stop médian du dégradé de l'icône fournie (`#5BC46A → #28A24B →
+#127A38`), pour que la barre de statut / splash s'accordent à la marque. Le
+`background_color` du splash est blanc `#ffffff` (fond clair de l'app).
 
 ## Risques / limites
 
