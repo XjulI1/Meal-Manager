@@ -37,6 +37,7 @@ export default defineNuxtConfig({
     anthropicModel: 'claude-sonnet-4-6',
     anthropicChatEffort: 'medium',
     anthropicImportEffort: 'low',
+    anthropicPhotoEffort: 'low',
     session: {
       password: '',
       cookie: {

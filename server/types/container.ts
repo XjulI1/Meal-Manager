@@ -1,6 +1,7 @@
 import type { ChatRecipeUseCase } from '../contexts/catalog/application/use-cases/chat-recipe.use-case'
 import type { CreateRecipeUseCase } from '../contexts/catalog/application/use-cases/create-recipe.use-case'
 import type { ImportRecipeFromUrlUseCase } from '../contexts/catalog/application/use-cases/import-recipe-from-url.use-case'
+import type { ImportRecipeFromPhotosUseCase } from '../contexts/catalog/application/use-cases/import-recipe-from-photos.use-case'
 import type { ResolveRecipeDraftUseCase } from '../contexts/catalog/application/use-cases/resolve-recipe-draft.use-case'
 import type { DeleteRecipeUseCase } from '../contexts/catalog/application/use-cases/delete-recipe.use-case'
 import type { GetRecipeByIdUseCase } from '../contexts/catalog/application/use-cases/get-recipe-by-id.use-case'
@@ -92,6 +93,7 @@ export interface Container {
   /** AI recipe assistant (chat / import / draft resolution) — gated per account. */
   chatRecipe: ChatRecipeUseCase
   importRecipeFromUrl: ImportRecipeFromUrlUseCase
+  importRecipeFromPhotos: ImportRecipeFromPhotosUseCase
   resolveRecipeDraft: ResolveRecipeDraftUseCase
   // meal-planning
   createMenu: CreateMenuUseCase

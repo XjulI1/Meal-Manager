@@ -208,7 +208,8 @@ Pour les détails d'architecture, voir [`docs/ARCHITECTURE.md`](./docs/ARCHITECT
 | `NUXT_ANTHROPIC_API_KEY` | non | Clé serveur de l'API Claude pour l'assistant recettes IA (lue via `runtimeConfig`, préfixe `NUXT_` requis). Vide ⇒ IA inactive. Jamais exposée au client. |
 | `NUXT_ANTHROPIC_MODEL` | non | Modèle Claude utilisé (défaut `claude-sonnet-4-6`). |
 | `NUXT_ANTHROPIC_CHAT_EFFORT` | non | Effort du chat : `low`/`medium`/`high`/`max` (défaut `medium`). |
-| `NUXT_ANTHROPIC_IMPORT_EFFORT` | non | Effort de l'extraction d'import (défaut `low`). |
+| `NUXT_ANTHROPIC_IMPORT_EFFORT` | non | Effort de l'extraction d'import URL (défaut `low`). |
+| `NUXT_ANTHROPIC_PHOTO_EFFORT` | non | Effort de l'interprétation des photos de recette (défaut `low` ; passer à `medium`/`high` pour du manuscrit). |
 | `NODE_ENV` | non | `development` / `production` |
 | `HOST` / `PORT` | non | Bind du serveur Nitro (défaut image Docker : `0.0.0.0:3000`) |
 | `MARIADB_USER` / `MARIADB_PASSWORD` / `MARIADB_DATABASE` / `MARIADB_ROOT_PASSWORD` | compose uniquement | Initialisent le service `db` du `docker-compose.yml` |
@@ -217,7 +218,7 @@ Voir `.env.example`.
 
 ## Assistant recettes (IA)
 
-Un assistant conversationnel (Claude) aide à trouver, co-construire ou importer une recette, puis pré-remplit le formulaire de création (`/recipes/chat`). Recherche web intégrée + import depuis une URL (JSON-LD, repli extraction Claude).
+Un assistant conversationnel (Claude) aide à trouver, co-construire ou importer une recette, puis pré-remplit le formulaire de création (`/recipes/chat`). Recherche web intégrée, import depuis une URL (JSON-LD, repli extraction Claude) et **import depuis une ou plusieurs photos** d'une même recette (livre, fiche manuscrite) interprétées par Claude vision (les photos HEIC d'iPhone sont converties en JPEG côté navigateur).
 
 - Nécessite `NUXT_ANTHROPIC_API_KEY` côté serveur.
 - **Désactivé par défaut, par compte** : la colonne `users.ai_enabled` vaut `false` à la création. Tant qu'elle n'est pas activée, les routes IA renvoient `403` et aucun appel à l'API n'est fait (pas de consommation subie).

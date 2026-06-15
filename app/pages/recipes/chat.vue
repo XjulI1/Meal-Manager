@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import type { DraftResolutionDto } from '../../../shared/dto/recipe-chat'
+import { MAX_RECIPE_PHOTOS } from '../../../shared/dto/recipe-chat'
 import type { ChatSource } from '../../composables/useApiRecipeChat'
 
 definePageMeta({ title: 'Assistant recettes' })
 
-const { aiEnabled, streamChat, importUrl, resolveDraft, toPrefill } = useApiRecipeChat()
+const { aiEnabled, streamChat, importUrl, importPhotos, resolveDraft, toPrefill } = useApiRecipeChat()
 const prefill = useRecipePrefill()
 const toast = useToast()
 
@@ -17,6 +18,10 @@ const sources = ref<ChatSource[]>([])
 const resolution = ref<DraftResolutionDto | null>(null)
 const urlInput = ref('')
 const importing = ref(false)
+const photoFiles = ref<File[]>([])
+const importingPhotos = ref(false)
+const photoPhase = ref<'preparing' | 'interpreting' | ''>('')
+const ACCEPTED_PHOTO_TYPES = 'image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif'
 
 async function send() {
   const text = input.value.trim()
@@ -70,6 +75,37 @@ async function doImport() {
   }
 }
 
+function onPhotosSelected(event: Event) {
+  const input = event.target as HTMLInputElement
+  const files = Array.from(input.files ?? [])
+  if (files.length > MAX_RECIPE_PHOTOS) {
+    toast.add({ title: `${MAX_RECIPE_PHOTOS} photos maximum`, color: 'warning' })
+    photoFiles.value = files.slice(0, MAX_RECIPE_PHOTOS)
+  }
+  else {
+    photoFiles.value = files
+  }
+}
+
+async function doImportPhotos() {
+  if (!photoFiles.value.length || importingPhotos.value) return
+  importingPhotos.value = true
+  try {
+    const draft = await importPhotos(photoFiles.value, (phase) => { photoPhase.value = phase })
+    resolution.value = await resolveDraft(draft)
+    photoFiles.value = []
+    toast.add({ title: 'Recette interprétée — vérifiez le brouillon', color: 'success' })
+  }
+  catch (error) {
+    const e = error as { statusMessage?: string, message?: string }
+    toast.add({ title: e.statusMessage ?? e.message ?? 'Interprétation impossible', color: 'error' })
+  }
+  finally {
+    importingPhotos.value = false
+    photoPhase.value = ''
+  }
+}
+
 function continueToForm() {
   if (!resolution.value) return
   prefill.value = toPrefill(resolution.value)
@@ -104,6 +140,38 @@ function continueToForm() {
             @keydown.enter="doImport"
           />
           <UButton :loading="importing" icon="i-lucide-download" @click="doImport">Importer</UButton>
+        </div>
+      </UCard>
+
+      <!-- Import depuis une ou plusieurs photos -->
+      <UCard>
+        <div class="space-y-2">
+          <div class="flex flex-col sm:flex-row gap-2 sm:items-center">
+            <input
+              type="file"
+              :accept="ACCEPTED_PHOTO_TYPES"
+              multiple
+              capture="environment"
+              class="flex-1 text-sm file:mr-3 file:rounded file:border-0 file:bg-primary-500 file:px-3 file:py-1.5 file:text-white"
+              @change="onPhotosSelected"
+            >
+            <UButton
+              :loading="importingPhotos"
+              :disabled="!photoFiles.length"
+              icon="i-lucide-camera"
+              @click="doImportPhotos"
+            >Interpréter</UButton>
+          </div>
+          <p class="text-xs text-gray-500">
+            Photographiez une recette (livre, fiche…). Jusqu'à {{ MAX_RECIPE_PHOTOS }} photos d'une même recette (JPEG, PNG, WebP, HEIC).
+          </p>
+          <p v-if="photoFiles.length && !importingPhotos" class="text-xs text-gray-600 dark:text-gray-300">
+            {{ photoFiles.length }} photo(s) sélectionnée(s) : {{ photoFiles.map((f) => f.name).join(', ') }}
+          </p>
+          <p v-if="importingPhotos" class="flex items-center gap-1.5 text-xs text-primary-600 dark:text-primary-400">
+            <UIcon name="i-lucide-loader-circle" class="animate-spin" />
+            {{ photoPhase === 'interpreting' ? "Interprétation par l'IA…" : 'Préparation des photos…' }}
+          </p>
         </div>
       </UCard>
 
