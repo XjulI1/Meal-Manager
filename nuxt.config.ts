@@ -20,6 +20,26 @@ export default defineNuxtConfig({
     optimizeDeps: {
       include: ['zod'],
     },
+    build: {
+      rollupOptions: {
+        output: {
+          // Isole le WASM libheif (paquet `heic-to`, ~2.9 Mo, embarqué dans le
+          // JS et chargé en lazy uniquement à la conversion d'une photo HEIC)
+          // dans un chunk au nom stable, afin de l'exclure proprement du
+          // précache PWA — voir `pwa.workbox` plus bas.
+          manualChunks(id) {
+            if (id.includes('/heic-to/')) return 'heic-to'
+          },
+          // Réplique le défaut Nuxt (`_nuxt/[hash].js`) et donne un nom au seul
+          // chunk heic pour que `globIgnores` puisse le cibler de façon stable.
+          chunkFileNames(chunkInfo) {
+            return chunkInfo.name === 'heic-to'
+              ? '_nuxt/heic-to.[hash].js'
+              : '_nuxt/[hash].js'
+          },
+        },
+      },
+    },
   },
   css: ['~/assets/css/main.css'],
 
@@ -138,6 +158,22 @@ export default defineNuxtConfig({
     },
     workbox: {
       globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+      // Le chunk `heic-to` (~2.9 Mo, WASM libheif) dépasse la limite de précache
+      // de Workbox (2 MiB) et ne sert qu'à convertir une photo HEIC d'iPhone :
+      // on l'exclut du précache (install PWA légère, ~1.3 Mo) et on le met en
+      // cache à la volée, au premier usage seulement.
+      globIgnores: ['**/heic-to.*.js'],
+      runtimeCaching: [
+        {
+          urlPattern: /\/_nuxt\/heic-to\..*\.js$/,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'heic-wasm',
+            expiration: { maxEntries: 2, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            cacheableResponse: { statuses: [0, 200] },
+          },
+        },
+      ],
       navigateFallback: '/',
       navigateFallbackDenylist: [/^\/api\//, /^\/mcp/, /^\/\.well-known\//],
       cleanupOutdatedCaches: true,
