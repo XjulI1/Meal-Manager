@@ -2,6 +2,8 @@ import type {
   ChatMessageDto,
   DraftResolutionDto,
   RecipeDraftDto,
+  RecipeImageDto,
+  RecipeImageMediaType,
 } from '../../shared/dto/recipe-chat'
 
 export interface ChatSource {
@@ -78,6 +80,30 @@ export function useApiRecipeChat() {
     return $fetch<RecipeDraftDto>('/api/recipes/import', { method: 'POST', body: { url } })
   }
 
+  /** Read a File as raw base64 (strips the `data:<mime>;base64,` prefix). */
+  function fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onerror = () => reject(reader.error ?? new Error('Lecture du fichier impossible'))
+      reader.onload = () => {
+        const result = reader.result as string
+        resolve(result.slice(result.indexOf(',') + 1))
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
+  /** Interpret one or more photos of the same recipe into a draft. */
+  async function importPhotos(files: File[]): Promise<RecipeDraftDto> {
+    const images: RecipeImageDto[] = await Promise.all(
+      files.map(async (file) => ({
+        mediaType: file.type as RecipeImageMediaType,
+        data: await fileToBase64(file),
+      })),
+    )
+    return $fetch<RecipeDraftDto>('/api/recipes/import-photo', { method: 'POST', body: { images } })
+  }
+
   async function resolveDraft(draft: RecipeDraftDto): Promise<DraftResolutionDto> {
     return $fetch<DraftResolutionDto>('/api/recipes/draft/resolve', { method: 'POST', body: { draft } })
   }
@@ -104,7 +130,7 @@ export function useApiRecipeChat() {
     }
   }
 
-  return { aiEnabled, streamChat, importUrl, resolveDraft, toPrefill }
+  return { aiEnabled, streamChat, importUrl, importPhotos, resolveDraft, toPrefill }
 }
 
 /** Shared handoff slot so the chat page can pre-fill /recipes/new. */

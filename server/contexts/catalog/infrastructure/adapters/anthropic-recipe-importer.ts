@@ -4,41 +4,10 @@ import { RecipeImportError } from '../../domain/errors/recipe-import.error'
 import type { IRecipeImporter, RecipeDraft } from '../../domain/ports/recipe-importer'
 import type { AnthropicEffort } from '../anthropic-config'
 import { parseRecipeJsonLd } from '../recipe-json-ld'
+import { EXTRACT_TOOLS } from './recipe-extract-tool'
 
 const MAX_TOKENS = 2048
 const MAX_HTML_CHARS = 60_000
-
-const EXTRACT_RECIPE_TOOL: Anthropic.Messages.Tool = {
-  name: 'extract_recipe',
-  description: 'Renvoie la recette structurée extraite du contenu de la page.',
-  input_schema: {
-    type: 'object',
-    properties: {
-      title: { type: 'string' },
-      instructions: { type: 'string' },
-      servings: { type: 'integer', minimum: 1 },
-      ingredients: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: {
-            name: { type: 'string' },
-            quantity: {
-              type: 'object',
-              properties: { value: { type: 'number' }, unit: { type: 'string' } },
-              required: ['value', 'unit'],
-            },
-            raw: { type: 'string' },
-          },
-          required: ['name'],
-        },
-      },
-    },
-    required: ['title', 'instructions', 'ingredients'],
-  },
-}
-
-const EXTRACT_TOOLS: Anthropic.Messages.ToolUnion[] = [EXTRACT_RECIPE_TOOL]
 
 /**
  * Imports a recipe from a URL. First tries structured data (schema.org Recipe

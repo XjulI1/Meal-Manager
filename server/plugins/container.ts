@@ -2,6 +2,7 @@ import { useDb } from '../database/client'
 import { ChatRecipeUseCase } from '../contexts/catalog/application/use-cases/chat-recipe.use-case'
 import { CreateRecipeUseCase } from '../contexts/catalog/application/use-cases/create-recipe.use-case'
 import { ImportRecipeFromUrlUseCase } from '../contexts/catalog/application/use-cases/import-recipe-from-url.use-case'
+import { ImportRecipeFromPhotosUseCase } from '../contexts/catalog/application/use-cases/import-recipe-from-photos.use-case'
 import { ResolveRecipeDraftUseCase } from '../contexts/catalog/application/use-cases/resolve-recipe-draft.use-case'
 import { DeleteRecipeUseCase } from '../contexts/catalog/application/use-cases/delete-recipe.use-case'
 import { GetRecipeByIdUseCase } from '../contexts/catalog/application/use-cases/get-recipe-by-id.use-case'
@@ -9,7 +10,8 @@ import { ListRecipesUseCase } from '../contexts/catalog/application/use-cases/li
 import { UpdateRecipeUseCase } from '../contexts/catalog/application/use-cases/update-recipe.use-case'
 import { AnthropicRecipeChatService } from '../contexts/catalog/infrastructure/adapters/anthropic-recipe-chat.service'
 import { AnthropicRecipeImporter } from '../contexts/catalog/infrastructure/adapters/anthropic-recipe-importer'
-import { DEFAULT_CHAT_EFFORT, DEFAULT_IMPORT_EFFORT, parseEffort } from '../contexts/catalog/infrastructure/anthropic-config'
+import { AnthropicRecipePhotoImporter } from '../contexts/catalog/infrastructure/adapters/anthropic-recipe-photo-importer'
+import { DEFAULT_CHAT_EFFORT, DEFAULT_IMPORT_EFFORT, DEFAULT_PHOTO_EFFORT, parseEffort } from '../contexts/catalog/infrastructure/anthropic-config'
 import { DrizzleRecipeRepository } from '../contexts/catalog/infrastructure/repositories/drizzle-recipe.repository'
 import { CreateHouseholdUseCase } from '../contexts/family/application/use-cases/create-household.use-case'
 import { GetCurrentHouseholdUseCase } from '../contexts/family/application/use-cases/get-current-household.use-case'
@@ -137,6 +139,11 @@ function buildContainer(): Container {
     aiConfig.anthropicModel,
     parseEffort(aiConfig.anthropicImportEffort, DEFAULT_IMPORT_EFFORT),
   )
+  const recipePhotoImporter = new AnthropicRecipePhotoImporter(
+    aiConfig.anthropicApiKey,
+    aiConfig.anthropicModel,
+    parseEffort(aiConfig.anthropicPhotoEffort, DEFAULT_PHOTO_EFFORT),
+  )
 
   // meal-planning
   const menuRepo = new DrizzleMenuRepository(db)
@@ -194,6 +201,7 @@ function buildContainer(): Container {
     getRecipeById: new GetRecipeByIdUseCase(recipeRepo, ingredientLookup),
     chatRecipe: new ChatRecipeUseCase(recipeChatAssistant),
     importRecipeFromUrl: new ImportRecipeFromUrlUseCase(recipeImporter),
+    importRecipeFromPhotos: new ImportRecipeFromPhotosUseCase(recipePhotoImporter),
     resolveRecipeDraft: new ResolveRecipeDraftUseCase(ingredientLookup),
     createMenu: new CreateMenuUseCase(menuRepo),
     getMenuByWeek: new GetMenuByWeekUseCase(menuRepo),

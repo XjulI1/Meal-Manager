@@ -54,6 +54,32 @@ export const ImportRecipeSchema = z.object({
 })
 export type ImportRecipeDto = z.infer<typeof ImportRecipeSchema>
 
+// --- Photo import -----------------------------------------------------------
+
+/** Image media types accepted for photo import (matches Anthropic vision support). */
+export const RecipeImageMediaTypeSchema = z.enum(['image/jpeg', 'image/png', 'image/webp'])
+export type RecipeImageMediaType = z.infer<typeof RecipeImageMediaTypeSchema>
+
+export const MAX_RECIPE_PHOTOS = 5
+/**
+ * Max base64 length per image ≈ 5 MB decoded. base64 inflates by ~4/3, so a
+ * 5 MB image is ~6.99 M chars; round up slightly to keep a small margin.
+ */
+export const MAX_RECIPE_PHOTO_BASE64_CHARS = 7_000_000
+
+export const RecipeImageSchema = z.object({
+  mediaType: RecipeImageMediaTypeSchema,
+  /** Raw base64 (no `data:` prefix). */
+  data: z.string().min(1).max(MAX_RECIPE_PHOTO_BASE64_CHARS),
+})
+export type RecipeImageDto = z.infer<typeof RecipeImageSchema>
+
+export const ImportRecipePhotosSchema = z.object({
+  /** One or more photos of the SAME recipe, interpreted together. */
+  images: z.array(RecipeImageSchema).min(1).max(MAX_RECIPE_PHOTOS),
+})
+export type ImportRecipePhotosDto = z.infer<typeof ImportRecipePhotosSchema>
+
 // --- Draft resolution against the household catalog -------------------------
 
 export const ResolvedIngredientSchema = z.discriminatedUnion('status', [
