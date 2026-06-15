@@ -2,17 +2,26 @@
 import type { CanonicalUnit, Dimension } from '../../shared/units/conversions'
 import type { CreateRecipeDto, RecipeView } from '../../shared/dto/recipes'
 import type { RecipePrefill } from '../composables/useApiRecipeChat'
+import type { RecipeDraftContent } from '../composables/useRecipeDraftSync'
 
 const props = defineProps<{
   initial?: RecipeView | null
   /** AI-assistant pre-fill (takes precedence over `initial` when present). */
   prefill?: RecipePrefill | null
   loading?: boolean
+  /** When true, every change is emitted via `change` so the parent can autosave a draft. */
+  draftAutosave?: boolean
+  /** Whether a draft autosave is currently in flight (UI hint). */
+  draftSaving?: boolean
 }>()
 
 const emit = defineEmits<{
   submit: [payload: CreateRecipeDto]
   cancel: []
+  /** Emitted on every edit when `draftAutosave` is on — loose, free-text content. */
+  change: [content: RecipeDraftContent]
+  /** Explicit "ne pas garder" — the parent deletes the draft. */
+  discard: []
 }>()
 
 const CANONICAL_TO_DIMENSION: Record<CanonicalUnit, Dimension> = {
@@ -27,6 +36,8 @@ const { data: ingredients } = api.list()
 interface RowState {
   ingredientId: string | null
   quantity: { value: number, unit: string }
+  /** Free-text ingredient name, preserved for the saved draft (esp. proposed-new ones). */
+  name?: string
   /** Set for AI-proposed ingredients the user must pick/create before saving. */
   hint?: string
 }
@@ -36,6 +47,7 @@ function initialRows(): RowState[] {
     return props.prefill.rows.map((r) => ({
       ingredientId: r.ingredientId,
       quantity: { ...r.quantity },
+      name: r.name,
       hint: r.hint,
     }))
   }
@@ -94,6 +106,34 @@ function onSubmit() {
     })),
   })
 }
+
+/** Loose snapshot of the form for autosave: free-text names, no catalog resolution. */
+function buildDraftContent(): RecipeDraftContent {
+  return {
+    title: state.title.trim() || undefined,
+    instructions: state.instructions.trim() ? state.instructions : undefined,
+    servings: Number(state.servings) || undefined,
+    ingredients: state.ingredients
+      .map((r) => {
+        const name = (ingredientById(r.ingredientId)?.name ?? r.name ?? '').trim()
+        const value = Number(r.quantity?.value) || 0
+        return {
+          name,
+          ...(value > 0 ? { quantity: { value, unit: r.quantity.unit } } : {}),
+        }
+      })
+      .filter((i) => i.name.length > 0),
+    ...(props.prefill?.sourceUrl ? { sourceUrl: props.prefill.sourceUrl } : {}),
+  }
+}
+
+// Autosave: emit the current content on mount (persists an AI pre-fill, leaves a
+// blank manual form untouched) then on every edit. Client-only — drafts hit the API.
+onMounted(() => {
+  if (!props.draftAutosave) return
+  emit('change', buildDraftContent())
+  watch(state, () => emit('change', buildDraftContent()), { deep: true })
+})
 </script>
 
 <template>
@@ -141,8 +181,26 @@ function onSubmit() {
       </div>
     </div>
 
-    <div class="flex justify-end gap-2 pt-2">
-      <UButton variant="ghost" color="neutral" @click="emit('cancel')">Annuler</UButton>
+    <div class="flex items-center gap-2 pt-2">
+      <p v-if="draftAutosave" class="text-xs text-gray-500 flex items-center gap-1.5">
+        <template v-if="draftSaving">
+          <UIcon name="i-lucide-loader-circle" class="size-3.5 animate-spin" />
+          Enregistrement du brouillon…
+        </template>
+        <template v-else>
+          <UIcon name="i-lucide-cloud-check" class="size-3.5 text-green-500" />
+          Brouillon enregistré automatiquement
+        </template>
+      </p>
+      <div class="flex-1" />
+      <UButton
+        v-if="draftAutosave"
+        variant="ghost"
+        color="error"
+        icon="i-lucide-trash-2"
+        @click="emit('discard')"
+      >Ne pas garder</UButton>
+      <UButton v-else variant="ghost" color="neutral" @click="emit('cancel')">Annuler</UButton>
       <UButton type="submit" :loading="loading">{{ initial ? 'Enregistrer' : 'Créer la recette' }}</UButton>
     </div>
   </UForm>

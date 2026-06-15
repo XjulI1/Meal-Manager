@@ -51,7 +51,7 @@
 ## 8. Front (préparation autosave)
 
 - [x] 8.1 Composable `app/composables/useApiRecipeDrafts.ts` typé via les DTO
-- [ ] 8.2 Persister un brouillon depuis le formulaire recette (manuel) et depuis les retours des 3 modes IA (bouton « Enregistrer le brouillon » avec la `source` adéquate)
+- [x] 8.2 Autosave sans bouton : `useRecipeDraftSync` (create au 1er changement, patch debounce/coalescé), `RecipeForm` émet `change`/`discard`, `/recipes/new` câble autosave + reprise (`?draft=`) + promotion à la création ; bouton « Ne pas garder » ; les 3 modes IA taguent la `source` ; liste des brouillons sur `/recipes`
 
 ## 9. Tests
 

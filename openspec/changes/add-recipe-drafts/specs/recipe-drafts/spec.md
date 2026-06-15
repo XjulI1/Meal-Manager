@@ -1,5 +1,38 @@
 ## ADDED Requirements
 
+### Requirement: Automatic Draft Autosave on the Recipe Form
+
+The web recipe-creation form SHALL persist a draft **automatically**, without any "save draft" button. There is no manual save action for drafts; saving is a side effect of writing in the form.
+
+- The first meaningful change (a non-empty title, instructions, or at least one named ingredient) SHALL create a draft. An empty, untouched form SHALL NOT create a draft.
+- Every subsequent change SHALL be persisted to that draft (debounced and coalesced), recording the latest form content.
+- Arriving on the form with AI-produced content (chat / URL / photo) SHALL persist a draft tagged with the matching `source`; a manual form uses `source: "manual"`.
+- Leaving the form (navigating away, closing) SHALL keep the draft. The draft SHALL be removed only by an explicit **"Ne pas garder"** (discard) action, or implicitly once the recipe has been created from it (promotion).
+- A member SHALL be able to resume a saved draft, which re-populates the form, and continued edits SHALL patch the same draft (no duplicate).
+
+#### Scenario: Starting a form creates a draft; an empty form does not
+- GIVEN a member on the new-recipe form who has typed nothing
+- THEN no draft is created
+- WHEN they type a title or add a named ingredient
+- THEN a draft is created automatically with that content (no button pressed)
+
+#### Scenario: Each change is persisted to the same draft
+- GIVEN a form that has already auto-created a draft
+- WHEN the member edits the title or ingredients again
+- THEN the existing draft is updated (not duplicated) with the latest content
+
+#### Scenario: Leaving keeps the draft, only discard deletes it
+- GIVEN a form with an auto-saved draft
+- WHEN the member navigates away without submitting
+- THEN the draft remains and is listed under the household's drafts
+- WHEN the member instead clicks "Ne pas garder"
+- THEN the draft is deleted
+
+#### Scenario: Creating the recipe consumes the draft
+- GIVEN a form with an auto-saved draft
+- WHEN the member submits and the recipe is created
+- THEN the draft is removed (promoted into the recipe)
+
 ### Requirement: Persisting a Recipe Draft
 
 The system SHALL allow an authenticated household member to persist a **recipe draft** scoped to their household via `POST /api/recipes/drafts`.

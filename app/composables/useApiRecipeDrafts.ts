@@ -21,6 +21,10 @@ export function useApiRecipeDrafts() {
     return useFetch<RecipeDraftView>(() => `/api/recipes/drafts/${toValue(id)}`)
   }
 
+  async function fetchOne(id: string): Promise<RecipeDraftView> {
+    return $fetch<RecipeDraftView>(`/api/recipes/drafts/${id}`)
+  }
+
   async function save(payload: SaveRecipeDraftDto): Promise<RecipeDraftView> {
     return $fetch<RecipeDraftView>('/api/recipes/drafts', {
       method: 'POST',
@@ -39,5 +43,5 @@ export function useApiRecipeDrafts() {
     await $fetch(`/api/recipes/drafts/${id}`, { method: 'DELETE' })
   }
 
-  return { list, getById, save, update, remove }
+  return { list, getById, fetchOne, save, update, remove }
 }

@@ -16,6 +16,7 @@ const input = ref('')
 const sending = ref(false)
 const sources = ref<ChatSource[]>([])
 const resolution = ref<DraftResolutionDto | null>(null)
+const resolutionSource = ref<'ai-chat' | 'ai-url' | 'ai-photo'>('ai-chat')
 const urlInput = ref('')
 const importing = ref(false)
 const photoFiles = ref<File[]>([])
@@ -52,6 +53,7 @@ async function send() {
 async function applyDraft(draft: Parameters<typeof resolveDraft>[0]) {
   try {
     resolution.value = await resolveDraft(draft)
+    resolutionSource.value = 'ai-chat'
   }
   catch {
     toast.add({ title: 'Résolution des ingrédients impossible', color: 'error' })
@@ -65,6 +67,7 @@ async function doImport() {
   try {
     const draft = await importUrl(url)
     resolution.value = await resolveDraft(draft)
+    resolutionSource.value = 'ai-url'
     toast.add({ title: 'Recette importée', color: 'success' })
   }
   catch (error) {
@@ -93,6 +96,7 @@ async function doImportPhotos() {
   try {
     const draft = await importPhotos(photoFiles.value, (phase) => { photoPhase.value = phase })
     resolution.value = await resolveDraft(draft)
+    resolutionSource.value = 'ai-photo'
     photoFiles.value = []
     toast.add({ title: 'Recette interprétée — vérifiez le brouillon', color: 'success' })
   }
@@ -108,7 +112,7 @@ async function doImportPhotos() {
 
 function continueToForm() {
   if (!resolution.value) return
-  prefill.value = toPrefill(resolution.value)
+  prefill.value = toPrefill(resolution.value, { source: resolutionSource.value })
   navigateTo('/recipes/new')
 }
 </script>
