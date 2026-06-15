@@ -80,8 +80,8 @@ export function useApiRecipeChat() {
     return $fetch<RecipeDraftDto>('/api/recipes/import', { method: 'POST', body: { url } })
   }
 
-  /** Read a File as raw base64 (strips the `data:<mime>;base64,` prefix). */
-  function fileToBase64(file: File): Promise<string> {
+  /** Read a Blob as raw base64 (strips the `data:<mime>;base64,` prefix). */
+  function blobToBase64(blob: Blob): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
       reader.onerror = () => reject(reader.error ?? new Error('Lecture du fichier impossible'))
@@ -89,18 +89,32 @@ export function useApiRecipeChat() {
         const result = reader.result as string
         resolve(result.slice(result.indexOf(',') + 1))
       }
-      reader.readAsDataURL(file)
+      reader.readAsDataURL(blob)
     })
+  }
+
+  /** iPhone photos default to HEIC, which the vision API does not accept. */
+  function isHeic(file: File): boolean {
+    return /image\/hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name)
+  }
+
+  /**
+   * Normalize a picked file to an API-acceptable image: HEIC/HEIF is converted
+   * to JPEG in the browser (heic2any / libheif WASM); other formats pass through.
+   */
+  async function toApiImage(file: File): Promise<RecipeImageDto> {
+    if (isHeic(file)) {
+      const { default: heic2any } = await import('heic2any')
+      const converted = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 })
+      const jpeg = Array.isArray(converted) ? converted[0]! : converted
+      return { mediaType: 'image/jpeg', data: await blobToBase64(jpeg) }
+    }
+    return { mediaType: file.type as RecipeImageMediaType, data: await blobToBase64(file) }
   }
 
   /** Interpret one or more photos of the same recipe into a draft. */
   async function importPhotos(files: File[]): Promise<RecipeDraftDto> {
-    const images: RecipeImageDto[] = await Promise.all(
-      files.map(async (file) => ({
-        mediaType: file.type as RecipeImageMediaType,
-        data: await fileToBase64(file),
-      })),
-    )
+    const images: RecipeImageDto[] = await Promise.all(files.map(toApiImage))
     return $fetch<RecipeDraftDto>('/api/recipes/import-photo', { method: 'POST', body: { images } })
   }
 

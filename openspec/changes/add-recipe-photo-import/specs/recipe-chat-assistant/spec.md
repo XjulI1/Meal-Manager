@@ -10,6 +10,8 @@ The endpoint MUST be scoped to the caller's household (via `requireHouseholdMemb
 
 The endpoint MUST validate inbound images at the boundary: it MUST reject (HTTP 400) a request with zero images, more than the allowed maximum, an unsupported media type (only JPEG, PNG and WebP are accepted), or an image exceeding the allowed size. Validation failures MUST NOT call the Anthropic API.
 
+Because the Anthropic vision API does not accept HEIC/HEIF (the default iPhone camera format), the client SHALL convert HEIC/HEIF photos to JPEG before upload, so the endpoint only ever receives the accepted media types.
+
 The importer MUST NOT create, modify, or delete any recipe or inventory data. Its only output is a structured recipe draft, which the client uses to pre-fill the existing recipe form (followed by the existing ingredient-resolution flow). Persistence happens only through the existing recipe-creation flow after the user reviews and confirms.
 
 #### Scenario: Import from a single photo
@@ -43,6 +45,12 @@ The importer MUST NOT create, modify, or delete any recipe or inventory data. It
 - **WHEN** they call `POST /api/recipes/import-photo` with more images than allowed, an oversized image, or an unsupported media type (e.g. a PDF)
 - **THEN** the system returns HTTP 400 with an explanatory error
 - **AND** no call is made to the Anthropic API
+
+#### Scenario: HEIC photo from an iPhone is accepted via client-side conversion
+- **GIVEN** an authenticated household member with AI enabled
+- **WHEN** they select a HEIC/HEIF photo of a recipe
+- **THEN** the client converts it to JPEG before upload
+- **AND** the endpoint receives an accepted media type and proceeds with the import
 
 #### Scenario: AI disabled blocks the photo import
 - **GIVEN** an authenticated household member whose account has AI disabled (default)

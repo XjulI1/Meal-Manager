@@ -218,7 +218,7 @@ Voir `.env.example`.
 
 ## Assistant recettes (IA)
 
-Un assistant conversationnel (Claude) aide à trouver, co-construire ou importer une recette, puis pré-remplit le formulaire de création (`/recipes/chat`). Recherche web intégrée, import depuis une URL (JSON-LD, repli extraction Claude) et **import depuis une ou plusieurs photos** d'une même recette (livre, fiche manuscrite) interprétées par Claude vision.
+Un assistant conversationnel (Claude) aide à trouver, co-construire ou importer une recette, puis pré-remplit le formulaire de création (`/recipes/chat`). Recherche web intégrée, import depuis une URL (JSON-LD, repli extraction Claude) et **import depuis une ou plusieurs photos** d'une même recette (livre, fiche manuscrite) interprétées par Claude vision (les photos HEIC d'iPhone sont converties en JPEG côté navigateur).
 
 - Nécessite `NUXT_ANTHROPIC_API_KEY` côté serveur.
 - **Désactivé par défaut, par compte** : la colonne `users.ai_enabled` vaut `false` à la création. Tant qu'elle n'est pas activée, les routes IA renvoient `403` et aucun appel à l'API n'est fait (pas de consommation subie).

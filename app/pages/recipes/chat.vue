@@ -20,7 +20,7 @@ const urlInput = ref('')
 const importing = ref(false)
 const photoFiles = ref<File[]>([])
 const importingPhotos = ref(false)
-const ACCEPTED_PHOTO_TYPES = 'image/jpeg,image/png,image/webp'
+const ACCEPTED_PHOTO_TYPES = 'image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif'
 
 async function send() {
   const text = input.value.trim()
@@ -160,7 +160,7 @@ function continueToForm() {
             >Interpréter</UButton>
           </div>
           <p class="text-xs text-gray-500">
-            Photographiez une recette (livre, fiche…). Jusqu'à {{ MAX_RECIPE_PHOTOS }} photos d'une même recette (JPEG, PNG, WebP).
+            Photographiez une recette (livre, fiche…). Jusqu'à {{ MAX_RECIPE_PHOTOS }} photos d'une même recette (JPEG, PNG, WebP, HEIC).
           </p>
           <p v-if="photoFiles.length" class="text-xs text-gray-600 dark:text-gray-300">
             {{ photoFiles.length }} photo(s) sélectionnée(s) : {{ photoFiles.map((f) => f.name).join(', ') }}
