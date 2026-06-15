@@ -1,4 +1,4 @@
-import type { RecipeDraft } from './recipe-importer'
+import type { RecipeDraftContent } from './recipe-importer'
 
 /**
  * Port for importing a recipe from one or more photos (a cookbook page, a
@@ -17,5 +17,5 @@ export interface RecipeImageInput {
 }
 
 export interface IRecipePhotoImporter {
-  importFromPhotos(images: ReadonlyArray<RecipeImageInput>): Promise<RecipeDraft>
+  importFromPhotos(images: ReadonlyArray<RecipeImageInput>): Promise<RecipeDraftContent>
 }

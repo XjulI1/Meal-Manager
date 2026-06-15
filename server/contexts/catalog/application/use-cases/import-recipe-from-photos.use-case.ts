@@ -1,4 +1,4 @@
-import type { RecipeDraft } from '../../domain/ports/recipe-importer'
+import type { RecipeDraftContent } from '../../domain/ports/recipe-importer'
 import type { IRecipePhotoImporter, RecipeImageInput } from '../../domain/ports/recipe-photo-importer'
 
 export interface ImportRecipeFromPhotosInput {
@@ -15,7 +15,7 @@ export interface ImportRecipeFromPhotosInput {
 export class ImportRecipeFromPhotosUseCase {
   constructor(private readonly importer: IRecipePhotoImporter) {}
 
-  async execute(input: ImportRecipeFromPhotosInput): Promise<RecipeDraft> {
+  async execute(input: ImportRecipeFromPhotosInput): Promise<RecipeDraftContent> {
     return this.importer.importFromPhotos(input.images)
   }
 }

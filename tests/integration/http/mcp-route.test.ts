@@ -103,11 +103,14 @@ describe('registerAllTools', () => {
         listIngredients: { execute: vi.fn().mockResolvedValue([]) },
         getIngredient: { execute: vi.fn().mockResolvedValue({}) },
         getCurrentHousehold: { execute: vi.fn().mockResolvedValue({}) },
+        saveRecipeDraft: { execute: vi.fn().mockResolvedValue({ id: 'draft-1' }) },
+        listRecipeDrafts: { execute: vi.fn().mockResolvedValue([]) },
+        getRecipeDraftById: { execute: vi.fn().mockResolvedValue({}) },
       } as any,
     }
   })
 
-  it('registers exactly the 8 read-only tools', () => {
+  it('registers exactly the 11 tools (8 read-only + 3 draft tools)', () => {
     const { server, tools } = makeRecordingServer()
 
     registerAllTools(server, ctx)
@@ -117,11 +120,44 @@ describe('registerAllTools', () => {
       'mealmanager_get_ingredient',
       'mealmanager_get_menu_for_week',
       'mealmanager_get_recipe',
+      'mealmanager_get_recipe_draft',
       'mealmanager_get_shopping_list',
       'mealmanager_list_ingredients',
       'mealmanager_list_inventory',
+      'mealmanager_list_recipe_drafts',
       'mealmanager_list_recipes',
+      'mealmanager_save_recipe_draft',
     ])
+  })
+
+  it('save_recipe_draft persists under the PAT household with source forced to mcp', async () => {
+    const { server, tools } = makeRecordingServer()
+    registerAllTools(server, ctx)
+    const tool = tools.find((t) => t.name === 'mealmanager_save_recipe_draft')!
+
+    await tool.handler({ title: 'Soupe de courge', ingredients: [{ name: 'courge' }] })
+
+    expect(ctx.container.saveRecipeDraft.execute).toHaveBeenCalledWith({
+      householdId: 'hh-1',
+      source: 'mcp',
+      content: {
+        title: 'Soupe de courge',
+        instructions: undefined,
+        servings: undefined,
+        ingredients: [{ name: 'courge' }],
+        sourceUrl: undefined,
+      },
+    })
+  })
+
+  it('save_recipe_draft input schema declares neither householdId nor source', () => {
+    const { server, tools } = makeRecordingServer()
+    registerAllTools(server, ctx)
+    const tool = tools.find((t) => t.name === 'mealmanager_save_recipe_draft')!
+
+    const keys = Object.keys(tool.config.inputSchema ?? {})
+    expect(keys).not.toContain('householdId')
+    expect(keys).not.toContain('source')
   })
 
   it('injects the PAT householdId into list_inventory, never accepting it from input', async () => {

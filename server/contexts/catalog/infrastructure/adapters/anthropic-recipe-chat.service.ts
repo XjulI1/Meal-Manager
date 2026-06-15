@@ -6,7 +6,7 @@ import type {
   RecipeChatEvent,
   RecipeChatSource,
 } from '../../domain/ports/recipe-chat-assistant'
-import type { RecipeDraft } from '../../domain/ports/recipe-importer'
+import type { RecipeDraftContent } from '../../domain/ports/recipe-importer'
 import type { AnthropicEffort } from '../anthropic-config'
 
 /** Cost guard: bound output tokens per turn (streaming chat). */
@@ -107,7 +107,7 @@ export class AnthropicRecipeChatService implements IRecipeChatAssistant {
   }
 }
 
-function extractDraft(content: Anthropic.ContentBlock[]): RecipeDraft | null {
+function extractDraft(content: Anthropic.ContentBlock[]): RecipeDraftContent | null {
   for (const block of content) {
     if (block.type === 'tool_use' && block.name === 'propose_recipe') {
       const parsed = RecipeDraftSchema.safeParse(block.input)

@@ -45,9 +45,9 @@ Every MCP request MUST carry:
 - `Content-Type: application/json` — JSON-RPC payload.
 - `Accept: application/json, text/event-stream` — **both** media types, per the StreamableHTTP transport spec. A request that accepts only one will be rejected with HTTP 406 ("Not Acceptable: Client must accept both application/json and text/event-stream"). Real MCP clients (Claude Desktop, Cursor, Home Assistant) set this automatically — you only need to think about it when testing by hand with curl.
 
-### Tools available (read-only in v1)
+### Tools available
 
-All eight tools are read-only. None accept `householdId` as input — it is always derived from the PAT.
+Eleven tools. All are read-only except `mealmanager_save_recipe_draft`. None accept `householdId` as input — it is always derived from the PAT.
 
 | Tool | Purpose | Arguments |
 |---|---|---|
@@ -59,6 +59,9 @@ All eight tools are read-only. None accept `householdId` as input — it is alwa
 | `mealmanager_list_ingredients` | Ingredients catalog (master list). | `{ query?: string, category?: string, storage?: "pantry"\|"fridge", includeArchived?: boolean }` |
 | `mealmanager_get_ingredient` | Full ingredient details with products attached. | `{ ingredientId: string }` (UUID) |
 | `mealmanager_get_household` | Current household (id, name, members). | `{}` |
+| `mealmanager_list_recipe_drafts` | List the household recipe drafts (id, title, source, updatedAt), newest first. | `{}` |
+| `mealmanager_get_recipe_draft` | Full content of a recipe draft (free-text ingredients). | `{ draftId: string }` (UUID) |
+| `mealmanager_save_recipe_draft` | **Write.** Persist a work-in-progress recipe draft for the household to review. `source` is forced to `mcp`. | `{ title?, instructions?, servings?, ingredients?: { name, quantity?: { value, unit }, raw? }[], sourceUrl? }` |
 
 Each tool returns a single `text` content block containing the JSON-pretty-printed result of the underlying use case.
 
@@ -141,7 +144,7 @@ Four publicly-served resources let an agent or a scanner discover Meal Manager's
 |---|---|---|
 | `/robots.txt` | Bot Access Control — disallows AI crawlers from HTML pages. The legitimate agent channel is `/mcp` with a Bearer PAT. | `text/plain` |
 | `/.well-known/api-catalog` | RFC 9727 API catalog — single entry point listing the available APIs (currently just `/mcp`) and pointing to their descriptions. | `application/linkset+json` |
-| `/openapi-mcp.yaml` | OpenAPI 3.1 description of `/mcp` — declares the `bearerAuth` security scheme and the 8 `mealmanager_*` tools (each documented under the `x-mcp-tools` extension with its input schema). | `application/yaml` |
+| `/openapi-mcp.yaml` | OpenAPI 3.1 description of `/mcp` — declares the `bearerAuth` security scheme and the 11 `mealmanager_*` tools (each documented under the `x-mcp-tools` extension with its input schema). | `application/yaml` |
 | `/llms.txt` and `/llms-full.txt` | Prose, human-readable guides for LLM operators. You are reading the latter. | `text/plain` |
 
 In addition, every non-MCP HTTP response carries a `Link` header (RFC 8288) advertising these three resources, so a one-shot `HEAD /` lets an agent discover everything in a single round trip:

@@ -1,12 +1,12 @@
 import { lookupUnit } from '../../../../shared/units/conversions'
-import type { RecipeDraft, RecipeIngredientDraft } from '../domain/ports/recipe-importer'
+import type { RecipeDraftContent, RecipeIngredientDraft } from '../domain/ports/recipe-importer'
 
 /**
  * Pure parser: extract a schema.org `Recipe` from a page's JSON-LD blocks and
- * map it to a RecipeDraft. Returns null when no usable Recipe data is present.
+ * map it to a RecipeDraftContent. Returns null when no usable Recipe data is present.
  * Side-effect free so it can be unit-tested without any network.
  */
-export function parseRecipeJsonLd(html: string): RecipeDraft | null {
+export function parseRecipeJsonLd(html: string): RecipeDraftContent | null {
   for (const raw of extractJsonLdBlocks(html)) {
     const node = findRecipeNode(raw)
     if (node) return recipeNodeToDraft(node)
@@ -93,7 +93,7 @@ function typeHasRecipe(type: unknown): boolean {
   return false
 }
 
-function recipeNodeToDraft(node: Record<string, unknown>): RecipeDraft {
+function recipeNodeToDraft(node: Record<string, unknown>): RecipeDraftContent {
   const title = asString(node.name)?.trim() || 'Recette importée'
   const instructions = parseInstructions(node.recipeInstructions) || 'Instructions non disponibles.'
   const ingredients = toArray(node.recipeIngredient)

@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { RecipeDraftSchema } from '../../../../../shared/dto/recipe-chat'
 import { RecipeImportError } from '../../domain/errors/recipe-import.error'
-import type { IRecipeImporter, RecipeDraft } from '../../domain/ports/recipe-importer'
+import type { IRecipeImporter, RecipeDraftContent } from '../../domain/ports/recipe-importer'
 import type { AnthropicEffort } from '../anthropic-config'
 import { parseRecipeJsonLd } from '../recipe-json-ld'
 import { EXTRACT_TOOLS } from './recipe-extract-tool'
@@ -27,7 +27,7 @@ export class AnthropicRecipeImporter implements IRecipeImporter {
     this.client = new Anthropic({ apiKey })
   }
 
-  async importFromUrl(url: string): Promise<RecipeDraft> {
+  async importFromUrl(url: string): Promise<RecipeDraftContent> {
     const html = await this.fetchHtml(url)
     const fromJsonLd = parseRecipeJsonLd(html)
     if (fromJsonLd) return { ...fromJsonLd, sourceUrl: url }
@@ -49,7 +49,7 @@ export class AnthropicRecipeImporter implements IRecipeImporter {
     return await res.text()
   }
 
-  private async extractWithClaude(html: string, url: string): Promise<RecipeDraft> {
+  private async extractWithClaude(html: string, url: string): Promise<RecipeDraftContent> {
     const text = stripToText(html).slice(0, MAX_HTML_CHARS)
     const message = await this.client.messages.create({
       model: this.model,

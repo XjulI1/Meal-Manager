@@ -6,8 +6,9 @@ import { requireHouseholdFromPAT } from '../../utils/require-household'
 /**
  * MCP HTTP endpoint at `/mcp`. Authenticated by Personal Access Token in the
  * `Authorization: Bearer` header. Stateless mode — each request is autonomous.
- * Read-only in v1: 8 tools mapped on existing use cases. The `householdId`
- * comes from the PAT, never from tool input.
+ * 11 tools mapped on existing use cases (read-only, plus the mutating
+ * `mealmanager_save_recipe_draft`). The `householdId` comes from the PAT, never
+ * from tool input.
  *
  * See openspec/changes/add-mcp-llm-integration/design.md for rationale (D1, D7, D8).
  */

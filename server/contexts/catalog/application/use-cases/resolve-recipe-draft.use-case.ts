@@ -1,10 +1,10 @@
 import { CANONICAL_UNIT, lookupUnit, type CanonicalUnit } from '../../../../../shared/units/conversions'
 import type { IIngredientLookup } from '../../domain/ports/ingredient-lookup.port'
-import type { RecipeDraft } from '../../domain/ports/recipe-importer'
+import type { RecipeDraftContent } from '../../domain/ports/recipe-importer'
 
 export interface ResolveRecipeDraftInput {
   householdId: string
-  draft: RecipeDraft
+  draft: RecipeDraftContent
 }
 
 export interface ResolvedQuantity {

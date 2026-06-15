@@ -4,6 +4,11 @@ import { CreateRecipeUseCase } from '../contexts/catalog/application/use-cases/c
 import { ImportRecipeFromUrlUseCase } from '../contexts/catalog/application/use-cases/import-recipe-from-url.use-case'
 import { ImportRecipeFromPhotosUseCase } from '../contexts/catalog/application/use-cases/import-recipe-from-photos.use-case'
 import { ResolveRecipeDraftUseCase } from '../contexts/catalog/application/use-cases/resolve-recipe-draft.use-case'
+import { SaveRecipeDraftUseCase } from '../contexts/catalog/application/use-cases/save-recipe-draft.use-case'
+import { ListRecipeDraftsUseCase } from '../contexts/catalog/application/use-cases/list-recipe-drafts.use-case'
+import { GetRecipeDraftByIdUseCase } from '../contexts/catalog/application/use-cases/get-recipe-draft-by-id.use-case'
+import { UpdateRecipeDraftUseCase } from '../contexts/catalog/application/use-cases/update-recipe-draft.use-case'
+import { DeleteRecipeDraftUseCase } from '../contexts/catalog/application/use-cases/delete-recipe-draft.use-case'
 import { DeleteRecipeUseCase } from '../contexts/catalog/application/use-cases/delete-recipe.use-case'
 import { GetRecipeByIdUseCase } from '../contexts/catalog/application/use-cases/get-recipe-by-id.use-case'
 import { ListRecipesUseCase } from '../contexts/catalog/application/use-cases/list-recipes.use-case'
@@ -13,6 +18,7 @@ import { AnthropicRecipeImporter } from '../contexts/catalog/infrastructure/adap
 import { AnthropicRecipePhotoImporter } from '../contexts/catalog/infrastructure/adapters/anthropic-recipe-photo-importer'
 import { DEFAULT_CHAT_EFFORT, DEFAULT_IMPORT_EFFORT, DEFAULT_PHOTO_EFFORT, parseEffort } from '../contexts/catalog/infrastructure/anthropic-config'
 import { DrizzleRecipeRepository } from '../contexts/catalog/infrastructure/repositories/drizzle-recipe.repository'
+import { DrizzleRecipeDraftRepository } from '../contexts/catalog/infrastructure/repositories/drizzle-recipe-draft.repository'
 import { CreateHouseholdUseCase } from '../contexts/family/application/use-cases/create-household.use-case'
 import { GetCurrentHouseholdUseCase } from '../contexts/family/application/use-cases/get-current-household.use-case'
 import { JoinHouseholdUseCase } from '../contexts/family/application/use-cases/join-household.use-case'
@@ -126,6 +132,7 @@ function buildContainer(): Container {
 
   // catalog
   const recipeRepo = new DrizzleRecipeRepository(db)
+  const recipeDraftRepo = new DrizzleRecipeDraftRepository(db)
   // AI recipe assistant — config from runtimeConfig (server-only). Key, model
   // and effort are overridable via NUXT_ANTHROPIC_* env vars; gated per account.
   const aiConfig = useRuntimeConfig()
@@ -203,6 +210,11 @@ function buildContainer(): Container {
     importRecipeFromUrl: new ImportRecipeFromUrlUseCase(recipeImporter),
     importRecipeFromPhotos: new ImportRecipeFromPhotosUseCase(recipePhotoImporter),
     resolveRecipeDraft: new ResolveRecipeDraftUseCase(ingredientLookup),
+    saveRecipeDraft: new SaveRecipeDraftUseCase(recipeDraftRepo),
+    listRecipeDrafts: new ListRecipeDraftsUseCase(recipeDraftRepo),
+    getRecipeDraftById: new GetRecipeDraftByIdUseCase(recipeDraftRepo),
+    updateRecipeDraft: new UpdateRecipeDraftUseCase(recipeDraftRepo),
+    deleteRecipeDraft: new DeleteRecipeDraftUseCase(recipeDraftRepo),
     createMenu: new CreateMenuUseCase(menuRepo),
     getMenuByWeek: new GetMenuByWeekUseCase(menuRepo),
     assignRecipeToSlot: new AssignRecipeToSlotUseCase(menuRepo, recipeFinder),

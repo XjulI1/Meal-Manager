@@ -9,7 +9,7 @@ export interface RecipeIngredientDraft {
   raw?: string
 }
 
-export interface RecipeDraft {
+export interface RecipeDraftContent {
   title: string
   instructions: string
   servings?: number
@@ -18,5 +18,5 @@ export interface RecipeDraft {
 }
 
 export interface IRecipeImporter {
-  importFromUrl(url: string): Promise<RecipeDraft>
+  importFromUrl(url: string): Promise<RecipeDraftContent>
 }

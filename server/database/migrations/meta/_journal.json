@@ -43,6 +43,13 @@
       "when": 1780531200000,
       "tag": "0005_add_user_ai_enabled",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1781308800000,
+      "tag": "0006_add_recipe_drafts",
+      "breakpoints": true
     }
   ]
 }
