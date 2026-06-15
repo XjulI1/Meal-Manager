@@ -31,24 +31,38 @@ function makeRng(seed: number) {
   }
 }
 
-const COUNT = 22
+// Répartition en grille jitterée : un aliment par cellule, décalé
+// aléatoirement à l'intérieur → couverture homogène, sans paquets ni trous.
+const COLS = 6
+const ROWS = 4
 
 const items = computed<FloatingItem[]>(() => {
   const rng = makeRng(42)
-  return Array.from({ length: COUNT }, (_, i) => {
-    const depth = rng()
-    return {
-      emoji: FOODS[i % FOODS.length]!,
-      left: rng() * 100,
-      top: rng() * 100,
-      size: 1.5 + depth * 3.5,
-      depth,
-      duration: 8 + rng() * 10,
-      delay: -rng() * 12,
-      drift: 10 + rng() * 30,
-      rotate: (rng() - 0.5) * 40,
+  const result: FloatingItem[] = []
+  let i = 0
+  for (let row = 0; row < ROWS; row++) {
+    for (let col = 0; col < COLS; col++) {
+      const depth = rng()
+      // Centre de la cellule + jitter (60 % de la cellule), en gardant une marge.
+      const cellW = 100 / COLS
+      const cellH = 100 / ROWS
+      const left = col * cellW + cellW * (0.2 + rng() * 0.6)
+      const top = row * cellH + cellH * (0.2 + rng() * 0.6)
+      result.push({
+        emoji: FOODS[i % FOODS.length]!,
+        left,
+        top,
+        size: 1.5 + depth * 3,
+        depth,
+        duration: 8 + rng() * 10,
+        delay: -rng() * 12,
+        drift: 10 + rng() * 30,
+        rotate: (rng() - 0.5) * 40,
+      })
+      i++
     }
-  })
+  }
+  return result
 })
 
 // Parallaxe douce suivant la souris (désactivée si reduced-motion).
