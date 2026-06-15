@@ -20,6 +20,7 @@ const urlInput = ref('')
 const importing = ref(false)
 const photoFiles = ref<File[]>([])
 const importingPhotos = ref(false)
+const photoPhase = ref<'preparing' | 'interpreting' | ''>('')
 const ACCEPTED_PHOTO_TYPES = 'image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif'
 
 async function send() {
@@ -90,7 +91,7 @@ async function doImportPhotos() {
   if (!photoFiles.value.length || importingPhotos.value) return
   importingPhotos.value = true
   try {
-    const draft = await importPhotos(photoFiles.value)
+    const draft = await importPhotos(photoFiles.value, (phase) => { photoPhase.value = phase })
     resolution.value = await resolveDraft(draft)
     photoFiles.value = []
     toast.add({ title: 'Recette interprétée — vérifiez le brouillon', color: 'success' })
@@ -101,6 +102,7 @@ async function doImportPhotos() {
   }
   finally {
     importingPhotos.value = false
+    photoPhase.value = ''
   }
 }
 
@@ -163,8 +165,12 @@ function continueToForm() {
           <p class="text-xs text-gray-500">
             Photographiez une recette (livre, fiche…). Jusqu'à {{ MAX_RECIPE_PHOTOS }} photos d'une même recette (JPEG, PNG, WebP, HEIC).
           </p>
-          <p v-if="photoFiles.length" class="text-xs text-gray-600 dark:text-gray-300">
+          <p v-if="photoFiles.length && !importingPhotos" class="text-xs text-gray-600 dark:text-gray-300">
             {{ photoFiles.length }} photo(s) sélectionnée(s) : {{ photoFiles.map((f) => f.name).join(', ') }}
+          </p>
+          <p v-if="importingPhotos" class="flex items-center gap-1.5 text-xs text-primary-600 dark:text-primary-400">
+            <UIcon name="i-lucide-loader-circle" class="animate-spin" />
+            {{ photoPhase === 'interpreting' ? "Interprétation par l'IA…" : 'Préparation des photos…' }}
           </p>
         </div>
       </UCard>

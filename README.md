@@ -209,7 +209,7 @@ Pour les détails d'architecture, voir [`docs/ARCHITECTURE.md`](./docs/ARCHITECT
 | `NUXT_ANTHROPIC_MODEL` | non | Modèle Claude utilisé (défaut `claude-sonnet-4-6`). |
 | `NUXT_ANTHROPIC_CHAT_EFFORT` | non | Effort du chat : `low`/`medium`/`high`/`max` (défaut `medium`). |
 | `NUXT_ANTHROPIC_IMPORT_EFFORT` | non | Effort de l'extraction d'import URL (défaut `low`). |
-| `NUXT_ANTHROPIC_PHOTO_EFFORT` | non | Effort de l'interprétation des photos de recette (défaut `medium`). |
+| `NUXT_ANTHROPIC_PHOTO_EFFORT` | non | Effort de l'interprétation des photos de recette (défaut `low` ; passer à `medium`/`high` pour du manuscrit). |
 | `NODE_ENV` | non | `development` / `production` |
 | `HOST` / `PORT` | non | Bind du serveur Nitro (défaut image Docker : `0.0.0.0:3000`) |
 | `MARIADB_USER` / `MARIADB_PASSWORD` / `MARIADB_DATABASE` / `MARIADB_ROOT_PASSWORD` | compose uniquement | Initialisent le service `db` du `docker-compose.yml` |

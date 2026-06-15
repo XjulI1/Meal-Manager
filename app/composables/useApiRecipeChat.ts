@@ -111,7 +111,7 @@ export function useApiRecipeChat() {
    * the vision API downsamples large images anyway, so full resolution wastes
    * payload and tokens.
    */
-  const MAX_IMAGE_EDGE = 2000
+  const MAX_IMAGE_EDGE = 1600
   const JPEG_QUALITY = 0.85
 
   async function downscaleToJpeg(blob: Blob): Promise<Blob> {
@@ -162,9 +162,17 @@ export function useApiRecipeChat() {
     }
   }
 
+  /** Reported phases of a photo import, for UI feedback. */
+  type PhotoImportPhase = 'preparing' | 'interpreting'
+
   /** Interpret one or more photos of the same recipe into a draft. */
-  async function importPhotos(files: File[]): Promise<RecipeDraftDto> {
+  async function importPhotos(
+    files: File[],
+    onPhase?: (phase: PhotoImportPhase) => void,
+  ): Promise<RecipeDraftDto> {
+    onPhase?.('preparing')
     const images: RecipeImageDto[] = await Promise.all(files.map(toApiImage))
+    onPhase?.('interpreting')
     return $fetch<RecipeDraftDto>('/api/recipes/import-photo', { method: 'POST', body: { images } })
   }
 

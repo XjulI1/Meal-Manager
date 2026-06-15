@@ -8,7 +8,7 @@ const EFFORTS: readonly AnthropicEffort[] = ['low', 'medium', 'high', 'max']
 export const DEFAULT_ANTHROPIC_MODEL = 'claude-sonnet-4-6'
 export const DEFAULT_CHAT_EFFORT: AnthropicEffort = 'medium'
 export const DEFAULT_IMPORT_EFFORT: AnthropicEffort = 'low'
-export const DEFAULT_PHOTO_EFFORT: AnthropicEffort = 'medium'
+export const DEFAULT_PHOTO_EFFORT: AnthropicEffort = 'low'
 
 /** Coerce an env value to a valid effort, falling back when absent/invalid. */
 export function parseEffort(value: string | undefined, fallback: AnthropicEffort): AnthropicEffort {
