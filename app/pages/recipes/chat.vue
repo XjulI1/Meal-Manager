@@ -96,7 +96,8 @@ async function doImportPhotos() {
     toast.add({ title: 'Recette interprétée — vérifiez le brouillon', color: 'success' })
   }
   catch (error) {
-    toast.add({ title: (error as { statusMessage?: string }).statusMessage ?? 'Interprétation impossible', color: 'error' })
+    const e = error as { statusMessage?: string, message?: string }
+    toast.add({ title: e.statusMessage ?? e.message ?? 'Interprétation impossible', color: 'error' })
   }
   finally {
     importingPhotos.value = false

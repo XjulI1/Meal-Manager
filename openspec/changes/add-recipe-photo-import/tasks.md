@@ -36,7 +36,7 @@
 - [x] 7.2 Ajouter sur `/recipes/chat` une carte « Importer depuis une photo » : input `file` (`accept` jpeg/png/webp, `multiple`, `capture` pour la caméra mobile), aperçu des vignettes, bouton « Interpréter », garde de nombre/taille côté client
 - [x] 7.3 Brancher le résultat sur `resolveDraft` + `continueToForm` existants (réutilisation du parcours URL) ; toast invitant à vérifier le brouillon
 - [x] 7.4 Masquer la carte photo quand `aiEnabled` est `false` (comme l'URL et le chat)
-- [x] 7.5 Support HEIC/HEIF : conversion client en JPEG via `heic2any` (import dynamique) dans `toApiImage`, avant base64 ; `accept` de l'input élargi à `.heic`/`.heif`
+- [x] 7.5 Support HEIC/HEIF : conversion client en JPEG via `heic-to` (import dynamique, détection par octets magiques `isHeic`) dans `toApiImage`, avant base64 ; `accept` de l'input élargi à `.heic`/`.heif` ; erreur de conversion affichée en toast
 
 ## 8. Tests
 

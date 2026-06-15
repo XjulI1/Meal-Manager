@@ -93,20 +93,32 @@ export function useApiRecipeChat() {
     })
   }
 
-  /** iPhone photos default to HEIC, which the vision API does not accept. */
-  function isHeic(file: File): boolean {
-    return /image\/hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name)
+  /** Detect HEIC/HEIF by magic bytes, falling back to MIME type / extension. */
+  async function detectHeic(file: File): Promise<boolean> {
+    if (/image\/hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name)) return true
+    try {
+      const { isHeic } = await import('heic-to')
+      return await isHeic(file)
+    }
+    catch {
+      return false
+    }
   }
 
   /**
    * Normalize a picked file to an API-acceptable image: HEIC/HEIF is converted
-   * to JPEG in the browser (heic2any / libheif WASM); other formats pass through.
+   * to JPEG in the browser (heic-to / libheif WASM); other formats pass through.
    */
   async function toApiImage(file: File): Promise<RecipeImageDto> {
-    if (isHeic(file)) {
-      const { default: heic2any } = await import('heic2any')
-      const converted = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 })
-      const jpeg = Array.isArray(converted) ? converted[0]! : converted
+    if (await detectHeic(file)) {
+      let jpeg: Blob
+      try {
+        const { heicTo } = await import('heic-to')
+        jpeg = await heicTo({ blob: file, type: 'image/jpeg', quality: 0.9 })
+      }
+      catch {
+        throw new Error(`Impossible de convertir la photo HEIC « ${file.name} ». Réessayez ou exportez-la en JPEG.`)
+      }
       return { mediaType: 'image/jpeg', data: await blobToBase64(jpeg) }
     }
     return { mediaType: file.type as RecipeImageMediaType, data: await blobToBase64(file) }
