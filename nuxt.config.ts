@@ -43,6 +43,21 @@ export default defineNuxtConfig({
   },
   css: ['~/assets/css/main.css'],
 
+  // Le service worker et le manifest portent un nom stable (`/sw.js`,
+  // `/manifest.webmanifest`) : sans `Cache-Control` explicite, le CDN (Cloudflare)
+  // les met en cache et sert un `sw.js` périmé, ce qui empêche `autoUpdate` de
+  // détecter une nouvelle version. On force une revalidation systématique (valeur
+  // recommandée par vite-pwa). Les chunks `_nuxt/[hash].js` gardent l'immutabilité
+  // par défaut de Nitro (leur nom change à chaque build).
+  routeRules: {
+    '/sw.js': {
+      headers: { 'cache-control': 'public, max-age=0, must-revalidate' },
+    },
+    '/manifest.webmanifest': {
+      headers: { 'cache-control': 'public, max-age=0, must-revalidate' },
+    },
+  },
+
   typescript: {
     strict: true,
     typeCheck: false,
