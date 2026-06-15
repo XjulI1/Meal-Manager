@@ -106,22 +106,60 @@ export function useApiRecipeChat() {
   }
 
   /**
-   * Normalize a picked file to an API-acceptable image: HEIC/HEIF is converted
-   * to JPEG in the browser (heic-to / libheif WASM); other formats pass through.
+   * Downscale (never upscale) an image blob to a JPEG whose longest edge is
+   * ≤ MAX_IMAGE_EDGE. Keeps the upload small and well within the size bound;
+   * the vision API downsamples large images anyway, so full resolution wastes
+   * payload and tokens.
+   */
+  const MAX_IMAGE_EDGE = 2000
+  const JPEG_QUALITY = 0.85
+
+  async function downscaleToJpeg(blob: Blob): Promise<Blob> {
+    const bitmap = await createImageBitmap(blob)
+    try {
+      const scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(bitmap.width, bitmap.height))
+      const width = Math.max(1, Math.round(bitmap.width * scale))
+      const height = Math.max(1, Math.round(bitmap.height * scale))
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')
+      if (!ctx) throw new Error('Canvas indisponible')
+      ctx.drawImage(bitmap, 0, 0, width, height)
+      return await new Promise<Blob>((resolve, reject) =>
+        canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Encodage JPEG impossible'))), 'image/jpeg', JPEG_QUALITY),
+      )
+    }
+    finally {
+      bitmap.close()
+    }
+  }
+
+  /**
+   * Normalize a picked file to an API-acceptable image: HEIC/HEIF is first
+   * converted to JPEG (heic-to / libheif WASM), then every image is downscaled
+   * and re-encoded as JPEG so the payload stays small. Falls back to sending the
+   * (converted) source as-is if the canvas path is unavailable.
    */
   async function toApiImage(file: File): Promise<RecipeImageDto> {
+    let source: Blob = file
     if (await detectHeic(file)) {
-      let jpeg: Blob
       try {
         const { heicTo } = await import('heic-to')
-        jpeg = await heicTo({ blob: file, type: 'image/jpeg', quality: 0.9 })
+        source = await heicTo({ blob: file, type: 'image/jpeg', quality: 0.9 })
       }
       catch {
         throw new Error(`Impossible de convertir la photo HEIC « ${file.name} ». Réessayez ou exportez-la en JPEG.`)
       }
+    }
+    try {
+      const jpeg = await downscaleToJpeg(source)
       return { mediaType: 'image/jpeg', data: await blobToBase64(jpeg) }
     }
-    return { mediaType: file.type as RecipeImageMediaType, data: await blobToBase64(file) }
+    catch {
+      const mediaType = (source.type || file.type) as RecipeImageMediaType
+      return { mediaType, data: await blobToBase64(source) }
+    }
   }
 
   /** Interpret one or more photos of the same recipe into a draft. */

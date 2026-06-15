@@ -37,6 +37,7 @@
 - [x] 7.3 Brancher le résultat sur `resolveDraft` + `continueToForm` existants (réutilisation du parcours URL) ; toast invitant à vérifier le brouillon
 - [x] 7.4 Masquer la carte photo quand `aiEnabled` est `false` (comme l'URL et le chat)
 - [x] 7.5 Support HEIC/HEIF : conversion client en JPEG via `heic-to` (import dynamique, détection par octets magiques `isHeic`) dans `toApiImage`, avant base64 ; `accept` de l'input élargi à `.heic`/`.heif` ; erreur de conversion affichée en toast
+- [x] 7.6 Redimensionnement client (canvas, plus grand côté ≤ 2000 px, ré-encodage JPEG) avant l'envoi, pour rester sous la borne de taille et limiter le coût en tokens vision
 
 ## 8. Tests
 
