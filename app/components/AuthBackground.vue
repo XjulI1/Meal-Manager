@@ -8,7 +8,26 @@
  * `prefers-reduced-motion` et n'intercepte aucun clic (`pointer-events: none`).
  */
 
-const FOODS = ['🥕', '🍅', '🧅', '🥦', '🍆', '🌽', '🫑', '🥑', '🍋', '🍒', '🧄', '🥬', '🍞', '🧀', '🥚', '🫛', '🍄', '🌶️']
+const FOODS = [
+  '🥕',
+  '🍅',
+  '🧅',
+  '🥦',
+  '🍆',
+  '🌽',
+  '🫑',
+  '🥑',
+  '🍋',
+  '🍒',
+  '🧄',
+  '🥬',
+  '🍞',
+  '🧀',
+  '🥚',
+  '🫛',
+  '🍄',
+  '🌶️',
+]
 
 interface FloatingItem {
   emoji: string
@@ -34,7 +53,7 @@ function makeRng(seed: number) {
 // Répartition en grille jitterée : un aliment par cellule, décalé
 // aléatoirement à l'intérieur → couverture homogène, sans paquets ni trous.
 const COLS = 6
-const ROWS = 4
+const ROWS = 5
 
 const items = computed<FloatingItem[]>(() => {
   const rng = makeRng(42)
