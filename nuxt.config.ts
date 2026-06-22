@@ -73,6 +73,16 @@ export default defineNuxtConfig({
     anthropicChatEffort: 'medium',
     anthropicImportEffort: 'low',
     anthropicPhotoEffort: 'low',
+    // Recipe AI provider selector — 'anthropic' (default) or 'mistral'. Lets the
+    // two providers be compared without code changes (NUXT_RECIPE_AI_PROVIDER).
+    recipeAiProvider: 'anthropic',
+    // Mistral config — server-only, symmetric to the Anthropic block above.
+    // Overridable via NUXT_MISTRAL_* env vars.
+    mistralApiKey: '',
+    mistralModel: 'mistral-medium-latest',
+    mistralChatEffort: 'medium',
+    mistralImportEffort: 'low',
+    mistralPhotoEffort: 'low',
     session: {
       password: '',
       cookie: {

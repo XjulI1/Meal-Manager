@@ -11,7 +11,16 @@ import { UpdateRecipeUseCase } from '../contexts/catalog/application/use-cases/u
 import { AnthropicRecipeChatService } from '../contexts/catalog/infrastructure/adapters/anthropic-recipe-chat.service'
 import { AnthropicRecipeImporter } from '../contexts/catalog/infrastructure/adapters/anthropic-recipe-importer'
 import { AnthropicRecipePhotoImporter } from '../contexts/catalog/infrastructure/adapters/anthropic-recipe-photo-importer'
+import { MistralRecipeChatService } from '../contexts/catalog/infrastructure/adapters/mistral-recipe-chat.service'
+import { MistralRecipeImporter } from '../contexts/catalog/infrastructure/adapters/mistral-recipe-importer'
+import { MistralRecipePhotoImporter } from '../contexts/catalog/infrastructure/adapters/mistral-recipe-photo-importer'
 import { DEFAULT_CHAT_EFFORT, DEFAULT_IMPORT_EFFORT, DEFAULT_PHOTO_EFFORT, parseEffort } from '../contexts/catalog/infrastructure/anthropic-config'
+import {
+  DEFAULT_CHAT_EFFORT as MISTRAL_DEFAULT_CHAT_EFFORT,
+  DEFAULT_IMPORT_EFFORT as MISTRAL_DEFAULT_IMPORT_EFFORT,
+  DEFAULT_PHOTO_EFFORT as MISTRAL_DEFAULT_PHOTO_EFFORT,
+  parseEffort as parseMistralEffort,
+} from '../contexts/catalog/infrastructure/mistral-config'
 import { DrizzleRecipeRepository } from '../contexts/catalog/infrastructure/repositories/drizzle-recipe.repository'
 import { CreateHouseholdUseCase } from '../contexts/family/application/use-cases/create-household.use-case'
 import { GetCurrentHouseholdUseCase } from '../contexts/family/application/use-cases/get-current-household.use-case'
@@ -129,21 +138,41 @@ function buildContainer(): Container {
   // AI recipe assistant — config from runtimeConfig (server-only). Key, model
   // and effort are overridable via NUXT_ANTHROPIC_* env vars; gated per account.
   const aiConfig = useRuntimeConfig()
-  const recipeChatAssistant = new AnthropicRecipeChatService(
-    aiConfig.anthropicApiKey,
-    aiConfig.anthropicModel,
-    parseEffort(aiConfig.anthropicChatEffort, DEFAULT_CHAT_EFFORT),
-  )
-  const recipeImporter = new AnthropicRecipeImporter(
-    aiConfig.anthropicApiKey,
-    aiConfig.anthropicModel,
-    parseEffort(aiConfig.anthropicImportEffort, DEFAULT_IMPORT_EFFORT),
-  )
-  const recipePhotoImporter = new AnthropicRecipePhotoImporter(
-    aiConfig.anthropicApiKey,
-    aiConfig.anthropicModel,
-    parseEffort(aiConfig.anthropicPhotoEffort, DEFAULT_PHOTO_EFFORT),
-  )
+  // Provider switch — same ports, swappable adapters (NUXT_RECIPE_AI_PROVIDER).
+  const useMistral = aiConfig.recipeAiProvider === 'mistral'
+  const recipeChatAssistant = useMistral
+    ? new MistralRecipeChatService(
+        aiConfig.mistralApiKey,
+        aiConfig.mistralModel,
+        parseMistralEffort(aiConfig.mistralChatEffort, MISTRAL_DEFAULT_CHAT_EFFORT),
+      )
+    : new AnthropicRecipeChatService(
+        aiConfig.anthropicApiKey,
+        aiConfig.anthropicModel,
+        parseEffort(aiConfig.anthropicChatEffort, DEFAULT_CHAT_EFFORT),
+      )
+  const recipeImporter = useMistral
+    ? new MistralRecipeImporter(
+        aiConfig.mistralApiKey,
+        aiConfig.mistralModel,
+        parseMistralEffort(aiConfig.mistralImportEffort, MISTRAL_DEFAULT_IMPORT_EFFORT),
+      )
+    : new AnthropicRecipeImporter(
+        aiConfig.anthropicApiKey,
+        aiConfig.anthropicModel,
+        parseEffort(aiConfig.anthropicImportEffort, DEFAULT_IMPORT_EFFORT),
+      )
+  const recipePhotoImporter = useMistral
+    ? new MistralRecipePhotoImporter(
+        aiConfig.mistralApiKey,
+        aiConfig.mistralModel,
+        parseMistralEffort(aiConfig.mistralPhotoEffort, MISTRAL_DEFAULT_PHOTO_EFFORT),
+      )
+    : new AnthropicRecipePhotoImporter(
+        aiConfig.anthropicApiKey,
+        aiConfig.anthropicModel,
+        parseEffort(aiConfig.anthropicPhotoEffort, DEFAULT_PHOTO_EFFORT),
+      )
 
   // meal-planning
   const menuRepo = new DrizzleMenuRepository(db)
