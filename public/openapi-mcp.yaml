@@ -6,9 +6,11 @@ info:
   summary: Model Context Protocol (Streamable HTTP) endpoint for Meal Manager.
   description: |
     Describes the single MCP endpoint exposed by Meal Manager (`/mcp`) and the
-    eleven tools registered on it (read-only, plus `mealmanager_save_recipe_draft`
-    which persists a recipe draft for the household). Authentication is by
-    Personal Access Token in the `Authorization: Bearer` header.
+    thirteen tools registered on it. Most are read-only; three are write tools:
+    `mealmanager_save_recipe_draft` (persists a recipe draft for the household),
+    `mealmanager_create_ingredient` (adds an ingredient to the catalog) and
+    `mealmanager_add_inventory_item` (adds/increments an inventory item).
+    Authentication is by Personal Access Token in the `Authorization: Bearer` header.
 
     This document is **not** a description of the household-facing HTTP API
     (`/api/*`) — those routes are cookie-authenticated and not intended to be
@@ -185,6 +187,20 @@ components:
       type: string
       format: uuid
 
+    QuantityInput:
+      type: object
+      additionalProperties: false
+      required: [value, unit]
+      properties:
+        value:
+          type: number
+          minimum: 0
+        unit:
+          type: string
+          minLength: 1
+          maxLength: 8
+          description: Unit symbol (e.g. g, kg, ml, cl, l, unit). Must match the ingredient dimension.
+
     WeekStart:
       type: string
       pattern: "^\\d{4}-\\d{2}-\\d{2}$"
@@ -208,6 +224,29 @@ x-mcp-tools:
       type: object
       additionalProperties: false
       properties:
+        location:
+          $ref: "#/components/schemas/StorageLocation"
+
+  - operationId: mealmanager_add_inventory_item
+    summary: Add (or increment) an inventory item in the pantry, fridge or freezer.
+    description: |
+      A WRITE tool. Upsert semantics: if a line already exists for the same
+      ingredient and location, its quantity is incremented; otherwise a new line
+      is created. The `ingredientId` must reference an existing ingredient
+      (from `mealmanager_list_ingredients` or `mealmanager_create_ingredient`)
+      and the quantity unit must match the ingredient dimension. Returns
+      `{ item, created }`. The household comes from the PAT and is not accepted
+      as input. An unknown ingredient or incompatible unit returns an error
+      tool result.
+    inputSchema:
+      type: object
+      additionalProperties: false
+      required: [ingredientId, quantity]
+      properties:
+        ingredientId:
+          $ref: "#/components/schemas/UUID"
+        quantity:
+          $ref: "#/components/schemas/QuantityInput"
         location:
           $ref: "#/components/schemas/StorageLocation"
 
@@ -287,6 +326,31 @@ x-mcp-tools:
       properties:
         ingredientId:
           $ref: "#/components/schemas/UUID"
+
+  - operationId: mealmanager_create_ingredient
+    summary: Create an ingredient in the household catalog.
+    description: |
+      A WRITE tool. Creates an ingredient with the minimal fields only
+      (advanced fields are managed from the web app). The canonical unit is
+      locked once the ingredient is used. Returns the created ingredient
+      (including its `id`). The household comes from the PAT and is not accepted
+      as input. A duplicate name returns an error tool result.
+    inputSchema:
+      type: object
+      additionalProperties: false
+      required: [name, category, canonicalUnit, storage]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        category:
+          $ref: "#/components/schemas/IngredientCategory"
+        canonicalUnit:
+          type: string
+          enum: [g, ml, unit]
+        storage:
+          $ref: "#/components/schemas/IngredientStorage"
 
   - operationId: mealmanager_get_household
     summary: Get the current household this PAT is bound to.

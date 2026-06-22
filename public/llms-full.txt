@@ -5,7 +5,7 @@ This document tells an LLM client (or its operator) how to interact with a Meal 
 ## What Meal Manager is
 
 A self-hosted family app to manage:
-- **Inventory** (pantry + fridge), with quantities in canonical units (`g`, `ml`, `unit`).
+- **Inventory** (pantry + fridge + freezer), with quantities in canonical units (`g`, `ml`, `unit`).
 - **Recipes**, each with an ingredient list, servings, instructions.
 - **Weekly menus** (breakfast/lunch/dinner × 7 days).
 - **Shopping lists** derived from a menu (menu × servings − current inventory).
@@ -47,17 +47,19 @@ Every MCP request MUST carry:
 
 ### Tools available
 
-Eleven tools. All are read-only except `mealmanager_save_recipe_draft`. None accept `householdId` as input — it is always derived from the PAT.
+Thirteen tools. Most are read-only; three write to the household (`mealmanager_save_recipe_draft`, `mealmanager_create_ingredient`, `mealmanager_add_inventory_item`). None accept `householdId` as input — it is always derived from the PAT.
 
 | Tool | Purpose | Arguments |
 |---|---|---|
-| `mealmanager_list_inventory` | List current inventory items (id, ingredient name, category, quantity, location). | `{ location?: "pantry" \| "fridge" }` |
+| `mealmanager_list_inventory` | List current inventory items (id, ingredient name, category, quantity, location). | `{ location?: "pantry" \| "fridge" \| "freezer" }` |
 | `mealmanager_list_recipes` | List household recipes (id, title, servings, updatedAt). | `{ query?: string }` (title substring) |
 | `mealmanager_get_recipe` | Full recipe details with ingredient list. | `{ recipeId: string }` (UUID) |
 | `mealmanager_get_menu_for_week` | Menu for a given week. Creates an empty menu if none exists (idempotent — matches the web behavior). | `{ weekStart: string }` (ISO date `YYYY-MM-DD` of a Monday) |
 | `mealmanager_get_shopping_list` | Shopping list snapshot for a menu. | `{ menuId: string }` (UUID) |
-| `mealmanager_list_ingredients` | Ingredients catalog (master list). | `{ query?: string, category?: string, storage?: "pantry"\|"fridge", includeArchived?: boolean }` |
+| `mealmanager_list_ingredients` | Ingredients catalog (master list). | `{ query?: string, category?: string, storage?: "pantry"\|"fridge"\|"freezer", includeArchived?: boolean }` |
 | `mealmanager_get_ingredient` | Full ingredient details with products attached. | `{ ingredientId: string }` (UUID) |
+| `mealmanager_create_ingredient` | **Write.** Create an ingredient in the catalog (minimal fields; canonical unit locks once used). Returns the created ingredient incl. `id`. | `{ name: string, category: string, canonicalUnit: "g"\|"ml"\|"unit", storage: "pantry"\|"fridge"\|"freezer" }` |
+| `mealmanager_add_inventory_item` | **Write.** Add/increment an inventory item (upsert by ingredient + location). Returns `{ item, created }`. | `{ ingredientId: string, quantity: { value, unit }, location?: "pantry"\|"fridge"\|"freezer" }` |
 | `mealmanager_get_household` | Current household (id, name, members). | `{}` |
 | `mealmanager_list_recipe_drafts` | List the household recipe drafts (id, title, source, updatedAt), newest first. | `{}` |
 | `mealmanager_get_recipe_draft` | Full content of a recipe draft (free-text ingredients). | `{ draftId: string }` (UUID) |
@@ -144,7 +146,7 @@ Four publicly-served resources let an agent or a scanner discover Meal Manager's
 |---|---|---|
 | `/robots.txt` | Bot Access Control — disallows AI crawlers from HTML pages. The legitimate agent channel is `/mcp` with a Bearer PAT. | `text/plain` |
 | `/.well-known/api-catalog` | RFC 9727 API catalog — single entry point listing the available APIs (currently just `/mcp`) and pointing to their descriptions. | `application/linkset+json` |
-| `/openapi-mcp.yaml` | OpenAPI 3.1 description of `/mcp` — declares the `bearerAuth` security scheme and the 11 `mealmanager_*` tools (each documented under the `x-mcp-tools` extension with its input schema). | `application/yaml` |
+| `/openapi-mcp.yaml` | OpenAPI 3.1 description of `/mcp` — declares the `bearerAuth` security scheme and the 13 `mealmanager_*` tools (each documented under the `x-mcp-tools` extension with its input schema). | `application/yaml` |
 | `/llms.txt` and `/llms-full.txt` | Prose, human-readable guides for LLM operators. You are reading the latter. | `text/plain` |
 
 In addition, every non-MCP HTTP response carries a `Link` header (RFC 8288) advertising these three resources, so a one-shot `HEAD /` lets an agent discover everything in a single round trip:

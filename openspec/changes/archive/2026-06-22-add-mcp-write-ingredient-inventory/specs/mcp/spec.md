@@ -1,8 +1,5 @@
-# mcp Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change add-mcp-llm-integration. Update Purpose after archive.
-## Requirements
 ### Requirement: MCP HTTP Endpoint
 
 The system SHALL expose a Model Context Protocol endpoint at `POST /mcp` (and `GET /mcp`, `DELETE /mcp`) conforming to the MCP `StreamableHTTP` transport specification.
@@ -153,39 +150,6 @@ The tool description for `mealmanager_get_menu_for_week` MUST explicitly note th
 - WHEN the client calls `mealmanager_add_inventory_item` with an `ingredientId` that does not belong to `hh-1`
 - THEN the tool call returns an error result and no inventory line is created
 
-### Requirement: API Catalog (RFC 9727) advertises the MCP endpoint
-
-The system SHALL serve an API catalog at `GET /.well-known/api-catalog` conforming to [RFC 9727](https://www.rfc-editor.org/rfc/rfc9727.html), with `Content-Type: application/linkset+json` per [RFC 9264](https://www.rfc-editor.org/rfc/rfc9264.html).
-
-The catalog MUST advertise the MCP endpoint as an `item` link with `href: "/mcp"` and a `profile` parameter identifying the MCP Streamable HTTP transport.
-
-The catalog MUST advertise the OpenAPI description of `/mcp` via a `service-desc` link with `href: "/openapi-mcp.yaml"` and `type: "application/yaml"`.
-
-The catalog SHOULD advertise the LLM-oriented summary documents (`/llms.txt`, `/llms-full.txt`) via `related` links.
-
-The endpoint MUST NOT require authentication (it is part of the publicly-discoverable surface).
-
-#### Scenario: GET /.well-known/api-catalog returns a linkset
-- WHEN an unauthenticated client sends `GET /.well-known/api-catalog`
-- THEN the response is `200 OK`
-- AND the `Content-Type` is `application/linkset+json`
-- AND the body parses as JSON with a top-level `linkset` array of length ≥ 1
-
-#### Scenario: Linkset advertises /mcp as an item
-- WHEN the API catalog is fetched
-- THEN there exists an entry `linkset[0].item[i].href == "/mcp"`
-- AND that entry has a `profile` parameter whose value contains the substring `mcp` (identifies the MCP transport)
-
-#### Scenario: Linkset advertises the OpenAPI service description
-- WHEN the API catalog is fetched
-- THEN there exists an entry `linkset[0]["service-desc"][i].href == "/openapi-mcp.yaml"`
-- AND that entry has `type: "application/yaml"`
-
-#### Scenario: Linkset advertises the LLM-oriented documents
-- WHEN the API catalog is fetched
-- THEN `linkset[0].related` includes an entry with `href == "/llms.txt"`
-- AND `linkset[0].related` includes an entry with `href == "/llms-full.txt"`
-
 ### Requirement: OpenAPI description of /mcp is served at /openapi-mcp.yaml
 
 The system SHALL serve an OpenAPI 3.1 description of the MCP endpoint at `GET /openapi-mcp.yaml` with `Content-Type` indicating YAML (`application/yaml` or `text/yaml`).
@@ -223,4 +187,3 @@ The OpenAPI document MUST NOT declare a `householdId` field in any tool's input 
 - WHEN the OpenAPI document is parsed
 - THEN `components.securitySchemes.bearerAuth.type == "http"`
 - AND `components.securitySchemes.bearerAuth.scheme == "bearer"`
-

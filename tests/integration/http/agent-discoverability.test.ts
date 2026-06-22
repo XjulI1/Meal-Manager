@@ -76,10 +76,12 @@ describe('OpenAPI of /mcp — public/openapi-mcp.yaml', () => {
     expect(raw).toMatch(/bearerAuth:\s*\n\s+type:\s*http\s*\n\s+scheme:\s*bearer/)
   })
 
-  it('lists exactly the 11 mealmanager_* operationIds', () => {
+  it('lists exactly the 13 mealmanager_* operationIds', () => {
     const matches = raw.match(/operationId:\s*(mealmanager_\w+)/g) ?? []
     const opIds = matches.map((m) => m.replace(/^operationId:\s*/, '')).sort()
     expect(opIds).toEqual([
+      'mealmanager_add_inventory_item',
+      'mealmanager_create_ingredient',
       'mealmanager_get_household',
       'mealmanager_get_ingredient',
       'mealmanager_get_menu_for_week',
