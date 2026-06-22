@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { RecipeDraftSchema } from '../../../../../shared/dto/recipe-chat'
 import { RecipePhotoImportError } from '../../domain/errors/recipe-photo-import.error'
 import type { IRecipePhotoImporter, RecipeImageInput } from '../../domain/ports/recipe-photo-importer'
-import type { RecipeDraft } from '../../domain/ports/recipe-importer'
+import type { RecipeDraftContent } from '../../domain/ports/recipe-importer'
 import type { AnthropicEffort } from '../anthropic-config'
 import { EXTRACT_TOOLS } from './recipe-extract-tool'
 
@@ -35,7 +35,7 @@ export class AnthropicRecipePhotoImporter implements IRecipePhotoImporter {
     this.client = new Anthropic({ apiKey })
   }
 
-  async importFromPhotos(images: ReadonlyArray<RecipeImageInput>): Promise<RecipeDraft> {
+  async importFromPhotos(images: ReadonlyArray<RecipeImageInput>): Promise<RecipeDraftContent> {
     if (images.length === 0) {
       throw new RecipePhotoImportError('Aucune image fournie.')
     }

@@ -3,6 +3,11 @@ import type { CreateRecipeUseCase } from '../contexts/catalog/application/use-ca
 import type { ImportRecipeFromUrlUseCase } from '../contexts/catalog/application/use-cases/import-recipe-from-url.use-case'
 import type { ImportRecipeFromPhotosUseCase } from '../contexts/catalog/application/use-cases/import-recipe-from-photos.use-case'
 import type { ResolveRecipeDraftUseCase } from '../contexts/catalog/application/use-cases/resolve-recipe-draft.use-case'
+import type { SaveRecipeDraftUseCase } from '../contexts/catalog/application/use-cases/save-recipe-draft.use-case'
+import type { ListRecipeDraftsUseCase } from '../contexts/catalog/application/use-cases/list-recipe-drafts.use-case'
+import type { GetRecipeDraftByIdUseCase } from '../contexts/catalog/application/use-cases/get-recipe-draft-by-id.use-case'
+import type { UpdateRecipeDraftUseCase } from '../contexts/catalog/application/use-cases/update-recipe-draft.use-case'
+import type { DeleteRecipeDraftUseCase } from '../contexts/catalog/application/use-cases/delete-recipe-draft.use-case'
 import type { DeleteRecipeUseCase } from '../contexts/catalog/application/use-cases/delete-recipe.use-case'
 import type { GetRecipeByIdUseCase } from '../contexts/catalog/application/use-cases/get-recipe-by-id.use-case'
 import type { ListRecipesUseCase } from '../contexts/catalog/application/use-cases/list-recipes.use-case'
@@ -95,6 +100,12 @@ export interface Container {
   importRecipeFromUrl: ImportRecipeFromUrlUseCase
   importRecipeFromPhotos: ImportRecipeFromPhotosUseCase
   resolveRecipeDraft: ResolveRecipeDraftUseCase
+  /** Persisted per-household recipe drafts (manual / AI / MCP origins). */
+  saveRecipeDraft: SaveRecipeDraftUseCase
+  listRecipeDrafts: ListRecipeDraftsUseCase
+  getRecipeDraftById: GetRecipeDraftByIdUseCase
+  updateRecipeDraft: UpdateRecipeDraftUseCase
+  deleteRecipeDraft: DeleteRecipeDraftUseCase
   // meal-planning
   createMenu: CreateMenuUseCase
   getMenuByWeek: GetMenuByWeekUseCase

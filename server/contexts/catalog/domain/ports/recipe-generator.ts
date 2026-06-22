@@ -1,4 +1,4 @@
-import type { RecipeDraft } from './recipe-importer'
+import type { RecipeDraftContent } from './recipe-importer'
 
 /** Minimal shape the catalog needs to know about an available inventory item. */
 export interface AvailableIngredient {
@@ -12,5 +12,5 @@ export interface AvailableIngredient {
  * can be plugged later without touching the domain.
  */
 export interface IRecipeGenerator {
-  generateFromAvailableIngredients(inventory: AvailableIngredient[]): Promise<RecipeDraft[]>
+  generateFromAvailableIngredients(inventory: AvailableIngredient[]): Promise<RecipeDraftContent[]>
 }

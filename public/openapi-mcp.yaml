@@ -6,8 +6,9 @@ info:
   summary: Model Context Protocol (Streamable HTTP) endpoint for Meal Manager.
   description: |
     Describes the single MCP endpoint exposed by Meal Manager (`/mcp`) and the
-    eight read-only tools registered on it. Authentication is by Personal Access
-    Token in the `Authorization: Bearer` header.
+    eleven tools registered on it (read-only, plus `mealmanager_save_recipe_draft`
+    which persists a recipe draft for the household). Authentication is by
+    Personal Access Token in the `Authorization: Bearer` header.
 
     This document is **not** a description of the household-facing HTTP API
     (`/api/*`) — those routes are cookie-authenticated and not intended to be
@@ -293,3 +294,74 @@ x-mcp-tools:
       type: object
       additionalProperties: false
       properties: {}
+
+  - operationId: mealmanager_list_recipe_drafts
+    summary: List the household recipe drafts (most recently updated first).
+    inputSchema:
+      type: object
+      additionalProperties: false
+      properties: {}
+
+  - operationId: mealmanager_get_recipe_draft
+    summary: Get the full content of a recipe draft.
+    inputSchema:
+      type: object
+      additionalProperties: false
+      required: [draftId]
+      properties:
+        draftId:
+          $ref: "#/components/schemas/UUID"
+
+  - operationId: mealmanager_save_recipe_draft
+    summary: Persist a work-in-progress recipe draft for the household to review.
+    description: |
+      The only MUTATING tool. Saves a permissive recipe DRAFT (every field
+      optional, ingredients are free text not yet matched to the catalog). The
+      draft is NOT a published recipe — the user reviews and promotes it from
+      the web app. The `source` is forced to `mcp` server-side and the household
+      comes from the PAT; neither is accepted as input.
+    inputSchema:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          maxLength: 200
+        instructions:
+          type: string
+          maxLength: 10000
+        servings:
+          type: integer
+          minimum: 1
+          maximum: 50
+        sourceUrl:
+          type: string
+          format: uri
+          maxLength: 2000
+        ingredients:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            additionalProperties: false
+            required: [name]
+            properties:
+              name:
+                type: string
+                minLength: 1
+                maxLength: 200
+              quantity:
+                type: object
+                additionalProperties: false
+                required: [value, unit]
+                properties:
+                  value:
+                    type: number
+                    minimum: 0
+                  unit:
+                    type: string
+                    minLength: 1
+                    maxLength: 40
+              raw:
+                type: string
+                maxLength: 300

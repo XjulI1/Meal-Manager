@@ -22,9 +22,15 @@ export interface RecipePrefill {
   title: string
   instructions: string
   servings: number
+  /** Which AI mode produced this prefill, so the saved draft records its origin. */
+  source?: 'ai-chat' | 'ai-url' | 'ai-photo'
+  /** Source URL when the recipe came from a web import. */
+  sourceUrl?: string
   rows: Array<{
     ingredientId: string | null
     quantity: { value: number, unit: string }
+    /** Free-text ingredient name (preserved for the saved draft). */
+    name?: string
     /** Set for proposed-new ingredients the user must create/pick first. */
     hint?: string
   }>
@@ -181,21 +187,27 @@ export function useApiRecipeChat() {
   }
 
   /** Build the recipe-form pre-fill from a catalog resolution. */
-  function toPrefill(resolution: DraftResolutionDto): RecipePrefill {
+  function toPrefill(
+    resolution: DraftResolutionDto,
+    meta: { source?: RecipePrefill['source'] } = {},
+  ): RecipePrefill {
     return {
       title: resolution.title,
       instructions: resolution.instructions,
       servings: resolution.servings ?? 2,
+      source: meta.source,
+      sourceUrl: resolution.sourceUrl,
       rows: resolution.ingredients.map((ing) => {
         // Use the canonical unit (safe for QuantityInput); the user reviews values.
         const unit = ing.canonicalUnit
         const value = ing.quantity?.value ?? 0
         if (ing.status === 'matched') {
-          return { ingredientId: ing.ingredientId, quantity: { value, unit } }
+          return { ingredientId: ing.ingredientId, quantity: { value, unit }, name: ing.name }
         }
         return {
           ingredientId: null,
           quantity: { value, unit },
+          name: ing.proposedName,
           hint: `À créer : « ${ing.proposedName} » (${ing.canonicalUnit})`,
         }
       }),

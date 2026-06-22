@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { ImportRecipeFromUrlUseCase } from '../../../server/contexts/catalog/application/use-cases/import-recipe-from-url.use-case'
 import { RecipeImportError } from '../../../server/contexts/catalog/domain/errors/recipe-import.error'
-import type { RecipeDraft } from '../../../server/contexts/catalog/domain/ports/recipe-importer'
+import type { RecipeDraftContent } from '../../../server/contexts/catalog/domain/ports/recipe-importer'
 import { FakeRecipeImporter } from './in-memory/fake-recipe-importer'
 
 describe('ImportRecipeFromUrlUseCase', () => {
   it('returns the draft produced by the importer for the given URL', async () => {
-    const draft: RecipeDraft = {
+    const draft: RecipeDraftContent = {
       title: 'Tarte aux pommes',
       instructions: 'Cuire 30 min',
       ingredients: [{ name: 'Pommes', quantity: { value: 4, unit: 'unit' } }],

@@ -1,4 +1,4 @@
-import type { IRecipeImporter, RecipeDraft } from '../../domain/ports/recipe-importer'
+import type { IRecipeImporter, RecipeDraftContent } from '../../domain/ports/recipe-importer'
 
 export interface ImportRecipeFromUrlInput {
   householdId: string
@@ -13,7 +13,7 @@ export interface ImportRecipeFromUrlInput {
 export class ImportRecipeFromUrlUseCase {
   constructor(private readonly importer: IRecipeImporter) {}
 
-  async execute(input: ImportRecipeFromUrlInput): Promise<RecipeDraft> {
+  async execute(input: ImportRecipeFromUrlInput): Promise<RecipeDraftContent> {
     return this.importer.importFromUrl(input.url)
   }
 }

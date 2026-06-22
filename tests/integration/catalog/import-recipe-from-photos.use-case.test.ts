@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { ImportRecipeFromPhotosUseCase } from '../../../server/contexts/catalog/application/use-cases/import-recipe-from-photos.use-case'
 import { RecipePhotoImportError } from '../../../server/contexts/catalog/domain/errors/recipe-photo-import.error'
-import type { RecipeDraft } from '../../../server/contexts/catalog/domain/ports/recipe-importer'
+import type { RecipeDraftContent } from '../../../server/contexts/catalog/domain/ports/recipe-importer'
 import { FakeRecipePhotoImporter } from './in-memory/fake-recipe-photo-importer'
 
 describe('ImportRecipeFromPhotosUseCase', () => {
   it('returns the draft produced by the importer for the given images', async () => {
-    const draft: RecipeDraft = {
+    const draft: RecipeDraftContent = {
       title: 'Gâteau au yaourt',
       instructions: 'Mélanger puis cuire 35 min',
       servings: 6,
