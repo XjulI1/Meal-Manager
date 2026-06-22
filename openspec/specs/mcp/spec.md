@@ -17,7 +17,7 @@ The endpoint MAY expose **mutating** tools (in addition to read-only ones); any 
 - GIVEN an active PAT bound to `(user-1, hh-1)`
 - WHEN the client sends `POST /mcp` with `Authorization: Bearer <pat>` and body `{ jsonrpc: "2.0", id: 1, method: "tools/list" }`
 - THEN the response is `200 OK` with the list of registered tools
-- AND the response contains exactly 11 tools (see "MCP Tool Catalog" requirement)
+- AND the response contains exactly 13 tools (see "MCP Tool Catalog" requirement)
 
 #### Scenario: Unauthenticated request
 - GIVEN a `POST /mcp` request with no Authorization header
@@ -33,7 +33,7 @@ The endpoint MAY expose **mutating** tools (in addition to read-only ones); any 
 
 ### Requirement: MCP Tool Catalog
 
-The system SHALL register the following 11 tools, all prefixed `mealmanager_`. Eight are read-only; three operate on recipe drafts, of which `mealmanager_save_recipe_draft` is the only **write** tool:
+The system SHALL register the following 13 tools, all prefixed `mealmanager_`. Eight are read-only; five are **write** tools (`mealmanager_save_recipe_draft`, `mealmanager_create_ingredient`, `mealmanager_add_inventory_item`):
 
 | Tool | Underlying use case | Kind |
 |---|---|---|
@@ -48,12 +48,18 @@ The system SHALL register the following 11 tools, all prefixed `mealmanager_`. E
 | `mealmanager_list_recipe_drafts` | `listRecipeDrafts` | read |
 | `mealmanager_get_recipe_draft` | `getRecipeDraftById` | read |
 | `mealmanager_save_recipe_draft` | `saveRecipeDraft` | write |
+| `mealmanager_create_ingredient` | `createIngredient` | write |
+| `mealmanager_add_inventory_item` | `addInventoryItem` | write |
 
 Each tool's input schema MUST NOT contain a `householdId` field. The `householdId` is injected from the authenticated PAT and is never accepted from the client.
 
 The tool description for `mealmanager_get_menu_for_week` MUST explicitly note that an empty menu is created if none exists for the requested week (matching existing web behavior).
 
 `mealmanager_save_recipe_draft` MUST persist the submitted draft content with `source` forced to `mcp` server-side (the `source` is never accepted from the tool input), scoped to the PAT's household, and MUST be subject to the per-household draft cap. Its input is recipe-draft content only (optional title, optional instructions, optional servings, free-text ingredients, optional source URL).
+
+`mealmanager_create_ingredient` MUST create an ingredient in the PAT's household via the `createIngredient` use case. Its input is the minimal ingredient fields only: `name` (required), `category` (required), `canonicalUnit` (required, one of `g`/`ml`/`unit`), `storage` (required, one of `pantry`/`fridge`/`freezer`). Advanced fields (aliases, allergens, shelf life, image URL, default pack size) are NOT exposed. The tool MUST return the created ingredient view (including its `id`) as JSON text content. A business error (e.g. duplicate ingredient name) MUST be returned as an error tool result, not a transport-level 500.
+
+`mealmanager_add_inventory_item` MUST add or increment an inventory item in the PAT's household via the `addInventoryItem` use case (upsert semantics on `(householdId, ingredientId, location)`). Its input is: `ingredientId` (required UUID), `quantity` (`{ value, unit }`, required), and `location` (optional, one of `pantry`/`fridge`/`freezer`). The tool MUST return `{ item, created }` as JSON text content, where `created` is `true` when a new line was inserted and `false` when an existing line was incremented. An unknown or cross-household `ingredientId`, or a quantity unit incompatible with the ingredient's dimension, MUST be returned as an error tool result, not a transport-level 500.
 
 #### Scenario: Calling list_inventory uses the PAT's household
 - GIVEN an active PAT bound to `(user-1, hh-1)`
@@ -106,6 +112,47 @@ The tool description for `mealmanager_get_menu_for_week` MUST explicitly note th
 - WHEN the client calls `mealmanager_list_recipe_drafts`
 - THEN the response contains exactly the two `hh-1` drafts and no draft from any other household
 
+#### Scenario: create_ingredient persists under the PAT's household
+- GIVEN PAT bound to `(user-1, hh-1)`
+- WHEN the client calls `tools/call` with `{ name: "mealmanager_create_ingredient", arguments: { name: "Courgette", category: "produce", canonicalUnit: "unit", storage: "fridge" } }`
+- THEN the use case `createIngredient` is invoked with `{ householdId: "hh-1", name: "Courgette", category: "produce", canonicalUnit: "unit", storage: "fridge" }`
+- AND an ingredient is persisted in household `hh-1`
+- AND the response contains the created ingredient view (including its `id`) as JSON text content
+
+#### Scenario: create_ingredient ignores any client-supplied household
+- GIVEN PAT bound to `(user-1, hh-1)`
+- WHEN the client calls `mealmanager_create_ingredient` with arguments attempting to set `{ householdId: "hh-other" }`
+- THEN the ingredient is persisted in `hh-1`
+- AND the `householdId` argument is ignored or rejected
+
+#### Scenario: create_ingredient with a duplicate name returns an error result
+- GIVEN PAT bound to `(user-1, hh-1)` which already has an active ingredient named "Courgette"
+- WHEN the client calls `mealmanager_create_ingredient` with `{ name: "Courgette", category: "produce", canonicalUnit: "unit", storage: "fridge" }`
+- THEN the tool call returns an error result and no ingredient is created
+
+#### Scenario: add_inventory_item adds a new line under the PAT's household
+- GIVEN PAT bound to `(user-1, hh-1)` and an ingredient `ing-1` belonging to `hh-1` with no inventory line in the pantry
+- WHEN the client calls `tools/call` with `{ name: "mealmanager_add_inventory_item", arguments: { ingredientId: "ing-1", quantity: { value: 500, unit: "g" }, location: "pantry" } }`
+- THEN the use case `addInventoryItem` is invoked with `{ householdId: "hh-1", ingredientId: "ing-1", quantity: { value: 500, unit: "g" }, location: "pantry" }`
+- AND an inventory line is persisted in household `hh-1`
+- AND the response contains `{ item, created: true }` as JSON text content
+
+#### Scenario: add_inventory_item increments an existing line (upsert)
+- GIVEN PAT bound to `(user-1, hh-1)` and an existing pantry inventory line for ingredient `ing-1`
+- WHEN the client calls `mealmanager_add_inventory_item` for `ing-1` in the pantry with an additional quantity
+- THEN the existing line quantity is incremented (no second line is created)
+- AND the response contains `{ item, created: false }` as JSON text content
+
+#### Scenario: add_inventory_item supports the freezer location
+- GIVEN PAT bound to `(user-1, hh-1)` and an ingredient `ing-1` belonging to `hh-1`
+- WHEN the client calls `mealmanager_add_inventory_item` with `{ ingredientId: "ing-1", quantity: { value: 2, unit: "unit" }, location: "freezer" }`
+- THEN an inventory line is persisted in household `hh-1` with location `freezer`
+
+#### Scenario: add_inventory_item with an unknown or cross-household ingredient returns an error result
+- GIVEN PAT bound to `(user-1, hh-1)`
+- WHEN the client calls `mealmanager_add_inventory_item` with an `ingredientId` that does not belong to `hh-1`
+- THEN the tool call returns an error result and no inventory line is created
+
 ### Requirement: API Catalog (RFC 9727) advertises the MCP endpoint
 
 The system SHALL serve an API catalog at `GET /.well-known/api-catalog` conforming to [RFC 9727](https://www.rfc-editor.org/rfc/rfc9727.html), with `Content-Type: application/linkset+json` per [RFC 9264](https://www.rfc-editor.org/rfc/rfc9264.html).
@@ -145,7 +192,7 @@ The system SHALL serve an OpenAPI 3.1 description of the MCP endpoint at `GET /o
 
 The OpenAPI document MUST declare a `bearerAuth` security scheme of type HTTP Bearer.
 
-The OpenAPI document MUST list all 11 MCP tools as `operationId` values prefixed `mealmanager_`, each documented with an `x-mcp-tool` extension carrying the tool's input schema.
+The OpenAPI document MUST list all 13 MCP tools as `operationId` values prefixed `mealmanager_`, each documented with an `x-mcp-tool` extension carrying the tool's input schema.
 
 The OpenAPI document MUST NOT declare a `householdId` field in any tool's input schema (the household is injected from the authenticated PAT, never from the client). It MUST NOT declare a `source` field in `mealmanager_save_recipe_draft` (forced to `mcp` server-side).
 
@@ -155,9 +202,9 @@ The OpenAPI document MUST NOT declare a `householdId` field in any tool's input 
 - AND the `Content-Type` indicates YAML
 - AND the body parses as a valid YAML document
 
-#### Scenario: OpenAPI declares the 11 mealmanager tools
+#### Scenario: OpenAPI declares the 13 mealmanager tools
 - WHEN the OpenAPI document is parsed
-- THEN the set of `operationId` values prefixed `mealmanager_` equals the 11 tools registered by `registerAllTools`:
+- THEN the set of `operationId` values prefixed `mealmanager_` equals the 13 tools registered by `registerAllTools`:
   - `mealmanager_list_inventory`
   - `mealmanager_list_recipes`
   - `mealmanager_get_recipe`
@@ -169,6 +216,8 @@ The OpenAPI document MUST NOT declare a `householdId` field in any tool's input 
   - `mealmanager_list_recipe_drafts`
   - `mealmanager_get_recipe_draft`
   - `mealmanager_save_recipe_draft`
+  - `mealmanager_create_ingredient`
+  - `mealmanager_add_inventory_item`
 
 #### Scenario: OpenAPI declares Bearer auth
 - WHEN the OpenAPI document is parsed
