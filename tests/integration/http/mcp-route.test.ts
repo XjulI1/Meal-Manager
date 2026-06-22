@@ -3,6 +3,8 @@ import { registerAllTools } from '../../../server/routes/mcp/tools'
 import type { McpToolContext } from '../../../server/routes/mcp/tools'
 import { requireHouseholdFromPAT } from '../../../server/utils/require-household'
 import { InvalidTokenError } from '../../../server/contexts/platform/domain/errors/invalid-token.error'
+import { DuplicateIngredientNameError } from '../../../server/contexts/ingredients/domain/errors/duplicate-ingredient-name.error'
+import { InvalidIngredientReferenceError } from '../../../server/contexts/inventory/domain/errors/invalid-ingredient-reference.error'
 import { makeEvent } from './nuxt-runtime-stubs'
 
 /**
@@ -106,16 +108,20 @@ describe('registerAllTools', () => {
         saveRecipeDraft: { execute: vi.fn().mockResolvedValue({ id: 'draft-1' }) },
         listRecipeDrafts: { execute: vi.fn().mockResolvedValue([]) },
         getRecipeDraftById: { execute: vi.fn().mockResolvedValue({}) },
+        createIngredient: { execute: vi.fn().mockResolvedValue({ id: 'ing-1' }) },
+        addInventoryItem: { execute: vi.fn().mockResolvedValue({ item: { id: 'inv-1' }, created: true }) },
       } as any,
     }
   })
 
-  it('registers exactly the 11 tools (8 read-only + 3 draft tools)', () => {
+  it('registers exactly the 13 tools (read-only + 3 write tools)', () => {
     const { server, tools } = makeRecordingServer()
 
     registerAllTools(server, ctx)
 
     expect(tools.map((t) => t.name).sort()).toEqual([
+      'mealmanager_add_inventory_item',
+      'mealmanager_create_ingredient',
       'mealmanager_get_household',
       'mealmanager_get_ingredient',
       'mealmanager_get_menu_for_week',
@@ -227,6 +233,120 @@ describe('registerAllTools', () => {
         },
       ],
     })
+  })
+
+  it('create_ingredient persists under the PAT household with the minimal fields', async () => {
+    const { server, tools } = makeRecordingServer()
+    registerAllTools(server, ctx)
+    const tool = tools.find((t) => t.name === 'mealmanager_create_ingredient')!
+
+    const result = await tool.handler({
+      name: 'Courgette',
+      category: 'produce',
+      canonicalUnit: 'unit',
+      storage: 'fridge',
+    })
+
+    expect(ctx.container.createIngredient.execute).toHaveBeenCalledWith({
+      householdId: 'hh-1',
+      name: 'Courgette',
+      category: 'produce',
+      canonicalUnit: 'unit',
+      storage: 'fridge',
+    })
+    expect(result.isError).toBeUndefined()
+    expect(result.content[0].text).toContain('"id": "ing-1"')
+  })
+
+  it('create_ingredient returns an error result on a duplicate name', async () => {
+    const { server, tools } = makeRecordingServer()
+    ;(ctx.container as any).createIngredient.execute = vi
+      .fn()
+      .mockRejectedValue(new DuplicateIngredientNameError('Courgette'))
+    registerAllTools(server, ctx)
+    const tool = tools.find((t) => t.name === 'mealmanager_create_ingredient')!
+
+    const result = await tool.handler({
+      name: 'Courgette',
+      category: 'produce',
+      canonicalUnit: 'unit',
+      storage: 'fridge',
+    })
+
+    expect(result.isError).toBe(true)
+    expect(result.content[0].text).toContain('Courgette')
+  })
+
+  it('create_ingredient input schema declares neither householdId nor advanced fields', () => {
+    const { server, tools } = makeRecordingServer()
+    registerAllTools(server, ctx)
+    const tool = tools.find((t) => t.name === 'mealmanager_create_ingredient')!
+
+    const keys = Object.keys(tool.config.inputSchema ?? {})
+    expect(keys.sort()).toEqual(['canonicalUnit', 'category', 'name', 'storage'])
+  })
+
+  it('add_inventory_item upserts under the PAT household and reports created=true', async () => {
+    const { server, tools } = makeRecordingServer()
+    registerAllTools(server, ctx)
+    const tool = tools.find((t) => t.name === 'mealmanager_add_inventory_item')!
+
+    const result = await tool.handler({
+      ingredientId: 'ing-1',
+      quantity: { value: 500, unit: 'g' },
+      location: 'pantry',
+    })
+
+    expect(ctx.container.addInventoryItem.execute).toHaveBeenCalledWith({
+      householdId: 'hh-1',
+      ingredientId: 'ing-1',
+      quantity: { value: 500, unit: 'g' },
+      location: 'pantry',
+    })
+    expect(result.isError).toBeUndefined()
+    expect(result.content[0].text).toContain('"created": true')
+  })
+
+  it('add_inventory_item reports created=false when an existing line is incremented', async () => {
+    const { server, tools } = makeRecordingServer()
+    ;(ctx.container as any).addInventoryItem.execute = vi
+      .fn()
+      .mockResolvedValue({ item: { id: 'inv-1' }, created: false })
+    registerAllTools(server, ctx)
+    const tool = tools.find((t) => t.name === 'mealmanager_add_inventory_item')!
+
+    const result = await tool.handler({ ingredientId: 'ing-1', quantity: { value: 2, unit: 'unit' } })
+
+    expect(result.content[0].text).toContain('"created": false')
+  })
+
+  it('add_inventory_item supports the freezer location', async () => {
+    const { server, tools } = makeRecordingServer()
+    registerAllTools(server, ctx)
+    const tool = tools.find((t) => t.name === 'mealmanager_add_inventory_item')!
+
+    await tool.handler({ ingredientId: 'ing-1', quantity: { value: 2, unit: 'unit' }, location: 'freezer' })
+
+    expect(ctx.container.addInventoryItem.execute).toHaveBeenCalledWith({
+      householdId: 'hh-1',
+      ingredientId: 'ing-1',
+      quantity: { value: 2, unit: 'unit' },
+      location: 'freezer',
+    })
+  })
+
+  it('add_inventory_item returns an error result for an unknown/cross-household ingredient', async () => {
+    const { server, tools } = makeRecordingServer()
+    ;(ctx.container as any).addInventoryItem.execute = vi
+      .fn()
+      .mockRejectedValue(new InvalidIngredientReferenceError('ing-x', 'not-found'))
+    registerAllTools(server, ctx)
+    const tool = tools.find((t) => t.name === 'mealmanager_add_inventory_item')!
+
+    const result = await tool.handler({ ingredientId: 'ing-x', quantity: { value: 1, unit: 'unit' } })
+
+    expect(result.isError).toBe(true)
+    expect(result.content[0].text).toContain('ing-x')
   })
 
   it('input schemas never declare a householdId field', () => {

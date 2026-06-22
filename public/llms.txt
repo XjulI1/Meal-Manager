@@ -6,7 +6,7 @@ Meal Manager is a self-hosted family meal management app (inventory, recipes, we
 
 The app exposes a remote MCP server at `/mcp` (e.g. `https://your-domain.example/mcp`). Authentication is by Personal Access Token in the `Authorization: Bearer` header. Tokens are scoped to a single household and revocable.
 
-Eleven tools cover inventory, recipes, weekly menus, shopping lists, ingredients catalog, household info, and recipe drafts. All are read-only except `mealmanager_save_recipe_draft`, which saves a work-in-progress recipe draft for the household to review. All tools are prefixed `mealmanager_`.
+Thirteen tools cover inventory, recipes, weekly menus, shopping lists, ingredients catalog, household info, and recipe drafts. Most are read-only; three write to the household: `mealmanager_save_recipe_draft` saves a work-in-progress recipe draft to review, `mealmanager_create_ingredient` adds an ingredient to the catalog, and `mealmanager_add_inventory_item` adds (or increments) an item in the pantry, fridge or freezer. All tools are prefixed `mealmanager_`.
 
 ## Get a token
 
