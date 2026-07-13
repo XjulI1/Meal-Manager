@@ -51,16 +51,16 @@ async function loadJournal() {
 }
 
 // ── Bottle filters ──────────────────────────────────────────────────────
-const fColor = ref<WineColor | ''>('')
-const fRegion = ref<WineRegion | ''>('')
+const fColor = ref<WineColor | 'all'>('all')
+const fRegion = ref<WineRegion | 'all'>('all')
 const fDomain = ref('')
-const fPlacement = ref<'' | 'placed' | 'unplaced'>('')
+const fPlacement = ref<'all' | 'placed' | 'unplaced'>('all')
 const fSort = ref<'name' | 'vintage' | 'region'>('name')
 
-const colorFilterOptions = [{ value: '', label: 'Toutes robes' }, ...WINE_COLOR_OPTIONS]
-const regionFilterOptions = [{ value: '', label: 'Toutes régions' }, ...WINE_REGION_OPTIONS]
+const colorFilterOptions = [{ value: 'all', label: 'Toutes robes' }, ...WINE_COLOR_OPTIONS]
+const regionFilterOptions = [{ value: 'all', label: 'Toutes régions' }, ...WINE_REGION_OPTIONS]
 const placementOptions = [
-  { value: '', label: 'Tous' },
+  { value: 'all', label: 'Tous' },
   { value: 'placed', label: 'Rangées' },
   { value: 'unplaced', label: 'À ranger' },
 ]
@@ -72,10 +72,10 @@ const sortOptions = [
 
 async function loadBottles() {
   const query: ListBottlesQueryDto = { sort: fSort.value }
-  if (fColor.value) query.color = fColor.value
-  if (fRegion.value) query.region = fRegion.value
+  if (fColor.value !== 'all') query.color = fColor.value
+  if (fRegion.value !== 'all') query.region = fRegion.value
   if (fDomain.value.trim()) query.domain = fDomain.value.trim()
-  if (fPlacement.value) query.placement = fPlacement.value
+  if (fPlacement.value !== 'all') query.placement = fPlacement.value
   try { bottles.value = await api.listBottles(query) }
   catch (e) { notifyError(e) }
 }

@@ -13,7 +13,7 @@ const emit = defineEmits<{
 
 const name = ref(props.initial?.name ?? '')
 const color = ref<WineColor>(props.initial?.color ?? 'rouge')
-const region = ref<WineRegion | ''>(props.initial?.region ?? '')
+const region = ref<WineRegion | '__none__'>(props.initial?.region ?? '__none__')
 const domain = ref(props.initial?.domain ?? '')
 const appellation = ref(props.initial?.appellation ?? '')
 const country = ref(props.initial?.country ?? 'France')
@@ -23,7 +23,7 @@ const gardeMax = ref<number | null>(props.initial?.gardeMax ?? null)
 const rating = ref<number | null>(props.initial?.rating ?? null)
 const comment = ref(props.initial?.comment ?? '')
 
-const regionOptions = [{ value: '', label: '—' }, ...WINE_REGION_OPTIONS]
+const regionOptions = [{ value: '__none__', label: '—' }, ...WINE_REGION_OPTIONS]
 const ratingOptions = [
   { value: -1, label: 'Non noté' },
   ...[0, 1, 2, 3, 4, 5].map((n) => ({ value: n, label: `${n}/5` })),
@@ -39,7 +39,7 @@ function onSubmit() {
   emit('submit', {
     name: name.value.trim(),
     color: color.value,
-    region: region.value === '' ? undefined : region.value,
+    region: region.value === '__none__' ? undefined : region.value,
     domain: trimmed(domain.value),
     appellation: trimmed(appellation.value),
     country: trimmed(country.value),
