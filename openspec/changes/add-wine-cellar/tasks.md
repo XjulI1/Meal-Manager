@@ -35,7 +35,7 @@
 - [ ] 5.1 Caves : `GET/POST /api/cave/cellars`, `GET/PATCH/DELETE /api/cave/cellars/[id]` (avec layout + occupation). Refs: add-wine-cellar §wine-cellar-structure
 - [ ] 5.2 Clayettes & étages : `POST /api/cave/cellars/[id]/shelves`, `DELETE .../shelves/[id]`, `POST .../shelves/[id]/rows`, `PATCH/DELETE .../rows/[id]`. Refs: add-wine-cellar §wine-cellar-structure
 - [ ] 5.3 Vins : `GET/POST /api/cave/wines`, `GET/PATCH /api/cave/wines/[id]`. Refs: add-wine-cellar §wine-collection
-- [ ] 5.4 Bouteilles : `POST /api/cave/wines/[id]/bottles`, `PATCH /api/cave/bottles/[id]/position`, `POST /api/cave/bottles/[id]/exit`, `GET /api/cave/bottles` (liste filtrable), `GET /api/cave/journal`. Refs: add-wine-cellar §wine-collection §wine-cellar-visualization
+- [ ] 5.4 Bouteilles : `POST /api/cave/wines/[id]/bottles` (dont `buyingPrice`), `PATCH /api/cave/bottles/[id]` (édition attributs : prix d'achat, contenance, date d'ajout ; refus prix négatif 400), `PATCH /api/cave/bottles/[id]/position`, `POST /api/cave/bottles/[id]/exit`, `GET /api/cave/bottles` (liste filtrable), `GET /api/cave/journal`. Refs: add-wine-cellar §wine-collection §wine-cellar-visualization
 - [ ] 5.5 Import : `POST /api/cave/import` (upload multipart `.xlsx`, refus autre type, limite de taille, renvoie le rapport). Refs: add-wine-cellar §wine-cellar-import
 - [ ] 5.6 Toutes les routes via `requireHouseholdMember()` + `safeParse` des DTO ; codes 400/404/409 conformes aux specs.
 
@@ -46,13 +46,13 @@
 - [ ] 6.3 Composants structure : formulaires création/édition cave, clayette, étage (capacités avant/arrière).
 - [ ] 6.4 Vue grille 2D par clayette : étages en lignes, rangées arrière/avant, slots cliquables, code couleur robe + libellé, slot vide → placement depuis le pool. Refs: add-wine-cellar §wine-cellar-visualization
 - [ ] 6.5 Vue liste filtrable (robe/région/domaine/apogée, tri) affichant l'emplacement complet ou « à ranger ». Refs: add-wine-cellar §wine-cellar-visualization
-- [ ] 6.6 Formulaires vin & bouteille + actions boire (motif + note de dégustation) / déplacer / ranger. Refs: add-wine-cellar §wine-collection
+- [ ] 6.6 Formulaires vin & bouteille (dont champ **prix d'achat** en euros) + actions boire (motif + note de dégustation) / déplacer / ranger. Refs: add-wine-cellar §wine-collection
 - [ ] 6.7 Page d'import Vinotag : upload, écran de confirmation (avertissement pas de fusion), affichage du rapport. Refs: add-wine-cellar §wine-cellar-import
 - [ ] 6.8 Responsive : liste par défaut sur mobile, grille scrollable horizontalement. Refs: add-wine-cellar §wine-cellar-visualization
 
 ## 7. Tests
 
-- [ ] 7.1 `tests/unit/` : VO contenance (cl/L→ml), `SlotPosition`, invariants capacité, garde `min ≤ max`, mapping Vinotag (robe, région, contenance, colonnes ignorées, ligne sans nom).
+- [ ] 7.1 `tests/unit/` : VO contenance (cl/L→ml), `SlotPosition`, invariants capacité, garde `min ≤ max`, prix d'achat positif, mapping Vinotag (robe, région, contenance, **prix `bottle_buying_price` vs `bottle_real_price` ignoré**, colonnes ignorées, ligne sans nom).
 - [ ] 7.2 `tests/integration/` : use cases avec repositories en mémoire couvrant chaque scénario des specs (création cave, capacités, placement/slot occupé 409, déplacement, sortie + journal, double sortie 409, import + rapport + skippedRows).
 - [ ] 7.3 `tests/integration/http/` : smoke tests des routes clés (`POST /api/cave/cellars`, placement 409, `POST /api/cave/import`).
 - [ ] 7.4 `pnpm lint` (isolation domaine), `pnpm typecheck`, `pnpm test` verts.

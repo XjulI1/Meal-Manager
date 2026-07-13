@@ -39,7 +39,7 @@ Le système SHALL permettre à un membre du foyer de créer et modifier des réf
 Le système SHALL permettre d'ajouter une ou plusieurs bouteilles (`Bottle`) à une référence de vin. Une bouteille porte :
 - `wineId` — **requis**, référence un vin du même foyer.
 - `size` (contenance) — quantité de dimension volume, normalisée en `ml` via le VO `Quantity` ; défaut `750 ml` (75 cl). Contenances usuelles supportées : 375 ml, 500 ml, 750 ml, 1500 ml (magnum), 3000 ml (jéroboam).
-- `buyingPrice` — optionnel, montant positif.
+- `buyingPrice` — **prix d'achat** optionnel, montant positif en euros (2 décimales) ; un montant négatif MUST être refusé (HTTP 400). Chaque bouteille porte son propre prix (des bouteilles d'une même référence achetées à des prix différents sont possibles).
 - `addedDate` — optionnel, date d'entrée en cave.
 - `position` — optionnel ; `null` place la bouteille dans le **pool « à ranger »**.
 - `status` — `in_stock` à la création.
@@ -55,6 +55,16 @@ Ajouter N bouteilles identiques MUST créer N instances distinctes (chacune pla�
 #### Scenario: Contenance convertie en ml
 - **WHEN** un membre ajoute une bouteille avec `size: { value: 1.5, unit: "L" }`
 - **THEN** la bouteille est stockée avec `size = 1500 ml`
+
+#### Scenario: Ajouter une bouteille avec prix d'achat
+- **GIVEN** une référence de vin `wine-1` du foyer
+- **WHEN** un membre soumet `POST /api/cave/wines/wine-1/bottles` avec `{ quantity: 2, size: { value: 75, unit: "cl" }, buyingPrice: 24.00 }`
+- **THEN** 2 bouteilles sont créées, chacune avec `buyingPrice = 24.00`
+- **AND** le prix d'achat est ensuite modifiable par bouteille via `PATCH /api/cave/bottles/{id}`
+
+#### Scenario: Prix d'achat négatif refusé
+- **WHEN** un membre ajoute une bouteille avec `buyingPrice: -5`
+- **THEN** le système renvoie HTTP 400
 
 ### Requirement: Placement et déplacement d'une bouteille
 

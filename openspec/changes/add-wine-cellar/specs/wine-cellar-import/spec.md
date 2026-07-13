@@ -51,9 +51,23 @@ Les colonnes `favorite` et `bottle_real_price` SHALL être ignorées. Les champs
 - **GIVEN** une ligne `bottle_size: "75cl"`
 - **THEN** les bouteilles créées ont `size = 750 ml`
 
+#### Scenario: Prix d'achat importé sur chaque bouteille
+- **GIVEN** une ligne `{ wine_name: "Bourgogne Hautes côtes de Beaune", bottle_quantity: 1, bottle_buying_price: "24.00" }`
+- **WHEN** l'import traite la ligne
+- **THEN** la bouteille créée a `buyingPrice = 24.00`
+
+#### Scenario: Prix d'achat propagé à toutes les bouteilles d'une ligne
+- **GIVEN** une ligne `{ bottle_quantity: 3, bottle_buying_price: "20.00" }`
+- **THEN** les 3 bouteilles créées ont chacune `buyingPrice = 20.00`
+
+#### Scenario: Prix d'achat absent
+- **GIVEN** une ligne sans `bottle_buying_price`
+- **THEN** les bouteilles créées ont `buyingPrice` non renseigné (optionnel)
+
 #### Scenario: Colonnes ignorées
 - **GIVEN** une ligne avec `favorite: "true"` et `bottle_real_price: "30.00"`
 - **THEN** ces valeurs n'apparaissent nulle part dans les entités créées
+- **AND** en particulier `bottle_real_price` n'est PAS confondu avec `bottle_buying_price` (seul ce dernier alimente `buyingPrice`)
 
 #### Scenario: Ligne sans nom ignorée et signalée
 - **GIVEN** une ligne avec `wine_name` vide
