@@ -17,6 +17,7 @@ import { ShelfNotEmptyError } from '../../../server/contexts/wine-cellar/domain/
 import { SlotOccupiedError } from '../../../server/contexts/wine-cellar/domain/errors/slot-occupied.error'
 import { SlotOutOfRangeError } from '../../../server/contexts/wine-cellar/domain/errors/slot-out-of-range.error'
 import { InvalidRowCapacityError } from '../../../server/contexts/wine-cellar/domain/entities/row.entity'
+import { FakeLabelPhotoStorage } from './in-memory/fake-label-photo-storage'
 import { InMemoryBottleRepository } from './in-memory/in-memory-bottle.repository'
 import { InMemoryCellarRepository } from './in-memory/in-memory-cellar.repository'
 import { InMemoryWineRepository } from './in-memory/in-memory-wine.repository'
@@ -56,7 +57,7 @@ describe('wine-cellar structure & placement', () => {
     updateRow = new UpdateRowUseCase(cellars, bottles, wines, now)
     deleteShelf = new DeleteShelfUseCase(cellars, bottles)
     renameShelf = new RenameShelfUseCase(cellars, now)
-    createWine = new CreateWineUseCase(wines, ids, now)
+    createWine = new CreateWineUseCase(wines, new FakeLabelPhotoStorage(), ids, now)
     addBottles = new AddBottlesUseCase(wines, bottles, ids, now)
     placeBottle = new PlaceBottleUseCase(bottles, cellars, now)
     exitBottle = new ExitBottleUseCase(bottles, now)

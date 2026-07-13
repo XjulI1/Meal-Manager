@@ -5,6 +5,7 @@ import { BottleNotFoundError } from '../contexts/wine-cellar/domain/errors/bottl
 import { CapacityBelowOccupancyError } from '../contexts/wine-cellar/domain/errors/capacity-below-occupancy.error'
 import { CellarNotFoundError } from '../contexts/wine-cellar/domain/errors/cellar-not-found.error'
 import { IncoherentGardeWindowError } from '../contexts/wine-cellar/domain/errors/incoherent-garde-window.error'
+import { LabelPhotoStorageError } from '../contexts/wine-cellar/domain/errors/label-photo-storage.error'
 import { RowNotEmptyError } from '../contexts/wine-cellar/domain/errors/row-not-empty.error'
 import { RowNotFoundError } from '../contexts/wine-cellar/domain/errors/row-not-found.error'
 import { ShelfNotEmptyError } from '../contexts/wine-cellar/domain/errors/shelf-not-empty.error'
@@ -41,6 +42,7 @@ const BAD_REQUEST = [
   InvalidSlotPositionError,
   InvalidRowCapacityError,
   WineImportError,
+  LabelPhotoStorageError,
   InvalidQuantityError,
 ] as const
 

@@ -19,6 +19,7 @@ import type {
   UpdateWineDto,
   WineView,
 } from '../../shared/dto/wine-cellar'
+import type { WineLabelDraftDto, WineLabelImageDto } from '../../shared/dto/wine-label'
 
 interface GetWineResponse {
   wine: WineView
@@ -81,6 +82,11 @@ export function useApiWineCellar() {
   const importVinotag = (fileBase64: string, filename?: string) =>
     $fetch<ImportReportView>('/api/cave/import', { method: 'POST', body: { fileBase64, filename } })
 
+  // ── Label scan (AI) ──────────────────────────────────────────────────
+  /** Extract a wine draft from label photos (never persisted). */
+  const scanLabel = (images: WineLabelImageDto[]) =>
+    $fetch<WineLabelDraftDto>('/api/cave/scan-label', { method: 'POST', body: { images } })
+
   return {
     listCellars,
     createCellar,
@@ -104,5 +110,6 @@ export function useApiWineCellar() {
     exitBottle,
     journal,
     importVinotag,
+    scanLabel,
   }
 }

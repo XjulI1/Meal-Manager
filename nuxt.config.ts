@@ -9,13 +9,7 @@ export default defineNuxtConfig({
     compatibilityVersion: 5,
   },
 
-  modules: [
-    '@nuxt/ui',
-    '@nuxt/eslint',
-    '@pinia/nuxt',
-    'nuxt-auth-utils',
-    '@vite-pwa/nuxt',
-  ],
+  modules: ['@nuxt/ui', '@nuxt/eslint', '@pinia/nuxt', 'nuxt-auth-utils', '@vite-pwa/nuxt'],
   vite: {
     optimizeDeps: {
       include: ['zod'],
@@ -33,9 +27,7 @@ export default defineNuxtConfig({
           // Réplique le défaut Nuxt (`_nuxt/[hash].js`) et donne un nom au seul
           // chunk heic pour que `globIgnores` puisse le cibler de façon stable.
           chunkFileNames(chunkInfo) {
-            return chunkInfo.name === 'heic-to'
-              ? '_nuxt/heic-to.[hash].js'
-              : '_nuxt/[hash].js'
+            return chunkInfo.name === 'heic-to' ? '_nuxt/heic-to.[hash].js' : '_nuxt/[hash].js'
           },
         },
       },
@@ -69,10 +61,14 @@ export default defineNuxtConfig({
     // under `public`. Overridable at runtime via NUXT_ANTHROPIC_* env vars;
     // defaults below are the current values.
     anthropicApiKey: '',
-    anthropicModel: 'claude-sonnet-4-6',
+    anthropicModel: 'claude-sonnet-5',
     anthropicChatEffort: 'medium',
     anthropicImportEffort: 'low',
     anthropicPhotoEffort: 'low',
+    anthropicLabelEffort: 'medium',
+    // Filesystem directory where persisted wine-label photos are written and
+    // served from. Overridable via NUXT_WINE_LABEL_DIR; mount a volume in Docker.
+    wineLabelDir: '.data/wine-labels',
     session: {
       password: '',
       cookie: {

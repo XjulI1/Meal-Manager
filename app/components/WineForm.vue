@@ -1,8 +1,13 @@
 <script setup lang="ts">
-import type { CreateWineDto, WineColor, WineRegion, WineView } from '../../shared/dto/wine-cellar'
+import type { CreateWineDto, WineColor, WineLabelInputDto, WineRegion, WineView } from '../../shared/dto/wine-cellar'
+import type { WineLabelDraftDto } from '../../shared/dto/wine-label'
 
 const props = defineProps<{
   initial?: WineView | null
+  /** Seed values from a label scan (creation only; distinct from `initial`). */
+  prefill?: WineLabelDraftDto | null
+  /** Label photo from a scan; pre-loads the form's photo (user may replace it). */
+  labelPhoto?: WineLabelInputDto | null
   loading?: boolean
 }>()
 
@@ -11,15 +16,46 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
-const name = ref(props.initial?.name ?? '')
-const color = ref<WineColor>(props.initial?.color ?? 'rouge')
-const region = ref<WineRegion | '__none__'>(props.initial?.region ?? '__none__')
-const domain = ref(props.initial?.domain ?? '')
-const appellation = ref(props.initial?.appellation ?? '')
-const country = ref(props.initial?.country ?? 'France')
-const vintage = ref<number | null>(props.initial?.vintage ?? null)
-const gardeMin = ref<number | null>(props.initial?.gardeMin ?? null)
-const gardeMax = ref<number | null>(props.initial?.gardeMax ?? null)
+// Photo to persist: seeded from a scan, or picked/replaced manually here.
+const labelPhoto = ref<WineLabelInputDto | null>(props.labelPhoto ?? null)
+const photoConverting = ref(false)
+const photoInput = useTemplateRef<HTMLInputElement>('photoInput')
+
+/** Preview: freshly picked/scanned photo wins, else the wine's stored photo. */
+const photoPreview = computed(() =>
+  labelPhoto.value
+    ? `data:${labelPhoto.value.mediaType};base64,${labelPhoto.value.data}`
+    : (props.initial?.photoUrl ?? null),
+)
+
+async function onPhotoPicked(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  photoConverting.value = true
+  try {
+    labelPhoto.value = await normalizeImageFile(file)
+  }
+  catch {
+    labelPhoto.value = null
+  }
+  finally {
+    photoConverting.value = false
+  }
+}
+
+const seed = props.initial ?? props.prefill ?? null
+
+const name = ref(seed?.name ?? '')
+const color = ref<WineColor>(seed?.color ?? 'rouge')
+const region = ref<WineRegion | '__none__'>(seed?.region ?? '__none__')
+const domain = ref(seed?.domain ?? '')
+const appellation = ref(seed?.appellation ?? '')
+const country = ref(seed?.country ?? 'France')
+const vintage = ref<number | null>(seed?.vintage ?? null)
+const gardeMin = ref<number | null>(seed?.gardeMin ?? null)
+const gardeMax = ref<number | null>(seed?.gardeMax ?? null)
 const rating = ref<number | null>(props.initial?.rating ?? null)
 const comment = ref(props.initial?.comment ?? '')
 
@@ -48,12 +84,33 @@ function onSubmit() {
     gardeMax: gardeMax.value ?? undefined,
     rating: rating.value === null || rating.value < 0 ? undefined : rating.value,
     comment: trimmed(comment.value),
+    labelPhoto: labelPhoto.value ?? undefined,
   })
 }
 </script>
 
 <template>
   <UForm :state="{ name }" class="space-y-4" @submit.prevent="onSubmit">
+    <div class="flex flex-col items-center gap-2">
+      <img
+        v-if="photoPreview"
+        :src="photoPreview"
+        alt="Étiquette du vin"
+        class="max-h-40 w-auto rounded-lg object-contain"
+      >
+      <input ref="photoInput" type="file" accept="image/*" capture="environment" class="hidden" @change="onPhotoPicked">
+      <UButton
+        icon="i-lucide-image-plus"
+        color="neutral"
+        variant="soft"
+        size="xs"
+        :loading="photoConverting"
+        @click="photoInput?.click()"
+      >
+        {{ photoPreview ? 'Changer la photo' : 'Ajouter une photo' }}
+      </UButton>
+    </div>
+
     <UFormField label="Nom du vin" required>
       <UInput v-model="name" class="w-full" placeholder="Saint-Amour" />
     </UFormField>

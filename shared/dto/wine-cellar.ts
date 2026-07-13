@@ -80,7 +80,19 @@ export type UpdateRowDto = z.infer<typeof UpdateRowSchema>
 
 // ── Wine reference ──────────────────────────────────────────────────────────
 
-export const CreateWineSchema = z.object({
+/**
+ * A label photo to upload and persist. Mutually exclusive with a direct
+ * `photoUrl`. The server stores it and sets `photoUrl` to the served URL.
+ */
+export const WineLabelInputSchema = z.object({
+  mediaType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
+  /** Raw base64 (no `data:` prefix). Max ≈ 5 MB decoded. */
+  data: z.string().min(1).max(7_000_000),
+})
+export type WineLabelInputDto = z.infer<typeof WineLabelInputSchema>
+
+/** Base wine fields; refined into Create/Update below. */
+const WineFieldsSchema = z.object({
   name: z.string().trim().min(1).max(200),
   domain: z.string().trim().max(200).optional(),
   country: z.string().trim().max(80).optional(),
@@ -92,11 +104,19 @@ export const CreateWineSchema = z.object({
   gardeMax: YearSchema.optional(),
   comment: z.string().trim().max(2000).optional(),
   photoUrl: z.string().trim().url().max(500).optional(),
+  /** Upload a label photo to persist; exclusive with `photoUrl`. */
+  labelPhoto: WineLabelInputSchema.optional(),
   rating: z.number().int().min(0).max(5).optional(),
 })
+
+/** photoUrl and labelPhoto MUST NOT be supplied together. */
+const noPhotoConflict = (v: { photoUrl?: string, labelPhoto?: unknown }): boolean => !(v.photoUrl && v.labelPhoto)
+const PHOTO_CONFLICT_MESSAGE = { message: 'photoUrl and labelPhoto are mutually exclusive', path: ['labelPhoto'] }
+
+export const CreateWineSchema = WineFieldsSchema.refine(noPhotoConflict, PHOTO_CONFLICT_MESSAGE)
 export type CreateWineDto = z.infer<typeof CreateWineSchema>
 
-export const UpdateWineSchema = CreateWineSchema.partial()
+export const UpdateWineSchema = WineFieldsSchema.partial().refine(noPhotoConflict, PHOTO_CONFLICT_MESSAGE)
 export type UpdateWineDto = z.infer<typeof UpdateWineSchema>
 
 // ── Bottles ─────────────────────────────────────────────────────────────────

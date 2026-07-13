@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import type { AddBottlesDto } from '../../shared/dto/wine-cellar'
 
-defineProps<{
+const props = defineProps<{
   wineName?: string
+  /** Pre-fill the bottle count (e.g. suggested by a label scan). */
+  initialQuantity?: number
   loading?: boolean
 }>()
 
@@ -11,7 +13,7 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
-const quantity = ref(1)
+const quantity = ref(props.initialQuantity && props.initialQuantity > 0 ? props.initialQuantity : 1)
 const sizeKey = ref('75cl')
 const buyingPrice = ref<number | null>(null)
 const addedDate = ref('')

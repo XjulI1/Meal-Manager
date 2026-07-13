@@ -1,6 +1,30 @@
 import type { Wine, WineAttributes } from '../domain/entities/wine.entity'
+import type { ILabelPhotoStorage } from '../domain/ports/label-photo-storage.port'
 import { WineColor } from '../domain/value-objects/wine-color.vo'
 import { WineRegion } from '../domain/value-objects/wine-region.vo'
+
+/** A label photo to upload; mutually exclusive with a direct `photoUrl`. */
+export interface LabelPhotoInput {
+  mediaType: string
+  data: string
+}
+
+/**
+ * Resolves the effective `photoUrl` for a create/update: if a `labelPhoto` was
+ * uploaded, it is persisted via storage and its served URL wins; otherwise the
+ * caller's `fallback` (a direct `photoUrl`, possibly undefined) is used.
+ * Persisting only here (at write time) guarantees no orphan files on cancel.
+ */
+export async function resolveLabelPhoto(
+  storage: ILabelPhotoStorage,
+  householdId: string,
+  source: { labelPhoto?: LabelPhotoInput },
+  fallback: string | undefined,
+): Promise<string | undefined> {
+  if (!source.labelPhoto) return fallback
+  const { url } = await storage.store({ householdId, ...source.labelPhoto })
+  return url
+}
 
 /** Primitive wine fields as received from the transport layer. */
 export interface WineInput {
