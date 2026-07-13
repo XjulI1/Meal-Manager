@@ -9,14 +9,37 @@ const emit = defineEmits<{
   slotClick: [payload: { rowId: string, slot: SlotView }]
 }>()
 
-// Geometry of the quincunx (staggered) rack, in px.
 const FRONT = 38
 const BACK = 24
-const FRONT_GAP = 16
-const PITCH = FRONT + FRONT_GAP
-const BACK_GAP = PITCH - BACK // back bottles share the front pitch…
-const BACK_OFFSET = PITCH / 2 - BACK / 2 // …shifted half a pitch into the valleys
-const OVERLAP = 15 // front rises into the back row
+
+interface Cell {
+  key: string
+  slot: SlotView
+  big: boolean
+}
+
+/**
+ * One étage = a single centered line alternating front (large) and back (small).
+ * Alternate étages flip the starting size (front-first vs back-first) so the
+ * large tokens stagger into a quincunx down the panel — the Vinotag layout.
+ */
+function cellsOf(row: RowLayoutView, flip: boolean): Cell[] {
+  const cells: Cell[] = []
+  const max = Math.max(row.front.length, row.back.length)
+  for (let i = 0; i < max; i++) {
+    const front = row.front[i]
+    const back = row.back[i]
+    if (flip) {
+      if (back) cells.push({ key: `b-${i}`, slot: back, big: false })
+      if (front) cells.push({ key: `f-${i}`, slot: front, big: true })
+    }
+    else {
+      if (front) cells.push({ key: `f-${i}`, slot: front, big: true })
+      if (back) cells.push({ key: `b-${i}`, slot: back, big: false })
+    }
+  }
+  return cells
+}
 
 function occupancy(row: RowLayoutView): { filled: number, total: number } {
   const all = [...row.back, ...row.front]
@@ -41,60 +64,34 @@ function title(slot: SlotView): string {
       :key="shelf.id"
       class="rounded-lg overflow-hidden border border-amber-800/40 bg-gray-50 dark:bg-gray-950"
     >
-      <div class="p-3 space-y-4 overflow-x-auto">
+      <div class="p-3 overflow-x-auto">
         <p v-if="shelf.rows.length === 0" class="text-sm text-gray-500">Aucun étage.</p>
 
-        <div v-for="row in (shelf.rows as RowLayoutView[])" :key="row.id" class="flex items-center gap-3">
+        <div v-for="(row, ri) in (shelf.rows as RowLayoutView[])" :key="row.id" class="flex items-center gap-3 py-1">
           <div class="w-16 shrink-0 text-right">
             <span class="text-xs font-medium text-gray-500">Étage {{ row.position }}</span>
             <span class="block text-[10px] text-gray-400">{{ occupancy(row).filled }}/{{ occupancy(row).total }}</span>
           </div>
 
-          <div class="relative">
-            <!-- Back rack (arrière): small, nestled in the valleys between front bottles. -->
-            <div
-              v-if="row.capacityFront > 0"
-              class="flex"
-              :style="{ gap: `${BACK_GAP}px`, paddingLeft: `${BACK_OFFSET}px` }"
+          <div class="flex items-center gap-1.5">
+            <button
+              v-for="cell in cellsOf(row, ri % 2 === 1)"
+              :key="cell.key"
+              type="button"
+              class="rounded-full shrink-0 flex items-center justify-center transition-all"
+              :style="{ width: `${cell.big ? FRONT : BACK}px`, height: `${cell.big ? FRONT : BACK}px` }"
+              :class="cell.slot.wine
+                ? `${WINE_COLOR_DOT[cell.slot.wine.color]} border border-black/25 shadow-sm hover:ring-2 hover:ring-amber-400`
+                : 'bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:border-amber-500'"
+              :title="title(cell.slot)"
+              @click="emit('slotClick', { rowId: row.id, slot: cell.slot })"
             >
-              <button
-                v-for="slot in row.back"
-                :key="`b-${slot.index}`"
-                type="button"
-                class="rounded-full shrink-0 flex items-center justify-center transition-all"
-                :style="{ width: `${BACK}px`, height: `${BACK}px` }"
-                :class="slot.wine
-                  ? `${WINE_COLOR_DOT[slot.wine.color]} border border-black/25 hover:ring-2 hover:ring-amber-400`
-                  : 'border border-dashed border-gray-400 dark:border-gray-600 hover:border-amber-500'"
-                :title="title(slot)"
-                @click="emit('slotClick', { rowId: row.id, slot })"
-              />
-            </div>
-
-            <!-- Front rack (avant): large, overlapping upward into the back row. -->
-            <div
-              class="flex relative"
-              :style="{ gap: `${FRONT_GAP}px`, marginTop: row.capacityFront > 0 ? `-${OVERLAP}px` : '0', zIndex: 1 }"
-            >
-              <button
-                v-for="slot in (row.capacityFront > 0 ? row.front : row.back)"
-                :key="`f-${slot.index}`"
-                type="button"
-                class="rounded-full shrink-0 flex items-center justify-center transition-all"
-                :style="{ width: `${FRONT}px`, height: `${FRONT}px` }"
-                :class="slot.wine
-                  ? `${WINE_COLOR_DOT[slot.wine.color]} border border-black/25 shadow-sm hover:ring-2 hover:ring-amber-400`
-                  : 'border border-dashed border-gray-400 dark:border-gray-600 hover:border-amber-500'"
-                :title="title(slot)"
-                @click="emit('slotClick', { rowId: row.id, slot })"
-              >
-                <span
-                  v-if="slot.wine?.vintage"
-                  class="text-[9px] font-medium leading-none"
-                  :class="slot.wine.color === 'rouge' || slot.wine.color === 'rose' ? 'text-white/90' : 'text-black/70'"
-                >{{ String(slot.wine.vintage).slice(2) }}</span>
-              </button>
-            </div>
+              <span
+                v-if="cell.slot.wine?.vintage && cell.big"
+                class="text-[9px] font-medium leading-none"
+                :class="cell.slot.wine.color === 'rouge' || cell.slot.wine.color === 'rose' ? 'text-white/90' : 'text-black/70'"
+              >{{ String(cell.slot.wine.vintage).slice(2) }}</span>
+            </button>
           </div>
 
           <div class="ml-auto pl-2">
@@ -103,7 +100,6 @@ function title(slot: SlotView): string {
         </div>
       </div>
 
-      <!-- Gold caption bar -->
       <div class="flex items-center justify-between gap-2 px-3 py-2 bg-amber-200/60 dark:bg-amber-900/30 border-t border-amber-800/40">
         <span class="font-medium text-amber-900 dark:text-amber-200 truncate">
           {{ shelf.label || `Clayette ${shelf.position}` }}
