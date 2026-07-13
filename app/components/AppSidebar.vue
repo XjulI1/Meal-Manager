@@ -5,6 +5,7 @@ const items = [
   { to: '/recipes', label: 'Recettes', icon: 'i-lucide-book-open' },
   { to: '/ingredients', label: 'Ingrédients', icon: 'i-lucide-carrot' },
   { to: '/shopping', label: 'Courses', icon: 'i-lucide-shopping-cart' },
+  { to: '/cave', label: 'Cave', icon: 'i-lucide-wine' },
 ]
 </script>
 
