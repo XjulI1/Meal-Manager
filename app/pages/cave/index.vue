@@ -332,7 +332,12 @@ function fileToBase64(file: File): Promise<string> {
             <p class="text-xs text-gray-500 truncate">
               {{ formatBottleSize(item.bottle.size.value) }}
               <template v-if="item.bottle.buyingPrice !== null"> · {{ formatPrice(item.bottle.buyingPrice) }}</template>
-              · <span :class="item.bottle.placement ? '' : 'text-amber-600'">{{ placementLabel(item) }}</span>
+              · <NuxtLink
+                v-if="item.bottle.placement"
+                :to="`/cave/${item.bottle.placement.cellarId}?bottle=${item.bottle.id}`"
+                class="text-primary-600 dark:text-primary-400 hover:underline"
+              >{{ placementLabel(item) }} <UIcon name="i-lucide-map-pin" class="size-3 align-middle" /></NuxtLink>
+              <span v-else class="text-amber-600">{{ placementLabel(item) }}</span>
             </p>
           </div>
           <UButton

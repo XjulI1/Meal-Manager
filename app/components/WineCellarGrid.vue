@@ -3,6 +3,7 @@ import type { CellarLayoutView, RowLayoutView, SlotView } from '../../shared/dto
 
 defineProps<{
   layout: CellarLayoutView
+  highlightBottleId?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -87,14 +88,20 @@ function title(slot: SlotView): string {
               class="shrink-0 flex items-center justify-center"
               :style="{ width: `${FRONT}px`, height: `${FRONT}px` }"
               :title="title(cell.slot)"
+              :data-bottle-id="cell.slot.bottle?.id"
               @click="emit('slotClick', { rowId: row.id, slot: cell.slot })"
             >
               <span
                 class="rounded-full flex items-center justify-center transition-all"
                 :style="{ width: `${cell.big ? FRONT : BACK}px`, height: `${cell.big ? FRONT : BACK}px` }"
-                :class="cell.slot.wine
-                  ? `${WINE_COLOR_DOT[cell.slot.wine.color]} border border-black/25 shadow-sm hover:ring-2 hover:ring-amber-400`
-                  : 'bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:border-amber-500'"
+                :class="[
+                  cell.slot.wine
+                    ? `${WINE_COLOR_DOT[cell.slot.wine.color]} border border-black/25 shadow-sm hover:ring-2 hover:ring-amber-400`
+                    : 'bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:border-amber-500',
+                  cell.slot.bottle && cell.slot.bottle.id === highlightBottleId
+                    ? 'ring-4 ring-amber-500 ring-offset-2 ring-offset-gray-50 dark:ring-offset-gray-950 animate-pulse'
+                    : '',
+                ]"
               >
                 <span
                   v-if="cell.slot.wine?.vintage && cell.big"

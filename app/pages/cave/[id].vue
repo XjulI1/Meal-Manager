@@ -11,6 +11,7 @@ definePageMeta({ title: 'Cave' })
 
 const route = useRoute()
 const cellarId = computed(() => route.params.id as string)
+const highlightBottleId = computed(() => (route.query.bottle as string) || null)
 const api = useApiWineCellar()
 const toast = useToast()
 
@@ -31,7 +32,19 @@ async function loadUnplaced() {
   try { unplaced.value = await api.listBottles({ placement: 'unplaced' }) }
   catch (e) { notifyError(e) }
 }
-async function refresh() { await Promise.all([loadLayout(), loadUnplaced()]) }
+async function refresh() {
+  await Promise.all([loadLayout(), loadUnplaced()])
+  if (highlightBottleId.value) scrollToHighlight()
+}
+
+function scrollToHighlight() {
+  nextTick(() => {
+    setTimeout(() => {
+      const el = document.querySelector(`[data-bottle-id="${highlightBottleId.value}"]`)
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' })
+    }, 100)
+  })
+}
 
 onMounted(refresh)
 
@@ -162,7 +175,7 @@ async function drinkOccupant() {
       <UButton icon="i-lucide-plus" @click="showShelfModal = true">Ajouter une clayette</UButton>
     </div>
 
-    <WineCellarGrid v-if="layout" :layout="layout" @slot-click="onSlotClick">
+    <WineCellarGrid v-if="layout" :layout="layout" :highlight-bottle-id="highlightBottleId" @slot-click="onSlotClick">
       <template #shelf-actions="{ shelf }">
         <div class="flex gap-1">
           <UButton icon="i-lucide-pencil" size="xs" variant="ghost" color="neutral" title="Renommer" @click="openRenameShelf(shelf)" />
