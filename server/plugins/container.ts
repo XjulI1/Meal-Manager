@@ -77,6 +77,31 @@ import { InventoryAdapter } from '../contexts/shopping/infrastructure/adapters/i
 import { MealPlanningMenuSnapshotFinder } from '../contexts/shopping/infrastructure/adapters/menu-snapshot-finder.adapter'
 import { CatalogRecipeSnapshotFinder } from '../contexts/shopping/infrastructure/adapters/recipe-snapshot-finder.adapter'
 import { DrizzleShoppingListRepository } from '../contexts/shopping/infrastructure/repositories/drizzle-shopping-list.repository'
+import { CreateCellarUseCase } from '../contexts/wine-cellar/application/use-cases/create-cellar.use-case'
+import { ListCellarsUseCase } from '../contexts/wine-cellar/application/use-cases/list-cellars.use-case'
+import { RenameCellarUseCase } from '../contexts/wine-cellar/application/use-cases/rename-cellar.use-case'
+import { DeleteCellarUseCase } from '../contexts/wine-cellar/application/use-cases/delete-cellar.use-case'
+import { GetCellarLayoutUseCase } from '../contexts/wine-cellar/application/use-cases/get-cellar-layout.use-case'
+import { AddShelfUseCase } from '../contexts/wine-cellar/application/use-cases/add-shelf.use-case'
+import { DeleteShelfUseCase } from '../contexts/wine-cellar/application/use-cases/delete-shelf.use-case'
+import { AddRowUseCase } from '../contexts/wine-cellar/application/use-cases/add-row.use-case'
+import { UpdateRowUseCase } from '../contexts/wine-cellar/application/use-cases/update-row.use-case'
+import { DeleteRowUseCase } from '../contexts/wine-cellar/application/use-cases/delete-row.use-case'
+import { CreateWineUseCase } from '../contexts/wine-cellar/application/use-cases/create-wine.use-case'
+import { UpdateWineUseCase } from '../contexts/wine-cellar/application/use-cases/update-wine.use-case'
+import { ListWinesUseCase } from '../contexts/wine-cellar/application/use-cases/list-wines.use-case'
+import { GetWineUseCase } from '../contexts/wine-cellar/application/use-cases/get-wine.use-case'
+import { AddBottlesUseCase } from '../contexts/wine-cellar/application/use-cases/add-bottles.use-case'
+import { PlaceBottleUseCase } from '../contexts/wine-cellar/application/use-cases/place-bottle.use-case'
+import { UpdateBottleUseCase } from '../contexts/wine-cellar/application/use-cases/update-bottle.use-case'
+import { ExitBottleUseCase } from '../contexts/wine-cellar/application/use-cases/exit-bottle.use-case'
+import { ListBottlesUseCase } from '../contexts/wine-cellar/application/use-cases/list-bottles.use-case'
+import { ListExitJournalUseCase } from '../contexts/wine-cellar/application/use-cases/list-exit-journal.use-case'
+import { ImportVinotagUseCase } from '../contexts/wine-cellar/application/use-cases/import-vinotag.use-case'
+import { DrizzleCellarRepository } from '../contexts/wine-cellar/infrastructure/repositories/drizzle-cellar.repository'
+import { DrizzleWineRepository } from '../contexts/wine-cellar/infrastructure/repositories/drizzle-wine.repository'
+import { DrizzleBottleRepository } from '../contexts/wine-cellar/infrastructure/repositories/drizzle-bottle.repository'
+import { ExcelJsWineImportParser } from '../contexts/wine-cellar/infrastructure/adapters/exceljs-wine-import-parser'
 import type { Container } from '../types/container'
 
 export default defineNitroPlugin((nitro) => {
@@ -170,6 +195,12 @@ function buildContainer(): Container {
     ingredientSummaryFinder,
   )
 
+  // wine-cellar
+  const cellarRepo = new DrizzleCellarRepository(db)
+  const wineRepo = new DrizzleWineRepository(db)
+  const bottleRepo = new DrizzleBottleRepository(db)
+  const wineImportParser = new ExcelJsWineImportParser()
+
   return {
     registerUser: new RegisterUserUseCase(userRepo, hasher),
     loginUser: new LoginUserUseCase(userRepo, hasher),
@@ -223,5 +254,26 @@ function buildContainer(): Container {
     regenerateShoppingList: new RegenerateShoppingListUseCase(generateShoppingList),
     getShoppingListByMenu: new GetShoppingListByMenuUseCase(shoppingRepo),
     toggleShoppingListItem: new ToggleShoppingListItemUseCase(shoppingRepo),
+    createCellar: new CreateCellarUseCase(cellarRepo),
+    listCellars: new ListCellarsUseCase(cellarRepo, bottleRepo),
+    renameCellar: new RenameCellarUseCase(cellarRepo, bottleRepo),
+    deleteCellar: new DeleteCellarUseCase(cellarRepo),
+    getCellarLayout: new GetCellarLayoutUseCase(cellarRepo, bottleRepo, wineRepo),
+    addShelf: new AddShelfUseCase(cellarRepo),
+    deleteShelf: new DeleteShelfUseCase(cellarRepo, bottleRepo),
+    addRow: new AddRowUseCase(cellarRepo),
+    updateRow: new UpdateRowUseCase(cellarRepo, bottleRepo, wineRepo),
+    deleteRow: new DeleteRowUseCase(cellarRepo, bottleRepo),
+    createWine: new CreateWineUseCase(wineRepo),
+    updateWine: new UpdateWineUseCase(wineRepo, bottleRepo),
+    listWines: new ListWinesUseCase(wineRepo, bottleRepo),
+    getWine: new GetWineUseCase(wineRepo, bottleRepo, cellarRepo),
+    addBottles: new AddBottlesUseCase(wineRepo, bottleRepo),
+    placeBottle: new PlaceBottleUseCase(bottleRepo, cellarRepo),
+    updateBottle: new UpdateBottleUseCase(bottleRepo, cellarRepo),
+    exitBottle: new ExitBottleUseCase(bottleRepo),
+    listBottles: new ListBottlesUseCase(bottleRepo, wineRepo, cellarRepo),
+    listExitJournal: new ListExitJournalUseCase(bottleRepo, wineRepo),
+    importVinotag: new ImportVinotagUseCase(wineImportParser, wineRepo, bottleRepo),
   }
 }

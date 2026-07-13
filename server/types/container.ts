@@ -50,6 +50,27 @@ import type { GenerateShoppingListUseCase } from '../contexts/shopping/applicati
 import type { GetShoppingListByMenuUseCase } from '../contexts/shopping/application/use-cases/get-shopping-list-by-menu.use-case'
 import type { RegenerateShoppingListUseCase } from '../contexts/shopping/application/use-cases/regenerate-shopping-list.use-case'
 import type { ToggleShoppingListItemUseCase } from '../contexts/shopping/application/use-cases/toggle-shopping-list-item.use-case'
+import type { CreateCellarUseCase } from '../contexts/wine-cellar/application/use-cases/create-cellar.use-case'
+import type { ListCellarsUseCase } from '../contexts/wine-cellar/application/use-cases/list-cellars.use-case'
+import type { RenameCellarUseCase } from '../contexts/wine-cellar/application/use-cases/rename-cellar.use-case'
+import type { DeleteCellarUseCase } from '../contexts/wine-cellar/application/use-cases/delete-cellar.use-case'
+import type { GetCellarLayoutUseCase } from '../contexts/wine-cellar/application/use-cases/get-cellar-layout.use-case'
+import type { AddShelfUseCase } from '../contexts/wine-cellar/application/use-cases/add-shelf.use-case'
+import type { DeleteShelfUseCase } from '../contexts/wine-cellar/application/use-cases/delete-shelf.use-case'
+import type { AddRowUseCase } from '../contexts/wine-cellar/application/use-cases/add-row.use-case'
+import type { UpdateRowUseCase } from '../contexts/wine-cellar/application/use-cases/update-row.use-case'
+import type { DeleteRowUseCase } from '../contexts/wine-cellar/application/use-cases/delete-row.use-case'
+import type { CreateWineUseCase } from '../contexts/wine-cellar/application/use-cases/create-wine.use-case'
+import type { UpdateWineUseCase } from '../contexts/wine-cellar/application/use-cases/update-wine.use-case'
+import type { ListWinesUseCase } from '../contexts/wine-cellar/application/use-cases/list-wines.use-case'
+import type { GetWineUseCase } from '../contexts/wine-cellar/application/use-cases/get-wine.use-case'
+import type { AddBottlesUseCase } from '../contexts/wine-cellar/application/use-cases/add-bottles.use-case'
+import type { PlaceBottleUseCase } from '../contexts/wine-cellar/application/use-cases/place-bottle.use-case'
+import type { UpdateBottleUseCase } from '../contexts/wine-cellar/application/use-cases/update-bottle.use-case'
+import type { ExitBottleUseCase } from '../contexts/wine-cellar/application/use-cases/exit-bottle.use-case'
+import type { ListBottlesUseCase } from '../contexts/wine-cellar/application/use-cases/list-bottles.use-case'
+import type { ListExitJournalUseCase } from '../contexts/wine-cellar/application/use-cases/list-exit-journal.use-case'
+import type { ImportVinotagUseCase } from '../contexts/wine-cellar/application/use-cases/import-vinotag.use-case'
 
 export interface Container {
   // platform
@@ -116,6 +137,28 @@ export interface Container {
   regenerateShoppingList: RegenerateShoppingListUseCase
   getShoppingListByMenu: GetShoppingListByMenuUseCase
   toggleShoppingListItem: ToggleShoppingListItemUseCase
+  // wine-cellar
+  createCellar: CreateCellarUseCase
+  listCellars: ListCellarsUseCase
+  renameCellar: RenameCellarUseCase
+  deleteCellar: DeleteCellarUseCase
+  getCellarLayout: GetCellarLayoutUseCase
+  addShelf: AddShelfUseCase
+  deleteShelf: DeleteShelfUseCase
+  addRow: AddRowUseCase
+  updateRow: UpdateRowUseCase
+  deleteRow: DeleteRowUseCase
+  createWine: CreateWineUseCase
+  updateWine: UpdateWineUseCase
+  listWines: ListWinesUseCase
+  getWine: GetWineUseCase
+  addBottles: AddBottlesUseCase
+  placeBottle: PlaceBottleUseCase
+  updateBottle: UpdateBottleUseCase
+  exitBottle: ExitBottleUseCase
+  listBottles: ListBottlesUseCase
+  listExitJournal: ListExitJournalUseCase
+  importVinotag: ImportVinotagUseCase
 }
 
 declare module 'h3' {
