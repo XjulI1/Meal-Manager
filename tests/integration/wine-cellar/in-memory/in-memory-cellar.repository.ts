@@ -51,6 +51,10 @@ export class InMemoryCellarRepository implements ICellarRepository {
       .sort((a, b) => a.position - b.position)
   }
 
+  async updateShelf(shelf: Shelf): Promise<void> {
+    this.shelves.set(shelf.id, shelf)
+  }
+
   async deleteShelf(id: string, householdId: string): Promise<void> {
     const s = this.shelves.get(id)
     if (!s || s.householdId !== householdId) return

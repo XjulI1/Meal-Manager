@@ -44,6 +44,8 @@ export function useApiWineCellar() {
 
   const addShelf = (cellarId: string, payload: AddShelfDto) =>
     $fetch<ShelfLayoutView>(`/api/cave/cellars/${cellarId}/shelves`, { method: 'POST', body: payload })
+  const renameShelf = (id: string, label: string) =>
+    $fetch(`/api/cave/shelves/${id}`, { method: 'PATCH', body: { label } })
   const deleteShelf = (id: string) =>
     $fetch(`/api/cave/shelves/${id}`, { method: 'DELETE' })
 
@@ -86,6 +88,7 @@ export function useApiWineCellar() {
     deleteCellar,
     getCellarLayout,
     addShelf,
+    renameShelf,
     deleteShelf,
     addRow,
     updateRow,

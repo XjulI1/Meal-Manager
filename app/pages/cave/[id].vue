@@ -55,6 +55,27 @@ async function removeShelf(shelf: ShelfLayoutView) {
   catch (e) { notifyError(e) }
 }
 
+// ── Rename shelf ──────────────────────────────────────────────────────
+const showRenameShelfModal = ref(false)
+const renameShelfId = ref<string | null>(null)
+const renameShelfLabel = ref('')
+function openRenameShelf(shelf: ShelfLayoutView) {
+  renameShelfId.value = shelf.id
+  renameShelfLabel.value = shelf.label ?? ''
+  showRenameShelfModal.value = true
+}
+async function submitRenameShelf() {
+  if (!renameShelfId.value) return
+  loading.value = true
+  try {
+    await api.renameShelf(renameShelfId.value, renameShelfLabel.value.trim())
+    showRenameShelfModal.value = false
+    await loadLayout()
+  }
+  catch (e) { notifyError(e) }
+  finally { loading.value = false }
+}
+
 // ── Add row ───────────────────────────────────────────────────────────
 const showRowModal = ref(false)
 const rowShelfId = ref<string | null>(null)
@@ -144,6 +165,7 @@ async function drinkOccupant() {
     <WineCellarGrid v-if="layout" :layout="layout" @slot-click="onSlotClick">
       <template #shelf-actions="{ shelf }">
         <div class="flex gap-1">
+          <UButton icon="i-lucide-pencil" size="xs" variant="ghost" color="neutral" title="Renommer" @click="openRenameShelf(shelf)" />
           <UButton icon="i-lucide-plus" size="xs" variant="soft" @click="openAddRow(shelf.id)">Étage</UButton>
           <UButton icon="i-lucide-trash-2" size="xs" variant="ghost" color="error" @click="removeShelf(shelf)" />
         </div>
@@ -163,6 +185,21 @@ async function drinkOccupant() {
           <div class="flex justify-end gap-2">
             <UButton variant="ghost" color="neutral" @click="showShelfModal = false">Annuler</UButton>
             <UButton type="submit" :loading="loading">Ajouter</UButton>
+          </div>
+        </UForm>
+      </template>
+    </UModal>
+
+    <!-- Rename shelf modal -->
+    <UModal v-model:open="showRenameShelfModal" title="Renommer la clayette">
+      <template #body>
+        <UForm :state="{ renameShelfLabel }" class="space-y-4" @submit.prevent="submitRenameShelf">
+          <UFormField label="Libellé" help="Laisser vide pour revenir au libellé par défaut.">
+            <UInput v-model="renameShelfLabel" class="w-full" placeholder="Bourgogne" autofocus />
+          </UFormField>
+          <div class="flex justify-end gap-2">
+            <UButton variant="ghost" color="neutral" @click="showRenameShelfModal = false">Annuler</UButton>
+            <UButton type="submit" :loading="loading">Enregistrer</UButton>
           </div>
         </UForm>
       </template>

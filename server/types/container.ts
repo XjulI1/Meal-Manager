@@ -57,6 +57,7 @@ import type { DeleteCellarUseCase } from '../contexts/wine-cellar/application/us
 import type { GetCellarLayoutUseCase } from '../contexts/wine-cellar/application/use-cases/get-cellar-layout.use-case'
 import type { AddShelfUseCase } from '../contexts/wine-cellar/application/use-cases/add-shelf.use-case'
 import type { DeleteShelfUseCase } from '../contexts/wine-cellar/application/use-cases/delete-shelf.use-case'
+import type { RenameShelfUseCase } from '../contexts/wine-cellar/application/use-cases/rename-shelf.use-case'
 import type { AddRowUseCase } from '../contexts/wine-cellar/application/use-cases/add-row.use-case'
 import type { UpdateRowUseCase } from '../contexts/wine-cellar/application/use-cases/update-row.use-case'
 import type { DeleteRowUseCase } from '../contexts/wine-cellar/application/use-cases/delete-row.use-case'
@@ -144,6 +145,7 @@ export interface Container {
   deleteCellar: DeleteCellarUseCase
   getCellarLayout: GetCellarLayoutUseCase
   addShelf: AddShelfUseCase
+  renameShelf: RenameShelfUseCase
   deleteShelf: DeleteShelfUseCase
   addRow: AddRowUseCase
   updateRow: UpdateRowUseCase

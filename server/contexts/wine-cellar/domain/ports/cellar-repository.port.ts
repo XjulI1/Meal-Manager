@@ -19,6 +19,7 @@ export interface ICellarRepository {
   createShelf(shelf: Shelf): Promise<void>
   findShelfById(id: string, householdId: string): Promise<Shelf | null>
   listShelvesByCellar(cellarId: string, householdId: string): Promise<Shelf[]>
+  updateShelf(shelf: Shelf): Promise<void>
   deleteShelf(id: string, householdId: string): Promise<void>
 
   // Rows

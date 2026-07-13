@@ -84,6 +84,14 @@ export class DrizzleCellarRepository implements ICellarRepository {
     return rows.map(ShelfMapper.toDomain)
   }
 
+  async updateShelf(shelf: Shelf): Promise<void> {
+    const row = ShelfMapper.toPersistence(shelf)
+    await this.db
+      .update(wineShelves)
+      .set({ label: row.label, position: row.position, updatedAt: row.updatedAt })
+      .where(and(eq(wineShelves.id, row.id), eq(wineShelves.householdId, row.householdId)))
+  }
+
   async deleteShelf(id: string, householdId: string): Promise<void> {
     await this.clearPositionsForShelves([id], householdId)
     await this.db

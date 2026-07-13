@@ -51,4 +51,25 @@ export class Shelf {
   static rehydrate(props: ShelfProps): Shelf {
     return new Shelf(props)
   }
+
+  withLabel(label: string | null, now: Date = new Date()): Shelf {
+    const trimmed = label?.trim()
+    return new Shelf({
+      ...this.props(),
+      label: trimmed && trimmed.length > 0 ? trimmed : null,
+      updatedAt: now,
+    })
+  }
+
+  private props(): ShelfProps {
+    return {
+      id: this.id,
+      householdId: this.householdId,
+      cellarId: this.cellarId,
+      label: this.label,
+      position: this.position,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
+    }
+  }
 }

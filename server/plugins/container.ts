@@ -84,6 +84,7 @@ import { DeleteCellarUseCase } from '../contexts/wine-cellar/application/use-cas
 import { GetCellarLayoutUseCase } from '../contexts/wine-cellar/application/use-cases/get-cellar-layout.use-case'
 import { AddShelfUseCase } from '../contexts/wine-cellar/application/use-cases/add-shelf.use-case'
 import { DeleteShelfUseCase } from '../contexts/wine-cellar/application/use-cases/delete-shelf.use-case'
+import { RenameShelfUseCase } from '../contexts/wine-cellar/application/use-cases/rename-shelf.use-case'
 import { AddRowUseCase } from '../contexts/wine-cellar/application/use-cases/add-row.use-case'
 import { UpdateRowUseCase } from '../contexts/wine-cellar/application/use-cases/update-row.use-case'
 import { DeleteRowUseCase } from '../contexts/wine-cellar/application/use-cases/delete-row.use-case'
@@ -260,6 +261,7 @@ function buildContainer(): Container {
     deleteCellar: new DeleteCellarUseCase(cellarRepo),
     getCellarLayout: new GetCellarLayoutUseCase(cellarRepo, bottleRepo, wineRepo),
     addShelf: new AddShelfUseCase(cellarRepo),
+    renameShelf: new RenameShelfUseCase(cellarRepo),
     deleteShelf: new DeleteShelfUseCase(cellarRepo, bottleRepo),
     addRow: new AddRowUseCase(cellarRepo),
     updateRow: new UpdateRowUseCase(cellarRepo, bottleRepo, wineRepo),

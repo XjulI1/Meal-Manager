@@ -59,6 +59,11 @@ export const AddShelfSchema = z.object({
 })
 export type AddShelfDto = z.infer<typeof AddShelfSchema>
 
+export const RenameShelfSchema = z.object({
+  label: z.string().trim().max(120),
+})
+export type RenameShelfDto = z.infer<typeof RenameShelfSchema>
+
 export const AddRowSchema = z.object({
   position: z.number().int().positive().optional(),
   capacityBack: z.number().int().min(1).max(1000),

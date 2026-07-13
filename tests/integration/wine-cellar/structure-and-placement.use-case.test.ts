@@ -5,6 +5,7 @@ import { AddShelfUseCase } from '../../../server/contexts/wine-cellar/applicatio
 import { CreateCellarUseCase } from '../../../server/contexts/wine-cellar/application/use-cases/create-cellar.use-case'
 import { CreateWineUseCase } from '../../../server/contexts/wine-cellar/application/use-cases/create-wine.use-case'
 import { DeleteShelfUseCase } from '../../../server/contexts/wine-cellar/application/use-cases/delete-shelf.use-case'
+import { RenameShelfUseCase } from '../../../server/contexts/wine-cellar/application/use-cases/rename-shelf.use-case'
 import { ExitBottleUseCase } from '../../../server/contexts/wine-cellar/application/use-cases/exit-bottle.use-case'
 import { ListBottlesUseCase } from '../../../server/contexts/wine-cellar/application/use-cases/list-bottles.use-case'
 import { ListExitJournalUseCase } from '../../../server/contexts/wine-cellar/application/use-cases/list-exit-journal.use-case'
@@ -34,6 +35,7 @@ describe('wine-cellar structure & placement', () => {
   let addRow: AddRowUseCase
   let updateRow: UpdateRowUseCase
   let deleteShelf: DeleteShelfUseCase
+  let renameShelf: RenameShelfUseCase
   let createWine: CreateWineUseCase
   let addBottles: AddBottlesUseCase
   let placeBottle: PlaceBottleUseCase
@@ -53,6 +55,7 @@ describe('wine-cellar structure & placement', () => {
     addRow = new AddRowUseCase(cellars, ids, now)
     updateRow = new UpdateRowUseCase(cellars, bottles, wines, now)
     deleteShelf = new DeleteShelfUseCase(cellars, bottles)
+    renameShelf = new RenameShelfUseCase(cellars, now)
     createWine = new CreateWineUseCase(wines, ids, now)
     addBottles = new AddBottlesUseCase(wines, bottles, ids, now)
     placeBottle = new PlaceBottleUseCase(bottles, cellars, now)
@@ -180,6 +183,18 @@ describe('wine-cellar structure & placement', () => {
     await exitBottle.execute({ householdId: HH, id: created[0]!.id, reason: 'gifted' })
     await expect(exitBottle.execute({ householdId: HH, id: created[0]!.id, reason: 'consumed' }))
       .rejects.toBeInstanceOf(BottleAlreadyExitedError)
+  })
+
+  it('renames a shelf and clears the label when blank', async () => {
+    const cellar = await createCellar.execute({ householdId: HH, name: 'Cave J.R' })
+    const shelf = await addShelf.execute({ householdId: HH, cellarId: cellar.id })
+
+    const renamed = await renameShelf.execute({ householdId: HH, id: shelf.id, label: 'Bourgogne' })
+    expect(renamed.label).toBe('Bourgogne')
+    expect(cellars.shelves.get(shelf.id)?.label).toBe('Bourgogne')
+
+    const cleared = await renameShelf.execute({ householdId: HH, id: shelf.id, label: null })
+    expect(cleared.label).toBeNull()
   })
 
   it('refuses to delete a shelf that still holds bottles', async () => {
