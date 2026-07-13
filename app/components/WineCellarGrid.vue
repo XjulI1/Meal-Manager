@@ -11,6 +11,7 @@ const emit = defineEmits<{
 
 const FRONT = 38
 const BACK = 24
+const GAP = 6
 
 interface Cell {
   key: string
@@ -73,24 +74,29 @@ function title(slot: SlotView): string {
             <span class="block text-[10px] text-gray-400">{{ occupancy(row).filled }}/{{ occupancy(row).total }}</span>
           </div>
 
-          <div class="flex items-center gap-1.5">
+          <div class="flex items-center" :style="{ gap: `${GAP}px` }">
             <button
               v-for="cell in cellsOf(row, ri % 2 === 1)"
               :key="cell.key"
               type="button"
-              class="rounded-full shrink-0 flex items-center justify-center transition-all"
-              :style="{ width: `${cell.big ? FRONT : BACK}px`, height: `${cell.big ? FRONT : BACK}px` }"
-              :class="cell.slot.wine
-                ? `${WINE_COLOR_DOT[cell.slot.wine.color]} border border-black/25 shadow-sm hover:ring-2 hover:ring-amber-400`
-                : 'bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:border-amber-500'"
+              class="shrink-0 flex items-center justify-center"
+              :style="{ width: `${FRONT}px`, height: `${FRONT}px` }"
               :title="title(cell.slot)"
               @click="emit('slotClick', { rowId: row.id, slot: cell.slot })"
             >
               <span
-                v-if="cell.slot.wine?.vintage && cell.big"
-                class="text-[9px] font-medium leading-none"
-                :class="cell.slot.wine.color === 'rouge' || cell.slot.wine.color === 'rose' ? 'text-white/90' : 'text-black/70'"
-              >{{ String(cell.slot.wine.vintage).slice(2) }}</span>
+                class="rounded-full flex items-center justify-center transition-all"
+                :style="{ width: `${cell.big ? FRONT : BACK}px`, height: `${cell.big ? FRONT : BACK}px` }"
+                :class="cell.slot.wine
+                  ? `${WINE_COLOR_DOT[cell.slot.wine.color]} border border-black/25 shadow-sm hover:ring-2 hover:ring-amber-400`
+                  : 'bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:border-amber-500'"
+              >
+                <span
+                  v-if="cell.slot.wine?.vintage && cell.big"
+                  class="text-[9px] font-medium leading-none"
+                  :class="cell.slot.wine.color === 'rouge' || cell.slot.wine.color === 'rose' ? 'text-white/90' : 'text-black/70'"
+                >{{ String(cell.slot.wine.vintage).slice(2) }}</span>
+              </span>
             </button>
           </div>
 
