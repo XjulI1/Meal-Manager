@@ -10,8 +10,9 @@ import type {
 definePageMeta({ title: 'Cave' })
 
 const route = useRoute()
+const router = useRouter()
 const cellarId = computed(() => route.params.id as string)
-const highlightBottleId = computed(() => (route.query.bottle as string) || null)
+const highlightBottleId = ref<string | null>(null)
 const api = useApiWineCellar()
 const toast = useToast()
 
@@ -33,8 +34,15 @@ async function loadUnplaced() {
   catch (e) { notifyError(e) }
 }
 async function refresh() {
+  highlightBottleId.value = (route.query.bottle as string) || null
   await Promise.all([loadLayout(), loadUnplaced()])
   if (highlightBottleId.value) scrollToHighlight()
+}
+
+function clearHighlight() {
+  if (!highlightBottleId.value) return
+  highlightBottleId.value = null
+  if (route.query.bottle) router.replace({ query: {} })
 }
 
 function scrollToHighlight() {
@@ -118,6 +126,7 @@ const showOccupantModal = ref(false)
 const target = ref<{ rowId: string, slot: SlotView } | null>(null)
 
 function onSlotClick(payload: { rowId: string, slot: SlotView }) {
+  clearHighlight()
   target.value = payload
   if (payload.slot.bottle) showOccupantModal.value = true
   else { loadUnplaced(); showPlaceModal.value = true }
