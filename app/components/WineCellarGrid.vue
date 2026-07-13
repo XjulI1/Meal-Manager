@@ -76,7 +76,7 @@ function title(slot: SlotView): string {
 
           <div class="flex items-center" :style="{ gap: `${GAP}px` }">
             <button
-              v-for="cell in cellsOf(row, ri % 2 === 1)"
+              v-for="cell in cellsOf(row, (shelf.rows.length - 1 - ri) % 2 === 1)"
               :key="cell.key"
               type="button"
               class="shrink-0 flex items-center justify-center"
