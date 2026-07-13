@@ -42,6 +42,11 @@ function cellsOf(row: RowLayoutView, flip: boolean): Cell[] {
   return cells
 }
 
+/** Render highest position on top, étage 1 at the bottom (physical order). */
+function orderedRows(shelf: { rows: RowLayoutView[] }): RowLayoutView[] {
+  return [...shelf.rows].reverse()
+}
+
 function occupancy(row: RowLayoutView): { filled: number, total: number } {
   const all = [...row.back, ...row.front]
   return { filled: all.filter((s) => s.bottle).length, total: all.length }
@@ -68,7 +73,7 @@ function title(slot: SlotView): string {
       <div class="p-3 overflow-x-auto">
         <p v-if="shelf.rows.length === 0" class="text-sm text-gray-500">Aucun étage.</p>
 
-        <div v-for="(row, ri) in (shelf.rows as RowLayoutView[])" :key="row.id" class="flex items-center gap-3 py-1">
+        <div v-for="(row, ri) in orderedRows(shelf)" :key="row.id" class="flex items-center gap-3 py-1">
           <div class="w-16 shrink-0 text-right">
             <span class="text-xs font-medium text-gray-500">Étage {{ row.position }}</span>
             <span class="block text-[10px] text-gray-400">{{ occupancy(row).filled }}/{{ occupancy(row).total }}</span>
