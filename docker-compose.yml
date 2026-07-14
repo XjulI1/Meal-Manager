@@ -34,14 +34,21 @@ services:
       # Inside the compose network the DB is reachable as `db`.
       DATABASE_URL: mysql://${MARIADB_USER:-meal}:${MARIADB_PASSWORD:-meal}@db:3306/${MARIADB_DATABASE:-meal_manager}
       NUXT_SESSION_PASSWORD: ${NUXT_SESSION_PASSWORD:?NUXT_SESSION_PASSWORD must be set in .env (>= 32 chars)}
+      # Anthropic (AI features: recipe assistant, wine-label scan) — optional.
+      NUXT_ANTHROPIC_API_KEY: ${NUXT_ANTHROPIC_API_KEY:-}
+      # Persisted wine-label photos live on a mounted volume so they survive restarts.
+      NUXT_WINE_LABEL_DIR: /data/wine-labels
       NODE_ENV: production
       HOST: 0.0.0.0
       PORT: "3000"
     ports:
       - "3000:3000"
+    volumes:
+      - wine-labels:/data/wine-labels
     depends_on:
       db:
         condition: service_healthy
 
 volumes:
   mariadb-data:
+  wine-labels:

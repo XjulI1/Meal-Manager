@@ -99,10 +99,14 @@ import { ExitBottleUseCase } from '../contexts/wine-cellar/application/use-cases
 import { ListBottlesUseCase } from '../contexts/wine-cellar/application/use-cases/list-bottles.use-case'
 import { ListExitJournalUseCase } from '../contexts/wine-cellar/application/use-cases/list-exit-journal.use-case'
 import { ImportVinotagUseCase } from '../contexts/wine-cellar/application/use-cases/import-vinotag.use-case'
+import { ScanWineLabelUseCase } from '../contexts/wine-cellar/application/use-cases/scan-wine-label.use-case'
 import { DrizzleCellarRepository } from '../contexts/wine-cellar/infrastructure/repositories/drizzle-cellar.repository'
 import { DrizzleWineRepository } from '../contexts/wine-cellar/infrastructure/repositories/drizzle-wine.repository'
 import { DrizzleBottleRepository } from '../contexts/wine-cellar/infrastructure/repositories/drizzle-bottle.repository'
 import { ExcelJsWineImportParser } from '../contexts/wine-cellar/infrastructure/adapters/exceljs-wine-import-parser'
+import { AnthropicWineLabelExtractor } from '../contexts/wine-cellar/infrastructure/adapters/anthropic-wine-label-extractor'
+import { FilesystemLabelPhotoStorage } from '../contexts/wine-cellar/infrastructure/adapters/filesystem-label-photo-storage'
+import { DEFAULT_LABEL_EFFORT, parseEffort as parseLabelEffort } from '../contexts/wine-cellar/infrastructure/anthropic-config'
 import type { Container } from '../types/container'
 
 export default defineNitroPlugin((nitro) => {
@@ -201,6 +205,12 @@ function buildContainer(): Container {
   const wineRepo = new DrizzleWineRepository(db)
   const bottleRepo = new DrizzleBottleRepository(db)
   const wineImportParser = new ExcelJsWineImportParser()
+  const labelPhotoStorage = new FilesystemLabelPhotoStorage(aiConfig.wineLabelDir)
+  const wineLabelExtractor = new AnthropicWineLabelExtractor(
+    aiConfig.anthropicApiKey,
+    aiConfig.anthropicModel,
+    parseLabelEffort(aiConfig.anthropicLabelEffort, DEFAULT_LABEL_EFFORT),
+  )
 
   return {
     registerUser: new RegisterUserUseCase(userRepo, hasher),
@@ -266,8 +276,8 @@ function buildContainer(): Container {
     addRow: new AddRowUseCase(cellarRepo),
     updateRow: new UpdateRowUseCase(cellarRepo, bottleRepo, wineRepo),
     deleteRow: new DeleteRowUseCase(cellarRepo, bottleRepo),
-    createWine: new CreateWineUseCase(wineRepo),
-    updateWine: new UpdateWineUseCase(wineRepo, bottleRepo),
+    createWine: new CreateWineUseCase(wineRepo, labelPhotoStorage),
+    updateWine: new UpdateWineUseCase(wineRepo, bottleRepo, labelPhotoStorage),
     listWines: new ListWinesUseCase(wineRepo, bottleRepo),
     getWine: new GetWineUseCase(wineRepo, bottleRepo, cellarRepo),
     addBottles: new AddBottlesUseCase(wineRepo, bottleRepo),
@@ -277,5 +287,6 @@ function buildContainer(): Container {
     listBottles: new ListBottlesUseCase(bottleRepo, wineRepo, cellarRepo),
     listExitJournal: new ListExitJournalUseCase(bottleRepo, wineRepo),
     importVinotag: new ImportVinotagUseCase(wineImportParser, wineRepo, bottleRepo),
+    scanWineLabel: new ScanWineLabelUseCase(wineLabelExtractor),
   }
 }

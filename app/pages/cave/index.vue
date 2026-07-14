@@ -7,9 +7,11 @@ import type {
   ImportReportView,
   ListBottlesQueryDto,
   WineColor,
+  WineLabelInputDto,
   WineRegion,
   WineView,
 } from '../../../shared/dto/wine-cellar'
+import type { WineLabelDraftDto } from '../../../shared/dto/wine-label'
 
 definePageMeta({ title: 'Cave' })
 
@@ -56,6 +58,8 @@ const fRegion = ref<WineRegion | 'all'>('all')
 const fDomain = ref('')
 const fPlacement = ref<'all' | 'placed' | 'unplaced'>('all')
 const fSort = ref<'name' | 'vintage' | 'region'>('name')
+/** Bottle tab layout: dense list or label-first grid. */
+const bottleView = ref<'list' | 'grid'>('list')
 
 const colorFilterOptions = [{ value: 'all', label: 'Toutes robes' }, ...WINE_COLOR_OPTIONS]
 const regionFilterOptions = [{ value: 'all', label: 'Toutes régions' }, ...WINE_REGION_OPTIONS]
@@ -118,26 +122,95 @@ async function removeCellar(cellar: CellarView) {
 // ── Wine create/edit ──────────────────────────────────────────────────
 const showWineModal = ref(false)
 const editingWine = ref<WineView | null>(null)
-function openCreateWine() { editingWine.value = null; showWineModal.value = true }
-function openEditWine(w: WineView) { editingWine.value = w; showWineModal.value = true }
+/** Pre-fill (from label scan) and label photo carried into the create form. */
+const winePrefill = ref<WineLabelDraftDto | null>(null)
+const wineLabelPhoto = ref<WineLabelInputDto | null>(null)
+/** When set, chain into "add bottles" after a scan-driven creation. */
+const pendingBottleCount = ref<number | null>(null)
+
+function openCreateWine() {
+  editingWine.value = null
+  winePrefill.value = null
+  wineLabelPhoto.value = null
+  pendingBottleCount.value = null
+  showWineModal.value = true
+}
+function openEditWine(w: WineView) {
+  editingWine.value = w
+  winePrefill.value = null
+  wineLabelPhoto.value = null
+  pendingBottleCount.value = null
+  showWineModal.value = true
+}
 
 async function submitWine(payload: CreateWineDto) {
   loading.value = true
   try {
-    if (editingWine.value) await api.updateWine(editingWine.value.id, payload)
-    else await api.createWine(payload)
-    showWineModal.value = false
-    await loadWines()
-    toast.add({ title: editingWine.value ? 'Vin mis à jour' : 'Vin créé', color: 'success' })
+    if (editingWine.value) {
+      await api.updateWine(editingWine.value.id, payload)
+      showWineModal.value = false
+      await loadWines()
+      toast.add({ title: 'Vin mis à jour', color: 'success' })
+    }
+    else {
+      const created = await api.createWine(payload)
+      showWineModal.value = false
+      await loadWines()
+      toast.add({ title: 'Vin créé', color: 'success' })
+      // Chain into adding bottles when the wine came from a label scan.
+      if (pendingBottleCount.value !== null) {
+        openAddBottles(created, pendingBottleCount.value)
+      }
+    }
   }
   catch (e) { notifyError(e) }
   finally { loading.value = false }
 }
 
+// ── Photo preview (lightbox) ──────────────────────────────────────────
+const showPhotoModal = ref(false)
+const previewPhotoUrl = ref<string | null>(null)
+function openPhoto(url: string) { previewPhotoUrl.value = url; showPhotoModal.value = true }
+
+// ── Label scan ────────────────────────────────────────────────────────
+// The button opens the OS photo/camera picker directly (no intermediate modal).
+const scanInput = useTemplateRef<HTMLInputElement>('scanInput')
+const scanning = ref(false)
+function openScan() { scanInput.value?.click() }
+
+async function onLabelFilePicked(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = '' // allow re-picking the same file
+  if (!file) return
+
+  scanning.value = true
+  const scanToast = toast.add({ title: 'Lecture de l\'étiquette…', icon: 'i-lucide-loader-circle', color: 'info' })
+  try {
+    const image: WineLabelInputDto = await normalizeImageFile(file)
+    const draft = await api.scanLabel([image])
+    editingWine.value = null
+    winePrefill.value = draft
+    wineLabelPhoto.value = image
+    pendingBottleCount.value = draft.suggestedBottleCount
+    showWineModal.value = true
+  }
+  catch (e) { notifyError(e) }
+  finally {
+    toast.remove(scanToast.id)
+    scanning.value = false
+  }
+}
+
 // ── Add bottles ───────────────────────────────────────────────────────
 const showBottlesModal = ref(false)
 const bottlesWine = ref<WineView | null>(null)
-function openAddBottles(w: WineView) { bottlesWine.value = w; showBottlesModal.value = true }
+const bottlesInitialQuantity = ref(1)
+function openAddBottles(w: WineView, initialQuantity = 1) {
+  bottlesWine.value = w
+  bottlesInitialQuantity.value = initialQuantity > 0 ? initialQuantity : 1
+  showBottlesModal.value = true
+}
 async function submitBottles(payload: import('../../../shared/dto/wine-cellar').AddBottlesDto) {
   if (!bottlesWine.value) return
   loading.value = true
@@ -282,7 +355,18 @@ function fileToBase64(file: File): Promise<string> {
 
     <!-- Vins -->
     <section v-else-if="tab === 'vins'" class="space-y-4">
-      <div class="flex justify-end">
+      <div class="flex justify-end gap-2">
+        <input
+          ref="scanInput"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          class="hidden"
+          @change="onLabelFilePicked"
+        >
+        <UButton icon="i-lucide-camera" color="neutral" variant="soft" :loading="scanning" @click="openScan">
+          Scanner une étiquette
+        </UButton>
         <UButton icon="i-lucide-plus" @click="openCreateWine">Nouveau vin</UButton>
       </div>
       <p v-if="wines.length === 0" class="text-sm text-gray-500">Aucun vin. Créez-en un ou importez depuis Vinotag.</p>
@@ -292,7 +376,15 @@ function fileToBase64(file: File): Promise<string> {
           :key="wine.id"
           class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-800"
         >
-          <span class="w-3 h-3 rounded-full shrink-0" :class="WINE_COLOR_DOT[wine.color]" />
+          <img
+            v-if="wine.photoUrl"
+            :src="wine.photoUrl"
+            alt=""
+            loading="lazy"
+            class="w-10 h-12 rounded object-cover shrink-0 bg-gray-100 dark:bg-gray-800 cursor-zoom-in"
+            @click="openPhoto(wine.photoUrl)"
+          >
+          <span v-else class="w-3 h-3 rounded-full shrink-0" :class="WINE_COLOR_DOT[wine.color]" />
           <div class="min-w-0 flex-1">
             <p class="font-medium truncate">{{ wine.name }} <span v-if="wine.vintage" class="text-gray-400">· {{ wine.vintage }}</span></p>
             <p class="text-xs text-gray-500 truncate">
@@ -316,14 +408,46 @@ function fileToBase64(file: File): Promise<string> {
         <USelect v-model="fPlacement" :items="placementOptions" />
         <USelect v-model="fSort" :items="sortOptions" />
       </div>
+
+      <div class="flex justify-end">
+        <UButtonGroup size="xs">
+          <UButton
+            icon="i-lucide-list"
+            :color="bottleView === 'list' ? 'primary' : 'neutral'"
+            :variant="bottleView === 'list' ? 'solid' : 'soft'"
+            @click="bottleView = 'list'"
+          >
+            Liste
+          </UButton>
+          <UButton
+            icon="i-lucide-layout-grid"
+            :color="bottleView === 'grid' ? 'primary' : 'neutral'"
+            :variant="bottleView === 'grid' ? 'solid' : 'soft'"
+            @click="bottleView = 'grid'"
+          >
+            Grille
+          </UButton>
+        </UButtonGroup>
+      </div>
+
       <p v-if="bottles.length === 0" class="text-sm text-gray-500">Aucune bouteille en stock pour ce filtre.</p>
-      <div class="space-y-2">
+
+      <!-- Vue liste -->
+      <div v-else-if="bottleView === 'list'" class="space-y-2">
         <div
           v-for="item in bottles"
           :key="item.bottle.id"
           class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-800"
         >
-          <span class="w-3 h-3 rounded-full shrink-0" :class="WINE_COLOR_DOT[item.wine.color]" />
+          <img
+            v-if="item.wine.photoUrl"
+            :src="item.wine.photoUrl"
+            alt=""
+            loading="lazy"
+            class="w-10 h-12 rounded object-cover shrink-0 bg-gray-100 dark:bg-gray-800 cursor-zoom-in"
+            @click="openPhoto(item.wine.photoUrl)"
+          >
+          <span v-else class="w-3 h-3 rounded-full shrink-0" :class="WINE_COLOR_DOT[item.wine.color]" />
           <div class="min-w-0 flex-1">
             <p class="font-medium truncate">
               {{ item.wine.name }}
@@ -351,6 +475,67 @@ function fileToBase64(file: File): Promise<string> {
           <UButton icon="i-lucide-wine-off" color="error" variant="soft" size="xs" @click="openExit(item.bottle.id)">
             Sortir
           </UButton>
+        </div>
+      </div>
+
+      <!-- Vue grille (étiquettes) -->
+      <div v-else class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div
+          v-for="item in bottles"
+          :key="item.bottle.id"
+          class="flex flex-col rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden"
+        >
+          <div class="relative aspect-[3/4] bg-gray-100 dark:bg-gray-800">
+            <img
+              v-if="item.wine.photoUrl"
+              :src="item.wine.photoUrl"
+              :alt="item.wine.name"
+              loading="lazy"
+              class="absolute inset-0 w-full h-full object-cover cursor-zoom-in"
+              @click="openPhoto(item.wine.photoUrl)"
+            >
+            <div v-else class="absolute inset-0 flex items-center justify-center">
+              <span class="w-8 h-8 rounded-full" :class="WINE_COLOR_DOT[item.wine.color]" />
+            </div>
+          </div>
+          <div class="p-2 space-y-1 flex-1 flex flex-col">
+            <p class="text-sm font-medium truncate">
+              {{ item.wine.name }}
+              <span v-if="item.wine.vintage" class="text-gray-400">· {{ item.wine.vintage }}</span>
+            </p>
+            <p class="text-xs text-gray-500 truncate">
+              {{ formatBottleSize(item.bottle.size.value) }}
+              <template v-if="item.bottle.buyingPrice !== null"> · {{ formatPrice(item.bottle.buyingPrice) }}</template>
+            </p>
+            <p class="text-xs truncate">
+              <NuxtLink
+                v-if="item.bottle.placement"
+                :to="`/cave/${item.bottle.placement.cellarId}?bottle=${item.bottle.id}`"
+                class="text-primary-600 dark:text-primary-400 hover:underline"
+              >{{ placementLabel(item) }} <UIcon name="i-lucide-map-pin" class="size-3 align-middle" /></NuxtLink>
+              <span v-else class="text-amber-600">{{ placementLabel(item) }}</span>
+            </p>
+            <div class="flex gap-1 pt-1 mt-auto">
+              <UButton
+                v-if="item.bottle.placement"
+                icon="i-lucide-package-open"
+                variant="ghost"
+                size="xs"
+                title="Renvoyer au pool à ranger"
+                @click="unassign(item.bottle.id)"
+              />
+              <UButton
+                icon="i-lucide-wine-off"
+                color="error"
+                variant="soft"
+                size="xs"
+                class="flex-1 justify-center"
+                @click="openExit(item.bottle.id)"
+              >
+                Sortir
+              </UButton>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -426,13 +611,32 @@ function fileToBase64(file: File): Promise<string> {
 
     <UModal v-model:open="showWineModal" :title="editingWine ? 'Modifier le vin' : 'Nouveau vin'">
       <template #body>
-        <WineForm :initial="editingWine" :loading="loading" @submit="submitWine" @cancel="showWineModal = false" />
+        <WineForm
+          :initial="editingWine"
+          :prefill="winePrefill"
+          :label-photo="wineLabelPhoto"
+          :loading="loading"
+          @submit="submitWine"
+          @cancel="showWineModal = false"
+        />
+      </template>
+    </UModal>
+
+    <UModal v-model:open="showPhotoModal" title="Étiquette">
+      <template #body>
+        <img v-if="previewPhotoUrl" :src="previewPhotoUrl" alt="Étiquette du vin" class="w-full h-auto rounded-lg">
       </template>
     </UModal>
 
     <UModal v-model:open="showBottlesModal" title="Ajouter des bouteilles">
       <template #body>
-        <WineBottlesForm :wine-name="bottlesWine?.name" :loading="loading" @submit="submitBottles" @cancel="showBottlesModal = false" />
+        <WineBottlesForm
+          :wine-name="bottlesWine?.name"
+          :initial-quantity="bottlesInitialQuantity"
+          :loading="loading"
+          @submit="submitBottles"
+          @cancel="showBottlesModal = false"
+        />
       </template>
     </UModal>
 
