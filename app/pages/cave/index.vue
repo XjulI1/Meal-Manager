@@ -58,6 +58,8 @@ const fRegion = ref<WineRegion | 'all'>('all')
 const fDomain = ref('')
 const fPlacement = ref<'all' | 'placed' | 'unplaced'>('all')
 const fSort = ref<'name' | 'vintage' | 'region'>('name')
+/** Bottle tab layout: dense list or label-first grid. */
+const bottleView = ref<'list' | 'grid'>('list')
 
 const colorFilterOptions = [{ value: 'all', label: 'Toutes robes' }, ...WINE_COLOR_OPTIONS]
 const regionFilterOptions = [{ value: 'all', label: 'Toutes régions' }, ...WINE_REGION_OPTIONS]
@@ -406,8 +408,32 @@ function fileToBase64(file: File): Promise<string> {
         <USelect v-model="fPlacement" :items="placementOptions" />
         <USelect v-model="fSort" :items="sortOptions" />
       </div>
+
+      <div class="flex justify-end">
+        <UButtonGroup size="xs">
+          <UButton
+            icon="i-lucide-list"
+            :color="bottleView === 'list' ? 'primary' : 'neutral'"
+            :variant="bottleView === 'list' ? 'solid' : 'soft'"
+            @click="bottleView = 'list'"
+          >
+            Liste
+          </UButton>
+          <UButton
+            icon="i-lucide-layout-grid"
+            :color="bottleView === 'grid' ? 'primary' : 'neutral'"
+            :variant="bottleView === 'grid' ? 'solid' : 'soft'"
+            @click="bottleView = 'grid'"
+          >
+            Grille
+          </UButton>
+        </UButtonGroup>
+      </div>
+
       <p v-if="bottles.length === 0" class="text-sm text-gray-500">Aucune bouteille en stock pour ce filtre.</p>
-      <div class="space-y-2">
+
+      <!-- Vue liste -->
+      <div v-else-if="bottleView === 'list'" class="space-y-2">
         <div
           v-for="item in bottles"
           :key="item.bottle.id"
@@ -449,6 +475,67 @@ function fileToBase64(file: File): Promise<string> {
           <UButton icon="i-lucide-wine-off" color="error" variant="soft" size="xs" @click="openExit(item.bottle.id)">
             Sortir
           </UButton>
+        </div>
+      </div>
+
+      <!-- Vue grille (étiquettes) -->
+      <div v-else class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div
+          v-for="item in bottles"
+          :key="item.bottle.id"
+          class="flex flex-col rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden"
+        >
+          <div class="relative aspect-[3/4] bg-gray-100 dark:bg-gray-800">
+            <img
+              v-if="item.wine.photoUrl"
+              :src="item.wine.photoUrl"
+              :alt="item.wine.name"
+              loading="lazy"
+              class="absolute inset-0 w-full h-full object-cover cursor-zoom-in"
+              @click="openPhoto(item.wine.photoUrl)"
+            >
+            <div v-else class="absolute inset-0 flex items-center justify-center">
+              <span class="w-8 h-8 rounded-full" :class="WINE_COLOR_DOT[item.wine.color]" />
+            </div>
+          </div>
+          <div class="p-2 space-y-1 flex-1 flex flex-col">
+            <p class="text-sm font-medium truncate">
+              {{ item.wine.name }}
+              <span v-if="item.wine.vintage" class="text-gray-400">· {{ item.wine.vintage }}</span>
+            </p>
+            <p class="text-xs text-gray-500 truncate">
+              {{ formatBottleSize(item.bottle.size.value) }}
+              <template v-if="item.bottle.buyingPrice !== null"> · {{ formatPrice(item.bottle.buyingPrice) }}</template>
+            </p>
+            <p class="text-xs truncate">
+              <NuxtLink
+                v-if="item.bottle.placement"
+                :to="`/cave/${item.bottle.placement.cellarId}?bottle=${item.bottle.id}`"
+                class="text-primary-600 dark:text-primary-400 hover:underline"
+              >{{ placementLabel(item) }} <UIcon name="i-lucide-map-pin" class="size-3 align-middle" /></NuxtLink>
+              <span v-else class="text-amber-600">{{ placementLabel(item) }}</span>
+            </p>
+            <div class="flex gap-1 pt-1 mt-auto">
+              <UButton
+                v-if="item.bottle.placement"
+                icon="i-lucide-package-open"
+                variant="ghost"
+                size="xs"
+                title="Renvoyer au pool à ranger"
+                @click="unassign(item.bottle.id)"
+              />
+              <UButton
+                icon="i-lucide-wine-off"
+                color="error"
+                variant="soft"
+                size="xs"
+                class="flex-1 justify-center"
+                @click="openExit(item.bottle.id)"
+              >
+                Sortir
+              </UButton>
+            </div>
+          </div>
         </div>
       </div>
     </section>
