@@ -60,6 +60,10 @@ export function createWineAttributes(input: WineInput): WineAttributes {
     gardeMin: input.gardeMin ?? null,
     gardeMax: input.gardeMax ?? null,
     comment: input.comment ?? null,
+    // AI-enrichment fields are never set via manual create/edit.
+    aromas: null,
+    foodPairings: null,
+    aiEnrichedAt: null,
     photoUrl: input.photoUrl ?? null,
     rating: input.rating ?? null,
   }
@@ -82,6 +86,10 @@ export function mergeWineAttributes(wine: Wine, patch: WinePatch): WineAttribute
     gardeMin: patch.gardeMin !== undefined ? patch.gardeMin : wine.gardeMin,
     gardeMax: patch.gardeMax !== undefined ? patch.gardeMax : wine.gardeMax,
     comment: patch.comment !== undefined ? patch.comment : wine.comment,
+    // AI-enrichment fields are untouched by a manual patch (only EnrichWineUseCase writes them).
+    aromas: wine.aromas,
+    foodPairings: wine.foodPairings,
+    aiEnrichedAt: wine.aiEnrichedAt,
     photoUrl: patch.photoUrl !== undefined ? patch.photoUrl : wine.photoUrl,
     rating: patch.rating !== undefined ? patch.rating : wine.rating,
   }

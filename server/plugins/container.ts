@@ -100,13 +100,15 @@ import { ListBottlesUseCase } from '../contexts/wine-cellar/application/use-case
 import { ListExitJournalUseCase } from '../contexts/wine-cellar/application/use-cases/list-exit-journal.use-case'
 import { ImportVinotagUseCase } from '../contexts/wine-cellar/application/use-cases/import-vinotag.use-case'
 import { ScanWineLabelUseCase } from '../contexts/wine-cellar/application/use-cases/scan-wine-label.use-case'
+import { EnrichWineUseCase } from '../contexts/wine-cellar/application/use-cases/enrich-wine.use-case'
 import { DrizzleCellarRepository } from '../contexts/wine-cellar/infrastructure/repositories/drizzle-cellar.repository'
 import { DrizzleWineRepository } from '../contexts/wine-cellar/infrastructure/repositories/drizzle-wine.repository'
 import { DrizzleBottleRepository } from '../contexts/wine-cellar/infrastructure/repositories/drizzle-bottle.repository'
 import { ExcelJsWineImportParser } from '../contexts/wine-cellar/infrastructure/adapters/exceljs-wine-import-parser'
 import { AnthropicWineLabelExtractor } from '../contexts/wine-cellar/infrastructure/adapters/anthropic-wine-label-extractor'
+import { AnthropicWineEnricher } from '../contexts/wine-cellar/infrastructure/adapters/anthropic-wine-enricher'
 import { FilesystemLabelPhotoStorage } from '../contexts/wine-cellar/infrastructure/adapters/filesystem-label-photo-storage'
-import { DEFAULT_LABEL_EFFORT, parseEffort as parseLabelEffort } from '../contexts/wine-cellar/infrastructure/anthropic-config'
+import { DEFAULT_LABEL_EFFORT, DEFAULT_ENRICH_EFFORT, parseEffort as parseLabelEffort } from '../contexts/wine-cellar/infrastructure/anthropic-config'
 import type { Container } from '../types/container'
 
 export default defineNitroPlugin((nitro) => {
@@ -211,6 +213,11 @@ function buildContainer(): Container {
     aiConfig.anthropicModel,
     parseLabelEffort(aiConfig.anthropicLabelEffort, DEFAULT_LABEL_EFFORT),
   )
+  const wineEnricher = new AnthropicWineEnricher(
+    aiConfig.anthropicApiKey,
+    aiConfig.anthropicModel,
+    parseLabelEffort(aiConfig.anthropicEnrichEffort, DEFAULT_ENRICH_EFFORT),
+  )
 
   return {
     registerUser: new RegisterUserUseCase(userRepo, hasher),
@@ -288,5 +295,6 @@ function buildContainer(): Container {
     listExitJournal: new ListExitJournalUseCase(bottleRepo, wineRepo),
     importVinotag: new ImportVinotagUseCase(wineImportParser, wineRepo, bottleRepo),
     scanWineLabel: new ScanWineLabelUseCase(wineLabelExtractor),
+    enrichWine: new EnrichWineUseCase(wineRepo, bottleRepo, wineEnricher),
   }
 }

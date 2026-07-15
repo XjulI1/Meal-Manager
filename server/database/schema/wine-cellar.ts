@@ -99,6 +99,12 @@ export const wines = mysqlTable(
     /** Drink-until year (apogée). */
     gardeMax: smallint('garde_max', { unsigned: true }),
     comment: text('comment'),
+    /** AI-researched aromatic profile (free text). */
+    aromas: text('aromas'),
+    /** AI-researched food pairings (free text). */
+    foodPairings: text('food_pairings'),
+    /** When the AI enrichment was last run; null if never enriched. */
+    aiEnrichedAt: timestamp('ai_enriched_at'),
     photoUrl: varchar('photo_url', { length: 500 }),
     /** Optional 0–5 personal rating. */
     rating: tinyint('rating', { unsigned: true }),

@@ -57,6 +57,13 @@
       "when": 1784073600000,
       "tag": "0007_add_wine_cellar",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1784678400000,
+      "tag": "0008_add_wine_ai_enrichment",
+      "breakpoints": true
     }
   ]
 }

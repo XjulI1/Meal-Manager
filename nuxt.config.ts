@@ -66,6 +66,7 @@ export default defineNuxtConfig({
     anthropicImportEffort: 'low',
     anthropicPhotoEffort: 'low',
     anthropicLabelEffort: 'medium',
+    anthropicEnrichEffort: 'medium',
     // Filesystem directory where persisted wine-label photos are written and
     // served from. Overridable via NUXT_WINE_LABEL_DIR; mount a volume in Docker.
     wineLabelDir: '.data/wine-labels',

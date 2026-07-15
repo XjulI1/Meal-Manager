@@ -73,6 +73,7 @@ import type { ListBottlesUseCase } from '../contexts/wine-cellar/application/use
 import type { ListExitJournalUseCase } from '../contexts/wine-cellar/application/use-cases/list-exit-journal.use-case'
 import type { ImportVinotagUseCase } from '../contexts/wine-cellar/application/use-cases/import-vinotag.use-case'
 import type { ScanWineLabelUseCase } from '../contexts/wine-cellar/application/use-cases/scan-wine-label.use-case'
+import type { EnrichWineUseCase } from '../contexts/wine-cellar/application/use-cases/enrich-wine.use-case'
 
 export interface Container {
   // platform
@@ -163,6 +164,7 @@ export interface Container {
   listExitJournal: ListExitJournalUseCase
   importVinotag: ImportVinotagUseCase
   scanWineLabel: ScanWineLabelUseCase
+  enrichWine: EnrichWineUseCase
 }
 
 declare module 'h3' {

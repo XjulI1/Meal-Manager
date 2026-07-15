@@ -115,6 +115,29 @@ async function refreshWine(id: string) {
   finally { loadingBottles.value = false }
 }
 
+// ── AI enrichment ──────────────────────────────────────────────────────
+const enriching = ref(false)
+async function enrichCurrentWine() {
+  if (!detailWine.value) return
+  enriching.value = true
+  const t = toast.add({ title: 'Recherche via l\'IA…', icon: 'i-lucide-loader-circle', color: 'info' })
+  try {
+    const updated = await api.enrichWine(detailWine.value.id)
+    detailWine.value = updated
+    const idx = wines.value.findIndex((w) => w.id === updated.id)
+    if (idx !== -1) wines.value[idx] = updated
+    toast.add({ title: 'Vin enrichi', color: 'success' })
+  }
+  catch (e) { notifyError(e) }
+  finally {
+    toast.remove(t.id)
+    enriching.value = false
+  }
+}
+function formatEnrichedAt(iso: string): string {
+  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
 watch([wColor, wRegion, wSearch, wSort], loadWines)
 watch(tab, (t) => {
   if (t === 'vins') loadWines()
@@ -531,8 +554,109 @@ async function unassign(bottleId: string, wineId: string) {
         <div v-if="detailWine" class="space-y-4">
           <p class="text-sm text-gray-500">
             {{ detailWine.bottleCount }} bouteille(s) en stock
-            <template v-if="detailWine.vintage"> · millésime {{ detailWine.vintage }}</template>
           </p>
+
+          <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-3 space-y-3">
+            <div class="flex items-start gap-3">
+              <img
+                v-if="detailWine.photoUrl"
+                :src="detailWine.photoUrl"
+                :alt="`Étiquette · ${detailWine.name}`"
+                class="w-14 h-14 rounded object-cover cursor-pointer shrink-0"
+                @click="openPhoto(detailWine.photoUrl)"
+              >
+              <span
+                v-else
+                class="w-4 h-4 rounded-full shrink-0 mt-1"
+                :class="WINE_COLOR_DOT[detailWine.color]"
+              />
+              <p class="min-w-0 text-sm text-gray-500">
+                {{ detailWine.domain || '—' }}
+                <template v-if="detailWine.region"> · {{ WINE_REGION_LABELS[detailWine.region] }}</template>
+              </p>
+            </div>
+            <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              <div>
+                <dt class="text-gray-500">Robe</dt>
+                <dd class="flex items-center gap-1.5">
+                  <span class="w-2.5 h-2.5 rounded-full" :class="WINE_COLOR_DOT[detailWine.color]" />
+                  {{ WINE_COLOR_LABELS[detailWine.color] }}
+                </dd>
+              </div>
+              <div v-if="detailWine.vintage">
+                <dt class="text-gray-500">Millésime</dt>
+                <dd>{{ detailWine.vintage }}</dd>
+              </div>
+              <div v-if="detailWine.appellation">
+                <dt class="text-gray-500">Appellation</dt>
+                <dd>{{ detailWine.appellation }}</dd>
+              </div>
+              <div v-if="detailWine.country">
+                <dt class="text-gray-500">Pays</dt>
+                <dd>{{ detailWine.country }}</dd>
+              </div>
+              <div v-if="detailWine.rating !== null">
+                <dt class="text-gray-500">Note</dt>
+                <dd>{{ detailWine.rating }}/5</dd>
+              </div>
+            </dl>
+            <div v-if="detailWine.comment" class="text-sm">
+              <dt class="text-gray-500">Commentaire</dt>
+              <dd class="whitespace-pre-line">{{ detailWine.comment }}</dd>
+            </div>
+          </div>
+
+          <div class="rounded-lg border border-gray-200 dark:border-gray-800 p-3 space-y-2">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <UIcon name="i-lucide-sparkles" class="text-primary" />
+                <span class="text-sm font-medium">Fiche IA</span>
+                <UBadge
+                  v-if="detailWine.aiEnrichedAt"
+                  color="neutral"
+                  variant="subtle"
+                  size="sm"
+                >
+                  Recherché le {{ formatEnrichedAt(detailWine.aiEnrichedAt) }}
+                </UBadge>
+              </div>
+              <UButton
+                :icon="detailWine.aiEnrichedAt ? 'i-lucide-refresh-cw' : 'i-lucide-sparkles'"
+                :label="detailWine.aiEnrichedAt ? 'Relancer' : 'Rechercher via l\'IA'"
+                size="sm"
+                variant="soft"
+                :loading="enriching"
+                @click="enrichCurrentWine"
+              />
+            </div>
+            <dl
+              v-if="detailWine.aiEnrichedAt"
+              class="grid grid-cols-1 gap-2 text-sm"
+            >
+              <div>
+                <dt class="text-gray-500">Période de garde</dt>
+                <dd v-if="detailWine.gardeMin || detailWine.gardeMax">
+                  {{ detailWine.gardeMin ?? '?' }} – {{ detailWine.gardeMax ?? '?' }}
+                </dd>
+                <dd v-else class="text-gray-400 italic">Non déterminée par la recherche</dd>
+              </div>
+              <div>
+                <dt class="text-gray-500">Profil aromatique</dt>
+                <dd v-if="detailWine.aromas">{{ detailWine.aromas }}</dd>
+                <dd v-else class="text-gray-400 italic">Non déterminé par la recherche</dd>
+              </div>
+              <div>
+                <dt class="text-gray-500">Accords mets/vin</dt>
+                <dd v-if="detailWine.foodPairings">{{ detailWine.foodPairings }}</dd>
+                <dd v-else class="text-gray-400 italic">Non déterminés par la recherche</dd>
+              </div>
+            </dl>
+            <p v-else class="text-sm text-gray-500">
+              Aucune fiche IA pour ce vin. Lancez une recherche pour trouver sa période de
+              garde, son profil aromatique et les accords mets/vin.
+            </p>
+          </div>
+
           <WineBottleList
             :bottles="bottlesByWine[detailWine.id] ?? []"
             :loading="loadingBottles"

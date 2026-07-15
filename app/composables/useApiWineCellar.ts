@@ -89,6 +89,11 @@ export function useApiWineCellar() {
   const scanLabel = (images: WineLabelImageDto[]) =>
     $fetch<WineLabelDraftDto>('/api/cave/scan-label', { method: 'POST', body: { images } })
 
+  // ── Enrichment (AI) ────────────────────────────────────────────────────
+  /** Research a wine's garde window, aromas and food pairings; persists on the wine. */
+  const enrichWine = (id: string) =>
+    $fetch<WineView>(`/api/cave/wines/${id}/enrich`, { method: 'POST' })
+
   return {
     listCellars,
     createCellar,
@@ -113,5 +118,6 @@ export function useApiWineCellar() {
     journal,
     importVinotag,
     scanLabel,
+    enrichWine,
   }
 }

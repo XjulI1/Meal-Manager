@@ -121,6 +121,19 @@ export type CreateWineDto = z.infer<typeof CreateWineSchema>
 export const UpdateWineSchema = WineFieldsSchema.partial().refine(noPhotoConflict, PHOTO_CONFLICT_MESSAGE)
 export type UpdateWineDto = z.infer<typeof UpdateWineSchema>
 
+/**
+ * Structured output of the AI wine enrichment (`enrich_wine` tool). Every field
+ * is optional: an omitted field means the research found nothing reliable and
+ * the existing value is kept. `gardeMin`/`gardeMax` are absolute apogée years.
+ */
+export const WineEnrichmentSchema = z.object({
+  gardeMin: YearSchema.optional(),
+  gardeMax: YearSchema.optional(),
+  aromas: z.string().trim().min(1).max(2000).optional(),
+  foodPairings: z.string().trim().min(1).max(2000).optional(),
+})
+export type WineEnrichmentDto = z.infer<typeof WineEnrichmentSchema>
+
 // ── Bottles ─────────────────────────────────────────────────────────────────
 
 export const AddBottlesSchema = z.object({
@@ -196,6 +209,12 @@ export const WineViewSchema = z.object({
   gardeMin: z.number().int().nullable(),
   gardeMax: z.number().int().nullable(),
   comment: z.string().nullable(),
+  /** AI-researched aromatic profile (free text); null if never enriched. */
+  aromas: z.string().nullable(),
+  /** AI-researched food pairings (free text); null if never enriched. */
+  foodPairings: z.string().nullable(),
+  /** ISO timestamp of the last AI enrichment; null if never enriched. */
+  aiEnrichedAt: z.string().nullable(),
   photoUrl: z.string().nullable(),
   rating: z.number().int().nullable(),
   /** Count of in-stock bottles of this wine. */

@@ -15,6 +15,9 @@ export interface WineProps {
   gardeMin: number | null
   gardeMax: number | null
   comment: string | null
+  aromas: string | null
+  foodPairings: string | null
+  aiEnrichedAt: Date | null
   photoUrl: string | null
   rating: number | null
   createdAt: Date
@@ -36,6 +39,9 @@ export class Wine {
   readonly gardeMin: number | null
   readonly gardeMax: number | null
   readonly comment: string | null
+  readonly aromas: string | null
+  readonly foodPairings: string | null
+  readonly aiEnrichedAt: Date | null
   readonly photoUrl: string | null
   readonly rating: number | null
   readonly createdAt: Date
@@ -54,6 +60,9 @@ export class Wine {
     this.gardeMin = props.gardeMin
     this.gardeMax = props.gardeMax
     this.comment = props.comment
+    this.aromas = props.aromas
+    this.foodPairings = props.foodPairings
+    this.aiEnrichedAt = props.aiEnrichedAt
     this.photoUrl = props.photoUrl
     this.rating = props.rating
     this.createdAt = props.createdAt
