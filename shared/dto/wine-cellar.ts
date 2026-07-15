@@ -92,25 +92,27 @@ export const WineLabelInputSchema = z.object({
 export type WineLabelInputDto = z.infer<typeof WineLabelInputSchema>
 
 /** Base wine fields; refined into Create/Update below. */
+// Nullable + optional on the entity's nullable fields: `undefined` = unchanged
+// (partial update), `null` = explicitly clear the value.
 const WineFieldsSchema = z.object({
   name: z.string().trim().min(1).max(200),
-  domain: z.string().trim().max(200).optional(),
-  country: z.string().trim().max(80).optional(),
-  region: WineRegionSchema.optional(),
-  appellation: z.string().trim().max(200).optional(),
-  vintage: YearSchema.optional(),
+  domain: z.string().trim().max(200).nullable().optional(),
+  country: z.string().trim().max(80).nullable().optional(),
+  region: WineRegionSchema.nullable().optional(),
+  appellation: z.string().trim().max(200).nullable().optional(),
+  vintage: YearSchema.nullable().optional(),
   color: WineColorSchema,
-  gardeMin: YearSchema.optional(),
-  gardeMax: YearSchema.optional(),
-  comment: z.string().trim().max(2000).optional(),
-  photoUrl: z.string().trim().url().max(500).optional(),
+  gardeMin: YearSchema.nullable().optional(),
+  gardeMax: YearSchema.nullable().optional(),
+  comment: z.string().trim().max(2000).nullable().optional(),
+  photoUrl: z.string().trim().url().max(500).nullable().optional(),
   /** Upload a label photo to persist; exclusive with `photoUrl`. */
   labelPhoto: WineLabelInputSchema.optional(),
-  rating: z.number().int().min(0).max(5).optional(),
+  rating: z.number().int().min(0).max(5).nullable().optional(),
 })
 
 /** photoUrl and labelPhoto MUST NOT be supplied together. */
-const noPhotoConflict = (v: { photoUrl?: string, labelPhoto?: unknown }): boolean => !(v.photoUrl && v.labelPhoto)
+const noPhotoConflict = (v: { photoUrl?: string | null, labelPhoto?: unknown }): boolean => !(v.photoUrl && v.labelPhoto)
 const PHOTO_CONFLICT_MESSAGE = { message: 'photoUrl and labelPhoto are mutually exclusive', path: ['labelPhoto'] }
 
 export const CreateWineSchema = WineFieldsSchema.refine(noPhotoConflict, PHOTO_CONFLICT_MESSAGE)

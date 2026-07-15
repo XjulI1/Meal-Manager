@@ -65,9 +65,18 @@ const ratingOptions = [
   ...[0, 1, 2, 3, 4, 5].map((n) => ({ value: n, label: `${n}/5` })),
 ]
 
-function trimmed(v: string): string | undefined {
+/** Empty text → null (explicitly clears the field on update). */
+function trimmedOrNull(v: string): string | null {
   const t = v.trim()
-  return t.length > 0 ? t : undefined
+  return t.length > 0 ? t : null
+}
+
+/**
+ * Empty number inputs surface as '' / NaN with `v-model.number`; normalize any
+ * non-finite value to null so we clear the field rather than send an invalid one.
+ */
+function numberOrNull(v: number | null): number | null {
+  return typeof v === 'number' && Number.isFinite(v) ? v : null
 }
 
 function onSubmit() {
@@ -75,15 +84,15 @@ function onSubmit() {
   emit('submit', {
     name: name.value.trim(),
     color: color.value,
-    region: region.value === '__none__' ? undefined : region.value,
-    domain: trimmed(domain.value),
-    appellation: trimmed(appellation.value),
-    country: trimmed(country.value),
-    vintage: vintage.value ?? undefined,
-    gardeMin: gardeMin.value ?? undefined,
-    gardeMax: gardeMax.value ?? undefined,
-    rating: rating.value === null || rating.value < 0 ? undefined : rating.value,
-    comment: trimmed(comment.value),
+    region: region.value === '__none__' ? null : region.value,
+    domain: trimmedOrNull(domain.value),
+    appellation: trimmedOrNull(appellation.value),
+    country: trimmedOrNull(country.value),
+    vintage: numberOrNull(vintage.value),
+    gardeMin: numberOrNull(gardeMin.value),
+    gardeMax: numberOrNull(gardeMax.value),
+    rating: rating.value === null || rating.value < 0 ? null : rating.value,
+    comment: trimmedOrNull(comment.value),
     labelPhoto: labelPhoto.value ?? undefined,
   })
 }

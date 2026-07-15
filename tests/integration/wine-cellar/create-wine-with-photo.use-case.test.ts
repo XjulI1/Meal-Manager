@@ -55,4 +55,45 @@ describe('wine creation/update with a label photo', () => {
     expect(storage.stored).toHaveLength(1)
     expect(updated.photoUrl).toBe(`/api/cave/label-photos/${HH}/photo-0.jpg`)
   })
+
+  it('clears nullable fields when the patch sends null', async () => {
+    const created = await createWine.execute({
+      householdId: HH,
+      name: 'Saint-Amour',
+      color: 'rouge',
+      region: 'beaujolais',
+      gardeMin: 2026,
+      gardeMax: 2030,
+      comment: 'À boire jeune',
+    })
+    expect(created.gardeMax).toBe(2030)
+
+    const updated = await updateWine.execute({
+      householdId: HH,
+      id: created.id,
+      gardeMax: null,
+      region: null,
+      comment: null,
+    })
+
+    expect(updated.gardeMax).toBeNull()
+    expect(updated.region).toBeNull()
+    expect(updated.comment).toBeNull()
+    // Untouched fields are preserved.
+    expect(updated.gardeMin).toBe(2026)
+  })
+
+  it('leaves fields unchanged when the patch omits them (undefined)', async () => {
+    const created = await createWine.execute({
+      householdId: HH,
+      name: 'Chablis',
+      color: 'blanc',
+      gardeMax: 2028,
+    })
+
+    const updated = await updateWine.execute({ householdId: HH, id: created.id, name: 'Chablis 1er cru' })
+
+    expect(updated.name).toBe('Chablis 1er cru')
+    expect(updated.gardeMax).toBe(2028)
+  })
 })

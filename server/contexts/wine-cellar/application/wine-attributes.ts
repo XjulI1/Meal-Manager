@@ -19,27 +19,30 @@ export async function resolveLabelPhoto(
   storage: ILabelPhotoStorage,
   householdId: string,
   source: { labelPhoto?: LabelPhotoInput },
-  fallback: string | undefined,
-): Promise<string | undefined> {
+  fallback: string | null | undefined,
+): Promise<string | null | undefined> {
   if (!source.labelPhoto) return fallback
   const { url } = await storage.store({ householdId, ...source.labelPhoto })
   return url
 }
 
-/** Primitive wine fields as received from the transport layer. */
+/**
+ * Primitive wine fields as received from the transport layer.
+ * `undefined` = field absent (unchanged on update); `null` = explicitly cleared.
+ */
 export interface WineInput {
   name: string
-  domain?: string
-  country?: string
-  region?: string
-  appellation?: string
-  vintage?: number
+  domain?: string | null
+  country?: string | null
+  region?: string | null
+  appellation?: string | null
+  vintage?: number | null
   color: string
-  gardeMin?: number
-  gardeMax?: number
-  comment?: string
-  photoUrl?: string
-  rating?: number
+  gardeMin?: number | null
+  gardeMax?: number | null
+  comment?: string | null
+  photoUrl?: string | null
+  rating?: number | null
 }
 
 export type WinePatch = Partial<WineInput>
@@ -68,7 +71,11 @@ export function mergeWineAttributes(wine: Wine, patch: WinePatch): WineAttribute
     name: patch.name ?? wine.name,
     domain: patch.domain !== undefined ? patch.domain : wine.domain,
     country: patch.country !== undefined ? patch.country : wine.country,
-    region: patch.region !== undefined ? WineRegion.fromString(patch.region) : wine.region,
+    region: patch.region === undefined
+      ? wine.region
+      : patch.region === null
+        ? null
+        : WineRegion.fromString(patch.region),
     appellation: patch.appellation !== undefined ? patch.appellation : wine.appellation,
     vintage: patch.vintage !== undefined ? patch.vintage : wine.vintage,
     color: patch.color !== undefined ? WineColor.fromString(patch.color) : wine.color,
