@@ -6,6 +6,7 @@ const items = [
   { to: '/ingredients', label: 'Ingrédients', icon: 'i-lucide-carrot' },
   { to: '/shopping', label: 'Courses', icon: 'i-lucide-shopping-cart' },
   { to: '/cave', label: 'Cave', icon: 'i-lucide-wine' },
+  { to: '/cave/calendrier', label: 'Apogée', icon: 'i-lucide-calendar-clock' },
 ]
 </script>
 

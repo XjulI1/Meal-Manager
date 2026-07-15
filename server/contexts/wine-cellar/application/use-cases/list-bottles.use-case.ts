@@ -2,6 +2,7 @@ import type { BottleListItemView } from '../../../../../shared/dto/wine-cellar'
 import type { IBottleRepository } from '../../domain/ports/bottle-repository.port'
 import type { ICellarRepository } from '../../domain/ports/cellar-repository.port'
 import type { IWineRepository } from '../../domain/ports/wine-repository.port'
+import { isDrinkableInYear } from '../../domain/value-objects/apogee-status.vo'
 import { loadStructureIndex } from '../load-structure-index'
 import { countBottlesByWine, toBottleView, toPlacementView, toWineView, wineMatchesQuery } from '../wine-cellar-views'
 
@@ -50,10 +51,7 @@ export class ListBottlesUseCase {
     if (input.placement === 'unplaced') items = items.filter((it) => it.bottle.placement === null)
     if (input.drinkableInYear !== undefined) {
       const y = input.drinkableInYear
-      items = items.filter((it) =>
-        (it.wine.gardeMin === null || it.wine.gardeMin <= y)
-        && (it.wine.gardeMax === null || it.wine.gardeMax >= y),
-      )
+      items = items.filter((it) => isDrinkableInYear(it.wine.gardeMin, it.wine.gardeMax, y))
     }
 
     const sort = input.sort ?? 'name'

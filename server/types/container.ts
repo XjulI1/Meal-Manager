@@ -70,6 +70,7 @@ import type { PlaceBottleUseCase } from '../contexts/wine-cellar/application/use
 import type { UpdateBottleUseCase } from '../contexts/wine-cellar/application/use-cases/update-bottle.use-case'
 import type { ExitBottleUseCase } from '../contexts/wine-cellar/application/use-cases/exit-bottle.use-case'
 import type { ListBottlesUseCase } from '../contexts/wine-cellar/application/use-cases/list-bottles.use-case'
+import type { GetApogeeCalendarUseCase } from '../contexts/wine-cellar/application/use-cases/get-apogee-calendar.use-case'
 import type { ListExitJournalUseCase } from '../contexts/wine-cellar/application/use-cases/list-exit-journal.use-case'
 import type { ImportVinotagUseCase } from '../contexts/wine-cellar/application/use-cases/import-vinotag.use-case'
 import type { ScanWineLabelUseCase } from '../contexts/wine-cellar/application/use-cases/scan-wine-label.use-case'
@@ -161,6 +162,7 @@ export interface Container {
   updateBottle: UpdateBottleUseCase
   exitBottle: ExitBottleUseCase
   listBottles: ListBottlesUseCase
+  getApogeeCalendar: GetApogeeCalendarUseCase
   listExitJournal: ListExitJournalUseCase
   importVinotag: ImportVinotagUseCase
   scanWineLabel: ScanWineLabelUseCase

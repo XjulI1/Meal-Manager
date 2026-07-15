@@ -97,6 +97,7 @@ import { PlaceBottleUseCase } from '../contexts/wine-cellar/application/use-case
 import { UpdateBottleUseCase } from '../contexts/wine-cellar/application/use-cases/update-bottle.use-case'
 import { ExitBottleUseCase } from '../contexts/wine-cellar/application/use-cases/exit-bottle.use-case'
 import { ListBottlesUseCase } from '../contexts/wine-cellar/application/use-cases/list-bottles.use-case'
+import { GetApogeeCalendarUseCase } from '../contexts/wine-cellar/application/use-cases/get-apogee-calendar.use-case'
 import { ListExitJournalUseCase } from '../contexts/wine-cellar/application/use-cases/list-exit-journal.use-case'
 import { ImportVinotagUseCase } from '../contexts/wine-cellar/application/use-cases/import-vinotag.use-case'
 import { ScanWineLabelUseCase } from '../contexts/wine-cellar/application/use-cases/scan-wine-label.use-case'
@@ -292,6 +293,7 @@ function buildContainer(): Container {
     updateBottle: new UpdateBottleUseCase(bottleRepo, cellarRepo),
     exitBottle: new ExitBottleUseCase(bottleRepo),
     listBottles: new ListBottlesUseCase(bottleRepo, wineRepo, cellarRepo),
+    getApogeeCalendar: new GetApogeeCalendarUseCase(wineRepo, bottleRepo),
     listExitJournal: new ListExitJournalUseCase(bottleRepo, wineRepo),
     importVinotag: new ImportVinotagUseCase(wineImportParser, wineRepo, bottleRepo),
     scanWineLabel: new ScanWineLabelUseCase(wineLabelExtractor),

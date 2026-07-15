@@ -2,6 +2,7 @@ import type {
   AddBottlesDto,
   AddRowDto,
   AddShelfDto,
+  ApogeeCalendarView,
   BottleListItemView,
   BottleView,
   CellarLayoutView,
@@ -81,6 +82,10 @@ export function useApiWineCellar() {
 
   const journal = () => $fetch<ExitJournalEntryView[]>('/api/cave/journal')
 
+  // ── Apogée calendar ──────────────────────────────────────────────────
+  /** Stocked wines grouped by cuvée with their apogée status for the current year. */
+  const getApogeeCalendar = () => $fetch<ApogeeCalendarView>('/api/cave/apogee-calendar')
+
   const importVinotag = (fileBase64: string, filename?: string) =>
     $fetch<ImportReportView>('/api/cave/import', { method: 'POST', body: { fileBase64, filename } })
 
@@ -116,6 +121,7 @@ export function useApiWineCellar() {
     placeBottle,
     exitBottle,
     journal,
+    getApogeeCalendar,
     importVinotag,
     scanLabel,
     enrichWine,

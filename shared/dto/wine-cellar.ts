@@ -254,6 +254,36 @@ export const BottleListItemViewSchema = z.object({
 })
 export type BottleListItemView = z.infer<typeof BottleListItemViewSchema>
 
+// ── Apogée calendar ───────────────────────────────────────────────────────
+
+/** Drinking-window status of a wine relative to a reference year. */
+export const ApogeeStatusSchema = z.enum([
+  'garde-non-renseignee',
+  'a-venir',
+  'debut-apogee',
+  'au-sommet',
+  'fin-apogee',
+  'depasse',
+])
+export type ApogeeStatus = z.infer<typeof ApogeeStatusSchema>
+
+/** A stocked wine plus its apogée status for the reference year. */
+export const ApogeeCalendarWineViewSchema = z.object({
+  wine: WineViewSchema,
+  status: ApogeeStatusSchema,
+})
+export type ApogeeCalendarWineView = z.infer<typeof ApogeeCalendarWineViewSchema>
+
+/**
+ * Flat list of wines with ≥1 in-stock bottle, each carrying its apogée status
+ * for `refYear`. Buckets (dashboard) and the year timeline are derived client-side.
+ */
+export const ApogeeCalendarViewSchema = z.object({
+  refYear: z.number().int(),
+  wines: z.array(ApogeeCalendarWineViewSchema),
+})
+export type ApogeeCalendarView = z.infer<typeof ApogeeCalendarViewSchema>
+
 export const SlotViewSchema = z.object({
   depth: BottleDepthSchema,
   index: z.number().int(),
