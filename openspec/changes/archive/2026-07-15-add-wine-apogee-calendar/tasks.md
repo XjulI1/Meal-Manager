@@ -30,4 +30,4 @@
 - [x] 5.1 `pnpm lint` + `pnpm typecheck` verts (dont règle d'isolation domaine)
 - [x] 5.2 `pnpm test` vert (unitaires statut + intégration use case)
 - [x] 5.3 `pnpm exec openspec validate add-wine-apogee-calendar --strict` vert
-- [ ] 5.4 Vérif manuelle en dev : page `/cave/calendrier` affiche dashboard + timeline cohérents avec les données de cave
+- [x] 5.4 Vérif manuelle en dev : page `/cave/calendrier` affiche dashboard + timeline cohérents avec les données de cave
