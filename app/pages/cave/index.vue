@@ -6,6 +6,7 @@ import type {
   ExitJournalEntryView,
   ImportReportView,
   ListBottlesQueryDto,
+  ListWinesQueryDto,
   WineColor,
   WineLabelInputDto,
   WineRegion,
@@ -43,8 +44,21 @@ async function loadCellars() {
   try { cellars.value = await api.listCellars() }
   catch (e) { notifyError(e) }
 }
+// ── Wine filters ────────────────────────────────────────────────────────
+const wColor = ref<WineColor | 'all'>('all')
+const wRegion = ref<WineRegion | 'all'>('all')
+const wSearch = ref('')
+const wSort = ref<'name' | 'vintage' | 'region'>('name')
+const wineFiltersActive = computed(() =>
+  wColor.value !== 'all' || wRegion.value !== 'all' || wSearch.value.trim() !== '',
+)
+
 async function loadWines() {
-  try { wines.value = await api.listWines() }
+  const query: ListWinesQueryDto = { sort: wSort.value }
+  if (wColor.value !== 'all') query.color = wColor.value
+  if (wRegion.value !== 'all') query.region = wRegion.value
+  if (wSearch.value.trim()) query.q = wSearch.value.trim()
+  try { wines.value = await api.listWines(query) }
   catch (e) { notifyError(e) }
 }
 async function loadJournal() {
@@ -55,7 +69,7 @@ async function loadJournal() {
 // ── Bottle filters ──────────────────────────────────────────────────────
 const fColor = ref<WineColor | 'all'>('all')
 const fRegion = ref<WineRegion | 'all'>('all')
-const fDomain = ref('')
+const fSearch = ref('')
 const fPlacement = ref<'all' | 'placed' | 'unplaced'>('all')
 const fSort = ref<'name' | 'vintage' | 'region'>('name')
 /** Bottle tab layout: dense list or label-first grid. */
@@ -78,13 +92,14 @@ async function loadBottles() {
   const query: ListBottlesQueryDto = { sort: fSort.value }
   if (fColor.value !== 'all') query.color = fColor.value
   if (fRegion.value !== 'all') query.region = fRegion.value
-  if (fDomain.value.trim()) query.domain = fDomain.value.trim()
+  if (fSearch.value.trim()) query.q = fSearch.value.trim()
   if (fPlacement.value !== 'all') query.placement = fPlacement.value
   try { bottles.value = await api.listBottles(query) }
   catch (e) { notifyError(e) }
 }
 
-watch([fColor, fRegion, fDomain, fPlacement, fSort], loadBottles)
+watch([fColor, fRegion, fSearch, fPlacement, fSort], loadBottles)
+watch([wColor, wRegion, wSearch, wSort], loadWines)
 watch(tab, (t) => {
   if (t === 'vins') loadWines()
   if (t === 'bouteilles') loadBottles()
@@ -311,7 +326,7 @@ function fileToBase64(file: File): Promise<string> {
       <h1 class="text-2xl font-bold">Cave à vin</h1>
     </div>
 
-    <div class="flex gap-1 border-b border-gray-200 dark:border-gray-800 overflow-x-auto">
+    <div class="flex gap-1 border-b border-gray-200 dark:border-gray-800 overflow-x-auto overflow-y-hidden">
       <button
         v-for="t in tabs"
         :key="t.value"
@@ -369,7 +384,17 @@ function fileToBase64(file: File): Promise<string> {
         </UButton>
         <UButton icon="i-lucide-plus" @click="openCreateWine">Nouveau vin</UButton>
       </div>
-      <p v-if="wines.length === 0" class="text-sm text-gray-500">Aucun vin. Créez-en un ou importez depuis Vinotag.</p>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <UInput v-model="wSearch" icon="i-lucide-search" placeholder="Rechercher…" class="col-span-2 sm:col-span-1" />
+        <USelect v-model="wColor" :items="colorFilterOptions" />
+        <USelect v-model="wRegion" :items="regionFilterOptions" />
+        <USelect v-model="wSort" :items="sortOptions" />
+      </div>
+
+      <p v-if="wines.length === 0" class="text-sm text-gray-500">
+        {{ wineFiltersActive ? 'Aucun vin pour ce filtre.' : 'Aucun vin. Créez-en un ou importez depuis Vinotag.' }}
+      </p>
       <div class="space-y-2">
         <div
           v-for="wine in wines"
@@ -402,9 +427,9 @@ function fileToBase64(file: File): Promise<string> {
     <!-- Bouteilles -->
     <section v-else-if="tab === 'bouteilles'" class="space-y-4">
       <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        <UInput v-model="fSearch" icon="i-lucide-search" placeholder="Rechercher…" class="col-span-2 sm:col-span-1" />
         <USelect v-model="fColor" :items="colorFilterOptions" />
         <USelect v-model="fRegion" :items="regionFilterOptions" />
-        <UInput v-model="fDomain" placeholder="Domaine…" />
         <USelect v-model="fPlacement" :items="placementOptions" />
         <USelect v-model="fSort" :items="sortOptions" />
       </div>

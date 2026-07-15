@@ -11,6 +11,7 @@ import type {
   ExitJournalEntryView,
   ImportReportView,
   ListBottlesQueryDto,
+  ListWinesQueryDto,
   PlaceBottleDto,
   RowLayoutView,
   ShelfLayoutView,
@@ -58,7 +59,8 @@ export function useApiWineCellar() {
     $fetch(`/api/cave/rows/${id}`, { method: 'DELETE' })
 
   // ── Wines ────────────────────────────────────────────────────────────
-  const listWines = () => $fetch<WineView[]>('/api/cave/wines')
+  const listWines = (query: ListWinesQueryDto = {}) =>
+    $fetch<WineView[]>('/api/cave/wines', { query })
   const getWine = (id: string) => $fetch<GetWineResponse>(`/api/cave/wines/${id}`)
   const createWine = (payload: CreateWineDto) =>
     $fetch<WineView>('/api/cave/wines', { method: 'POST', body: payload })

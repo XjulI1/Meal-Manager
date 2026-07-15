@@ -51,6 +51,23 @@ export function toWineView(wine: Wine, bottleCount: number): WineView {
   }
 }
 
+/** Accent- and case-insensitive normalization for free-text search. */
+export function normalizeSearch(s: string): string {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+}
+
+/** Whether a wine matches a free-text query across its searchable fields. */
+export function wineMatchesQuery(wine: WineView, query: string): boolean {
+  const needle = normalizeSearch(query)
+  if (!needle) return true
+  const haystack = normalizeSearch(
+    [wine.name, wine.domain, wine.appellation, wine.country, wine.region, wine.vintage]
+      .filter((v) => v !== null && v !== undefined)
+      .join(' '),
+  )
+  return haystack.includes(needle)
+}
+
 export function toPlacementView(bottle: Bottle, index: StructureIndex): BottlePlacementView | null {
   if (!bottle.position) return null
   const row = index.rowById.get(bottle.position.rowId)

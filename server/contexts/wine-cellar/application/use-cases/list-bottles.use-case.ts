@@ -3,13 +3,14 @@ import type { IBottleRepository } from '../../domain/ports/bottle-repository.por
 import type { ICellarRepository } from '../../domain/ports/cellar-repository.port'
 import type { IWineRepository } from '../../domain/ports/wine-repository.port'
 import { loadStructureIndex } from '../load-structure-index'
-import { countBottlesByWine, toBottleView, toPlacementView, toWineView } from '../wine-cellar-views'
+import { countBottlesByWine, toBottleView, toPlacementView, toWineView, wineMatchesQuery } from '../wine-cellar-views'
 
 export interface ListBottlesInput {
   householdId: string
   color?: string
   region?: string
   domain?: string
+  q?: string
   placement?: 'placed' | 'unplaced'
   drinkableInYear?: number
   sort?: 'name' | 'vintage' | 'region'
@@ -44,6 +45,7 @@ export class ListBottlesUseCase {
       const needle = input.domain.trim().toLowerCase()
       items = items.filter((it) => (it.wine.domain ?? '').toLowerCase().includes(needle))
     }
+    if (input.q) items = items.filter((it) => wineMatchesQuery(it.wine, input.q!))
     if (input.placement === 'placed') items = items.filter((it) => it.bottle.placement !== null)
     if (input.placement === 'unplaced') items = items.filter((it) => it.bottle.placement === null)
     if (input.drinkableInYear !== undefined) {

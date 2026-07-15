@@ -160,6 +160,8 @@ export const ListBottlesQuerySchema = z.object({
   color: WineColorSchema.optional(),
   region: WineRegionSchema.optional(),
   domain: z.string().trim().optional(),
+  /** Global free-text search across wine name, domain, appellation, country, region, vintage. */
+  q: z.string().trim().optional(),
   /** `placed` | `unplaced` | undefined (all in-stock). */
   placement: z.enum(['placed', 'unplaced']).optional(),
   /** Apogée filter: bottles drinkable in this year (gardeMin ≤ y ≤ gardeMax). */
@@ -167,6 +169,16 @@ export const ListBottlesQuerySchema = z.object({
   sort: z.enum(['name', 'vintage', 'region']).optional(),
 })
 export type ListBottlesQueryDto = z.infer<typeof ListBottlesQuerySchema>
+
+export const ListWinesQuerySchema = z.object({
+  color: WineColorSchema.optional(),
+  region: WineRegionSchema.optional(),
+  domain: z.string().trim().optional(),
+  /** Global free-text search across wine name, domain, appellation, country, region, vintage. */
+  q: z.string().trim().optional(),
+  sort: z.enum(['name', 'vintage', 'region']).optional(),
+})
+export type ListWinesQueryDto = z.infer<typeof ListWinesQuerySchema>
 
 // ── Views (server → client) ─────────────────────────────────────────────────
 
