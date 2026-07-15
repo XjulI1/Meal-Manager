@@ -7,7 +7,7 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  slotClick: [payload: { rowId: string, slot: SlotView }]
+  slotClick: [payload: { rowId: string; slot: SlotView }]
 }>()
 
 const FRONT = 38
@@ -34,8 +34,7 @@ function cellsOf(row: RowLayoutView, flip: boolean): Cell[] {
     if (flip) {
       if (back) cells.push({ key: `b-${i}`, slot: back, big: false })
       if (front) cells.push({ key: `f-${i}`, slot: front, big: true })
-    }
-    else {
+    } else {
       if (front) cells.push({ key: `f-${i}`, slot: front, big: true })
       if (back) cells.push({ key: `b-${i}`, slot: back, big: false })
     }
@@ -48,7 +47,7 @@ function orderedRows(shelf: { rows: RowLayoutView[] }): RowLayoutView[] {
   return [...shelf.rows].reverse()
 }
 
-function occupancy(row: RowLayoutView): { filled: number, total: number } {
+function occupancy(row: RowLayoutView): { filled: number; total: number } {
   const all = [...row.back, ...row.front]
   return { filled: all.filter((s) => s.bottle).length, total: all.length }
 }
@@ -74,10 +73,15 @@ function title(slot: SlotView): string {
       <div class="p-3 overflow-x-auto">
         <p v-if="shelf.rows.length === 0" class="text-sm text-gray-500">Aucun étage.</p>
 
-        <div v-for="(row, ri) in orderedRows(shelf)" :key="row.id" class="flex items-center gap-3 py-1">
-          <div class="w-16 shrink-0 text-right">
-            <span class="text-xs font-medium text-gray-500">Étage {{ row.position }}</span>
-            <span class="block text-[10px] text-gray-400">{{ occupancy(row).filled }}/{{ occupancy(row).total }}</span>
+        <div
+          v-for="(row, ri) in orderedRows(shelf)"
+          :key="row.id"
+          class="flex items-center gap-3 py-1"
+        >
+          <div class="w-4 shrink-0 text-right">
+            <span class="text-[10px] text-gray-400"
+              >{{ occupancy(row).filled }}/{{ occupancy(row).total }}</span
+            >
           </div>
 
           <div class="flex items-center" :style="{ gap: `${GAP}px` }">
@@ -93,7 +97,10 @@ function title(slot: SlotView): string {
             >
               <span
                 class="rounded-full flex items-center justify-center transition-all"
-                :style="{ width: `${cell.big ? FRONT : BACK}px`, height: `${cell.big ? FRONT : BACK}px` }"
+                :style="{
+                  width: `${cell.big ? FRONT : BACK}px`,
+                  height: `${cell.big ? FRONT : BACK}px`,
+                }"
                 :class="[
                   cell.slot.wine
                     ? `${WINE_COLOR_DOT[cell.slot.wine.color]} border border-black/25 shadow-sm hover:ring-2 hover:ring-amber-400`
@@ -104,10 +111,16 @@ function title(slot: SlotView): string {
                 ]"
               >
                 <span
-                  v-if="cell.slot.wine?.vintage && cell.big"
-                  class="text-[9px] font-medium leading-none"
-                  :class="cell.slot.wine.color === 'rouge' || cell.slot.wine.color === 'rose' ? 'text-white/90' : 'text-black/70'"
-                >{{ String(cell.slot.wine.vintage).slice(2) }}</span>
+                  v-if="cell.slot.wine?.vintage"
+                  class="font-medium leading-none"
+                  :class="[
+                    cell.big ? 'text-[9px]' : 'text-[7px]',
+                    cell.slot.wine.color === 'rouge' || cell.slot.wine.color === 'rose'
+                      ? 'text-white/90'
+                      : 'text-black/70',
+                  ]"
+                  >{{ String(cell.slot.wine.vintage).slice(2) }}</span
+                >
               </span>
             </button>
           </div>
@@ -118,7 +131,9 @@ function title(slot: SlotView): string {
         </div>
       </div>
 
-      <div class="flex items-center justify-between gap-2 px-3 py-2 bg-amber-200/60 dark:bg-amber-900/30 border-t border-amber-800/40">
+      <div
+        class="flex items-center justify-between gap-2 px-3 py-2 bg-amber-200/60 dark:bg-amber-900/30 border-t border-amber-800/40"
+      >
         <span class="font-medium text-amber-900 dark:text-amber-200 truncate">
           {{ shelf.label || `Clayette ${shelf.position}` }}
         </span>
@@ -128,9 +143,16 @@ function title(slot: SlotView): string {
       </div>
     </div>
 
-    <div v-if="layout.shelves.length" class="flex flex-wrap items-center gap-4 text-xs text-gray-500 pt-1">
+    <div
+      v-if="layout.shelves.length"
+      class="flex flex-wrap items-center gap-4 text-xs text-gray-500 pt-1"
+    >
       <span class="font-medium">Robe :</span>
-      <span v-for="c in (['rouge', 'blanc', 'rose', 'effervescent'] as const)" :key="c" class="flex items-center gap-1.5">
+      <span
+        v-for="c in ['rouge', 'blanc', 'rose', 'effervescent'] as const"
+        :key="c"
+        class="flex items-center gap-1.5"
+      >
         <span class="w-3 h-3 rounded-full" :class="WINE_COLOR_DOT[c]" />
         {{ WINE_COLOR_LABELS[c] }}
       </span>
