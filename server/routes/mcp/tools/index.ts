@@ -6,11 +6,13 @@ import { registerMenuTools } from './menu'
 import { registerRecipeDraftsTools } from './recipe-drafts'
 import { registerRecipesTools } from './recipes'
 import { registerShoppingTools } from './shopping'
+import { registerWineTools } from './wine'
 import type { McpToolContext } from './context'
 
 /**
  * Registers all Meal Manager tools on the given MCP server. Read-only except
- * `mealmanager_save_recipe_draft`, which persists a draft for the PAT's household.
+ * the write tools (`mealmanager_save_recipe_draft`, `mealmanager_create_ingredient`,
+ * `mealmanager_add_inventory_item`, `mealmanager_save_wine_enrichment`).
  */
 export function registerAllTools(server: McpServer, ctx: McpToolContext): void {
   registerInventoryTools(server, ctx)
@@ -20,6 +22,7 @@ export function registerAllTools(server: McpServer, ctx: McpToolContext): void {
   registerShoppingTools(server, ctx)
   registerIngredientsTools(server, ctx)
   registerHouseholdTools(server, ctx)
+  registerWineTools(server, ctx)
 }
 
 export type { McpToolContext } from './context'

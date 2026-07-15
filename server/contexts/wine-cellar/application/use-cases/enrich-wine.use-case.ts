@@ -1,9 +1,9 @@
 import type { WineView } from '../../../../../shared/dto/wine-cellar'
-import type { WineAttributes } from '../../domain/entities/wine.entity'
 import { WineNotFoundError } from '../../domain/errors/wine-not-found.error'
 import type { IBottleRepository } from '../../domain/ports/bottle-repository.port'
 import type { IWineEnricher } from '../../domain/ports/wine-enricher.port'
 import type { IWineRepository } from '../../domain/ports/wine-repository.port'
+import { applyWineEnrichment } from '../apply-wine-enrichment'
 import { toWineView } from '../wine-cellar-views'
 
 export interface EnrichWineInput {
@@ -42,30 +42,7 @@ export class EnrichWineUseCase {
       color: wine.color.value,
     })
 
-    // Only overwrite a field the research actually returned (`?? existing`).
-    const gardeMin = result.gardeMin ?? wine.gardeMin
-    const gardeMax = result.gardeMax ?? wine.gardeMax
-    const gardeCoherent = gardeMin === null || gardeMax === null || gardeMin <= gardeMax
-
-    const now = this.clock()
-    const attributes: WineAttributes = {
-      name: wine.name,
-      domain: wine.domain,
-      country: wine.country,
-      region: wine.region,
-      appellation: wine.appellation,
-      vintage: wine.vintage,
-      color: wine.color,
-      gardeMin: gardeCoherent ? gardeMin : wine.gardeMin,
-      gardeMax: gardeCoherent ? gardeMax : wine.gardeMax,
-      comment: wine.comment,
-      aromas: result.aromas ?? wine.aromas,
-      foodPairings: result.foodPairings ?? wine.foodPairings,
-      aiEnrichedAt: now,
-      photoUrl: wine.photoUrl,
-      rating: wine.rating,
-    }
-    const updated = wine.withAttributes(attributes, now)
+    const updated = applyWineEnrichment(wine, result, this.clock())
     await this.wines.update(updated)
 
     const bottleCount = (await this.bottles.listByWine(wine.id, input.householdId)).length

@@ -5,6 +5,7 @@ import { requireHouseholdFromPAT } from '../../../server/utils/require-household
 import { InvalidTokenError } from '../../../server/contexts/platform/domain/errors/invalid-token.error'
 import { DuplicateIngredientNameError } from '../../../server/contexts/ingredients/domain/errors/duplicate-ingredient-name.error'
 import { InvalidIngredientReferenceError } from '../../../server/contexts/inventory/domain/errors/invalid-ingredient-reference.error'
+import { WineNotFoundError } from '../../../server/contexts/wine-cellar/domain/errors/wine-not-found.error'
 import { makeEvent } from './nuxt-runtime-stubs'
 
 /**
@@ -110,11 +111,14 @@ describe('registerAllTools', () => {
         getRecipeDraftById: { execute: vi.fn().mockResolvedValue({}) },
         createIngredient: { execute: vi.fn().mockResolvedValue({ id: 'ing-1' }) },
         addInventoryItem: { execute: vi.fn().mockResolvedValue({ item: { id: 'inv-1' }, created: true }) },
+        listWines: { execute: vi.fn().mockResolvedValue([]) },
+        getWine: { execute: vi.fn().mockResolvedValue({ wine: { id: 'wine-1' }, bottles: [] }) },
+        saveWineEnrichment: { execute: vi.fn().mockResolvedValue({ id: 'wine-1', aiEnrichedAt: '2026-07-15T10:00:00.000Z' }) },
       } as any,
     }
   })
 
-  it('registers exactly the 13 tools (read-only + 3 write tools)', () => {
+  it('registers exactly the 16 tools (read-only + 4 write tools)', () => {
     const { server, tools } = makeRecordingServer()
 
     registerAllTools(server, ctx)
@@ -128,11 +132,14 @@ describe('registerAllTools', () => {
       'mealmanager_get_recipe',
       'mealmanager_get_recipe_draft',
       'mealmanager_get_shopping_list',
+      'mealmanager_get_wine',
       'mealmanager_list_ingredients',
       'mealmanager_list_inventory',
       'mealmanager_list_recipe_drafts',
       'mealmanager_list_recipes',
+      'mealmanager_list_wines',
       'mealmanager_save_recipe_draft',
+      'mealmanager_save_wine_enrichment',
     ])
   })
 
@@ -347,6 +354,70 @@ describe('registerAllTools', () => {
 
     expect(result.isError).toBe(true)
     expect(result.content[0].text).toContain('ing-x')
+  })
+
+  it('list_wines filters to not-yet-enriched wines and derives isEnriched', async () => {
+    const { server, tools } = makeRecordingServer()
+    ;(ctx.container as any).listWines.execute = vi.fn().mockResolvedValue([
+      { id: 'w-1', name: 'Enrichi', domain: null, region: null, vintage: 2020, color: 'rouge', aiEnrichedAt: '2026-01-01T00:00:00.000Z' },
+      { id: 'w-2', name: 'Vierge', domain: null, region: null, vintage: 2021, color: 'blanc', aiEnrichedAt: null },
+    ])
+    registerAllTools(server, ctx)
+    const tool = tools.find((t) => t.name === 'mealmanager_list_wines')!
+
+    const result = await tool.handler({ enriched: false })
+
+    expect(ctx.container.listWines.execute).toHaveBeenCalledWith({ householdId: 'hh-1' })
+    const payload = JSON.parse(result.content[0].text)
+    expect(payload).toEqual([{ id: 'w-2', name: 'Vierge', domain: null, region: null, vintage: 2021, color: 'blanc', isEnriched: false }])
+  })
+
+  it('get_wine forwards wineId as id, scoped to the PAT householdId', async () => {
+    const { server, tools } = makeRecordingServer()
+    registerAllTools(server, ctx)
+    const tool = tools.find((t) => t.name === 'mealmanager_get_wine')!
+
+    await tool.handler({ wineId: 'wine-1' })
+
+    expect(ctx.container.getWine.execute).toHaveBeenCalledWith({ householdId: 'hh-1', id: 'wine-1' })
+  })
+
+  it('get_wine returns an error result for a cross-household id', async () => {
+    const { server, tools } = makeRecordingServer()
+    ;(ctx.container as any).getWine.execute = vi.fn().mockRejectedValue(new WineNotFoundError('wine-2'))
+    registerAllTools(server, ctx)
+    const tool = tools.find((t) => t.name === 'mealmanager_get_wine')!
+
+    const result = await tool.handler({ wineId: 'wine-2' })
+
+    expect(result.isError).toBe(true)
+  })
+
+  it('save_wine_enrichment persists under the PAT household without a householdId field in the schema', async () => {
+    const { server, tools } = makeRecordingServer()
+    registerAllTools(server, ctx)
+    const tool = tools.find((t) => t.name === 'mealmanager_save_wine_enrichment')!
+
+    const result = await tool.handler({ wineId: 'wine-1', gardeMin: 2025, gardeMax: 2032, aromas: 'fruits rouges' })
+
+    expect(ctx.container.saveWineEnrichment.execute).toHaveBeenCalledWith({
+      householdId: 'hh-1',
+      id: 'wine-1',
+      enrichment: { gardeMin: 2025, gardeMax: 2032, aromas: 'fruits rouges', foodPairings: undefined },
+    })
+    expect(result.isError).toBeUndefined()
+    expect(Object.keys(tool.config.inputSchema ?? {})).not.toContain('householdId')
+  })
+
+  it('save_wine_enrichment returns an error result for a cross-household wine', async () => {
+    const { server, tools } = makeRecordingServer()
+    ;(ctx.container as any).saveWineEnrichment.execute = vi.fn().mockRejectedValue(new WineNotFoundError('wine-2'))
+    registerAllTools(server, ctx)
+    const tool = tools.find((t) => t.name === 'mealmanager_save_wine_enrichment')!
+
+    const result = await tool.handler({ wineId: 'wine-2', aromas: 'x' })
+
+    expect(result.isError).toBe(true)
   })
 
   it('input schemas never declare a householdId field', () => {

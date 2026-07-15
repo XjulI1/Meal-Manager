@@ -102,6 +102,7 @@ import { ListExitJournalUseCase } from '../contexts/wine-cellar/application/use-
 import { ImportVinotagUseCase } from '../contexts/wine-cellar/application/use-cases/import-vinotag.use-case'
 import { ScanWineLabelUseCase } from '../contexts/wine-cellar/application/use-cases/scan-wine-label.use-case'
 import { EnrichWineUseCase } from '../contexts/wine-cellar/application/use-cases/enrich-wine.use-case'
+import { SaveWineEnrichmentUseCase } from '../contexts/wine-cellar/application/use-cases/save-wine-enrichment.use-case'
 import { DrizzleCellarRepository } from '../contexts/wine-cellar/infrastructure/repositories/drizzle-cellar.repository'
 import { DrizzleWineRepository } from '../contexts/wine-cellar/infrastructure/repositories/drizzle-wine.repository'
 import { DrizzleBottleRepository } from '../contexts/wine-cellar/infrastructure/repositories/drizzle-bottle.repository'
@@ -298,5 +299,6 @@ function buildContainer(): Container {
     importVinotag: new ImportVinotagUseCase(wineImportParser, wineRepo, bottleRepo),
     scanWineLabel: new ScanWineLabelUseCase(wineLabelExtractor),
     enrichWine: new EnrichWineUseCase(wineRepo, bottleRepo, wineEnricher),
+    saveWineEnrichment: new SaveWineEnrichmentUseCase(wineRepo, bottleRepo),
   }
 }

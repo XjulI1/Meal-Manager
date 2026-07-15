@@ -6,6 +6,7 @@ import type {
   WineEnrichmentResult,
   WineFacts,
 } from '../../domain/ports/wine-enricher.port'
+import { WINE_ENRICHMENT_BRIEF } from '../../application/wine-enrichment-brief'
 import type { AnthropicEffort } from '../anthropic-config'
 import { ENRICH_WINE_TOOLS } from './wine-enrich-tool'
 
@@ -15,11 +16,8 @@ const MAX_TOKENS = 2048
 const MAX_TURNS = 3
 
 const SYSTEM
-  = 'Tu es sommelier. À partir de ce que l\'on sait d\'un vin, recherche sur le web '
-    + 'des informations fiables sur cette cuvée : la fenêtre de garde (années d\'apogée), '
-    + 'son profil aromatique et les accords mets/vin. Utilise l\'outil web_search autant '
-    + 'que nécessaire, puis appelle l\'outil enrich_wine pour renvoyer le résultat structuré. '
-    + 'N\'invente rien : si une information reste incertaine, ne renseigne pas le champ correspondant.'
+  = `${WINE_ENRICHMENT_BRIEF} Utilise l'outil web_search autant que nécessaire, `
+    + 'puis appelle l\'outil enrich_wine pour renvoyer le résultat structuré.'
 
 /**
  * Enriches a wine using the Anthropic API with server-side web search. The
