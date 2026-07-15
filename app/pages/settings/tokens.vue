@@ -90,6 +90,7 @@ function formatDate(iso: string | null): string {
 
 <template>
   <div>
+    <SettingsNav />
     <UCard>
     <template #header>
       <div class="flex items-center justify-between gap-4">
