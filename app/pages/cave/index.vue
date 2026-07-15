@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import type {
-  BottleListItemView,
+  BottleView,
   CellarView,
   CreateWineDto,
   ExitJournalEntryView,
   ImportReportView,
-  ListBottlesQueryDto,
   ListWinesQueryDto,
   WineColor,
   WineLabelInputDto,
@@ -19,19 +18,17 @@ definePageMeta({ title: 'Cave' })
 const api = useApiWineCellar()
 const toast = useToast()
 
-type Tab = 'caves' | 'vins' | 'bouteilles' | 'journal' | 'import'
+type Tab = 'caves' | 'vins' | 'journal' | 'import'
 const tab = ref<Tab>('caves')
 const tabs: { value: Tab, label: string, icon: string }[] = [
   { value: 'caves', label: 'Mes caves', icon: 'i-lucide-warehouse' },
   { value: 'vins', label: 'Vins', icon: 'i-lucide-grape' },
-  { value: 'bouteilles', label: 'Bouteilles', icon: 'i-lucide-wine' },
   { value: 'journal', label: 'Journal', icon: 'i-lucide-scroll-text' },
   { value: 'import', label: 'Importer', icon: 'i-lucide-upload' },
 ]
 
 const cellars = ref<CellarView[]>([])
 const wines = ref<WineView[]>([])
-const bottles = ref<BottleListItemView[]>([])
 const journalEntries = ref<ExitJournalEntryView[]>([])
 const loading = ref(false)
 
@@ -66,43 +63,63 @@ async function loadJournal() {
   catch (e) { notifyError(e) }
 }
 
-// ── Bottle filters ──────────────────────────────────────────────────────
-const fColor = ref<WineColor | 'all'>('all')
-const fRegion = ref<WineRegion | 'all'>('all')
-const fSearch = ref('')
-const fPlacement = ref<'all' | 'placed' | 'unplaced'>('all')
-const fSort = ref<'name' | 'vintage' | 'region'>('name')
-/** Bottle tab layout: dense list or label-first grid. */
-const bottleView = ref<'list' | 'grid'>('list')
+// ── Wine view mode + expansion ────────────────────────────────────────────
+/** Wine tab layout: dense list or label-first grid. */
+const wineView = ref<'list' | 'grid'>('list')
+/** Show only wines with ≥1 in-stock bottle (default) vs the full catalogue. */
+const showOnlyInStock = ref(true)
 
 const colorFilterOptions = [{ value: 'all', label: 'Toutes robes' }, ...WINE_COLOR_OPTIONS]
 const regionFilterOptions = [{ value: 'all', label: 'Toutes régions' }, ...WINE_REGION_OPTIONS]
-const placementOptions = [
-  { value: 'all', label: 'Tous' },
-  { value: 'placed', label: 'Rangées' },
-  { value: 'unplaced', label: 'À ranger' },
-]
 const sortOptions = [
   { value: 'name', label: 'Nom' },
   { value: 'vintage', label: 'Millésime' },
   { value: 'region', label: 'Région' },
 ]
 
-async function loadBottles() {
-  const query: ListBottlesQueryDto = { sort: fSort.value }
-  if (fColor.value !== 'all') query.color = fColor.value
-  if (fRegion.value !== 'all') query.region = fRegion.value
-  if (fSearch.value.trim()) query.q = fSearch.value.trim()
-  if (fPlacement.value !== 'all') query.placement = fPlacement.value
-  try { bottles.value = await api.listBottles(query) }
+const displayedWines = computed(() =>
+  showOnlyInStock.value ? wines.value.filter((w) => w.bottleCount > 0) : wines.value,
+)
+
+// Per-wine bottle detail, shown in a modal and lazy-loaded on open.
+const bottlesByWine = ref<Record<string, BottleView[]>>({})
+const loadingBottles = ref(false)
+const showWineBottlesModal = ref(false)
+const detailWine = ref<WineView | null>(null)
+
+async function loadWineBottles(id: string) {
+  loadingBottles.value = true
+  try {
+    const { bottles } = await api.getWine(id)
+    bottlesByWine.value = { ...bottlesByWine.value, [id]: bottles }
+  }
   catch (e) { notifyError(e) }
+  finally { loadingBottles.value = false }
 }
 
-watch([fColor, fRegion, fSearch, fPlacement, fSort], loadBottles)
+async function openWineBottles(wine: WineView) {
+  detailWine.value = wine
+  showWineBottlesModal.value = true
+  await loadWineBottles(wine.id)
+}
+
+/** Refresh the wine's stock count and the open modal's bottle detail after a mutation. */
+async function refreshWine(id: string) {
+  loadingBottles.value = true
+  try {
+    const { wine, bottles } = await api.getWine(id)
+    bottlesByWine.value = { ...bottlesByWine.value, [id]: bottles }
+    const idx = wines.value.findIndex((w) => w.id === id)
+    if (idx !== -1) wines.value[idx] = wine
+    if (detailWine.value?.id === id) detailWine.value = wine
+  }
+  catch (e) { notifyError(e) }
+  finally { loadingBottles.value = false }
+}
+
 watch([wColor, wRegion, wSearch, wSort], loadWines)
 watch(tab, (t) => {
   if (t === 'vins') loadWines()
-  if (t === 'bouteilles') loadBottles()
   if (t === 'journal') loadJournal()
 })
 
@@ -231,8 +248,10 @@ async function submitBottles(payload: import('../../../shared/dto/wine-cellar').
   loading.value = true
   try {
     const res = await api.addBottles(bottlesWine.value.id, payload)
+    const wineId = bottlesWine.value.id
     showBottlesModal.value = false
-    await Promise.all([loadWines(), loadBottles()])
+    await loadWines()
+    if (detailWine.value?.id === wineId) await refreshWine(wineId)
     toast.add({ title: `${res.created} bouteille(s) ajoutée(s)`, color: 'success' })
   }
   catch (e) { notifyError(e) }
@@ -242,6 +261,7 @@ async function submitBottles(payload: import('../../../shared/dto/wine-cellar').
 // ── Bottle actions ────────────────────────────────────────────────────
 const showExitModal = ref(false)
 const exitBottleId = ref<string | null>(null)
+const exitWineId = ref<string | null>(null)
 const exitReason = ref<'consumed' | 'gifted' | 'broken'>('consumed')
 const exitNote = ref('')
 const exitReasonOptions = [
@@ -249,7 +269,13 @@ const exitReasonOptions = [
   { value: 'gifted', label: 'Offerte' },
   { value: 'broken', label: 'Cassée' },
 ]
-function openExit(id: string) { exitBottleId.value = id; exitReason.value = 'consumed'; exitNote.value = ''; showExitModal.value = true }
+function openExit(bottleId: string, wineId: string) {
+  exitBottleId.value = bottleId
+  exitWineId.value = wineId
+  exitReason.value = 'consumed'
+  exitNote.value = ''
+  showExitModal.value = true
+}
 async function submitExit() {
   if (!exitBottleId.value) return
   loading.value = true
@@ -259,26 +285,20 @@ async function submitExit() {
       tastingNote: exitNote.value.trim() || undefined,
     })
     showExitModal.value = false
-    await Promise.all([loadBottles(), loadWines()])
+    if (exitWineId.value) await refreshWine(exitWineId.value)
     toast.add({ title: 'Bouteille sortie du stock', color: 'success' })
   }
   catch (e) { notifyError(e) }
   finally { loading.value = false }
 }
 
-async function unassign(id: string) {
+async function unassign(bottleId: string, wineId: string) {
   try {
-    await api.placeBottle(id, { position: null })
-    await loadBottles()
+    await api.placeBottle(bottleId, { position: null })
+    await loadWineBottles(wineId)
     toast.add({ title: 'Bouteille renvoyée au pool « à ranger »', color: 'success' })
   }
   catch (e) { notifyError(e) }
-}
-
-function placementLabel(b: BottleListItemView): string {
-  const p = b.bottle.placement
-  if (!p) return 'À ranger'
-  return `${p.cellarName} · ${p.shelfLabel || `Clayette ${p.shelfPosition}`} · Étage ${p.rowPosition} · ${p.depth === 'back' ? 'arrière' : 'avant'} #${p.index}`
 }
 
 // ── Import ────────────────────────────────────────────────────────────
@@ -392,14 +412,39 @@ function fileToBase64(file: File): Promise<string> {
         <USelect v-model="wSort" :items="sortOptions" />
       </div>
 
-      <p v-if="wines.length === 0" class="text-sm text-gray-500">
-        {{ wineFiltersActive ? 'Aucun vin pour ce filtre.' : 'Aucun vin. Créez-en un ou importez depuis Vinotag.' }}
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <USwitch v-model="showOnlyInStock" label="En stock uniquement" />
+        <UButtonGroup size="xs">
+          <UButton
+            icon="i-lucide-list"
+            :color="wineView === 'list' ? 'primary' : 'neutral'"
+            :variant="wineView === 'list' ? 'solid' : 'soft'"
+            @click="wineView = 'list'"
+          >
+            Liste
+          </UButton>
+          <UButton
+            icon="i-lucide-layout-grid"
+            :color="wineView === 'grid' ? 'primary' : 'neutral'"
+            :variant="wineView === 'grid' ? 'solid' : 'soft'"
+            @click="wineView = 'grid'"
+          >
+            Grille
+          </UButton>
+        </UButtonGroup>
+      </div>
+
+      <p v-if="displayedWines.length === 0" class="text-sm text-gray-500">
+        {{ wineFiltersActive || showOnlyInStock ? 'Aucun vin pour ce filtre.' : 'Aucun vin. Créez-en un ou importez depuis Vinotag.' }}
       </p>
-      <div class="space-y-2">
+
+      <!-- Vue liste -->
+      <div v-else-if="wineView === 'list'" class="space-y-2">
         <div
-          v-for="wine in wines"
+          v-for="wine in displayedWines"
           :key="wine.id"
-          class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-800"
+          class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900/40 cursor-pointer"
+          @click="openWineBottles(wine)"
         >
           <img
             v-if="wine.photoUrl"
@@ -407,7 +452,7 @@ function fileToBase64(file: File): Promise<string> {
             alt=""
             loading="lazy"
             class="w-10 h-12 rounded object-cover shrink-0 bg-gray-100 dark:bg-gray-800 cursor-zoom-in"
-            @click="openPhoto(wine.photoUrl)"
+            @click.stop="openPhoto(wine.photoUrl)"
           >
           <span v-else class="w-3 h-3 rounded-full shrink-0" :class="WINE_COLOR_DOT[wine.color]" />
           <div class="min-w-0 flex-1">
@@ -418,147 +463,45 @@ function fileToBase64(file: File): Promise<string> {
               · {{ wine.bottleCount }} en stock
             </p>
           </div>
-          <UButton icon="i-lucide-wine" variant="soft" size="xs" @click="openAddBottles(wine)">Bouteilles</UButton>
-          <UButton icon="i-lucide-pencil" variant="ghost" size="xs" @click="openEditWine(wine)" />
-        </div>
-      </div>
-    </section>
-
-    <!-- Bouteilles -->
-    <section v-else-if="tab === 'bouteilles'" class="space-y-4">
-      <div class="grid grid-cols-2 sm:grid-cols-5 gap-2">
-        <UInput v-model="fSearch" icon="i-lucide-search" placeholder="Rechercher…" class="col-span-2 sm:col-span-1" />
-        <USelect v-model="fColor" :items="colorFilterOptions" />
-        <USelect v-model="fRegion" :items="regionFilterOptions" />
-        <USelect v-model="fPlacement" :items="placementOptions" />
-        <USelect v-model="fSort" :items="sortOptions" />
-      </div>
-
-      <div class="flex justify-end">
-        <UButtonGroup size="xs">
-          <UButton
-            icon="i-lucide-list"
-            :color="bottleView === 'list' ? 'primary' : 'neutral'"
-            :variant="bottleView === 'list' ? 'solid' : 'soft'"
-            @click="bottleView = 'list'"
-          >
-            Liste
-          </UButton>
-          <UButton
-            icon="i-lucide-layout-grid"
-            :color="bottleView === 'grid' ? 'primary' : 'neutral'"
-            :variant="bottleView === 'grid' ? 'solid' : 'soft'"
-            @click="bottleView = 'grid'"
-          >
-            Grille
-          </UButton>
-        </UButtonGroup>
-      </div>
-
-      <p v-if="bottles.length === 0" class="text-sm text-gray-500">Aucune bouteille en stock pour ce filtre.</p>
-
-      <!-- Vue liste -->
-      <div v-else-if="bottleView === 'list'" class="space-y-2">
-        <div
-          v-for="item in bottles"
-          :key="item.bottle.id"
-          class="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-800"
-        >
-          <img
-            v-if="item.wine.photoUrl"
-            :src="item.wine.photoUrl"
-            alt=""
-            loading="lazy"
-            class="w-10 h-12 rounded object-cover shrink-0 bg-gray-100 dark:bg-gray-800 cursor-zoom-in"
-            @click="openPhoto(item.wine.photoUrl)"
-          >
-          <span v-else class="w-3 h-3 rounded-full shrink-0" :class="WINE_COLOR_DOT[item.wine.color]" />
-          <div class="min-w-0 flex-1">
-            <p class="font-medium truncate">
-              {{ item.wine.name }}
-              <span v-if="item.wine.vintage" class="text-gray-400">· {{ item.wine.vintage }}</span>
-            </p>
-            <p class="text-xs text-gray-500 truncate">
-              {{ formatBottleSize(item.bottle.size.value) }}
-              <template v-if="item.bottle.buyingPrice !== null"> · {{ formatPrice(item.bottle.buyingPrice) }}</template>
-              · <NuxtLink
-                v-if="item.bottle.placement"
-                :to="`/cave/${item.bottle.placement.cellarId}?bottle=${item.bottle.id}`"
-                class="text-primary-600 dark:text-primary-400 hover:underline"
-              >{{ placementLabel(item) }} <UIcon name="i-lucide-map-pin" class="size-3 align-middle" /></NuxtLink>
-              <span v-else class="text-amber-600">{{ placementLabel(item) }}</span>
-            </p>
-          </div>
-          <UButton
-            v-if="item.bottle.placement"
-            icon="i-lucide-package-open"
-            variant="ghost"
-            size="xs"
-            title="Renvoyer au pool à ranger"
-            @click="unassign(item.bottle.id)"
-          />
-          <UButton icon="i-lucide-wine-off" color="error" variant="soft" size="xs" @click="openExit(item.bottle.id)">
-            Sortir
-          </UButton>
+          <UButton icon="i-lucide-wine" variant="soft" size="xs" @click.stop="openWineBottles(wine)">Bouteilles</UButton>
+          <UButton icon="i-lucide-pencil" variant="ghost" size="xs" @click.stop="openEditWine(wine)" />
         </div>
       </div>
 
       <!-- Vue grille (étiquettes) -->
       <div v-else class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         <div
-          v-for="item in bottles"
-          :key="item.bottle.id"
-          class="flex flex-col rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden"
+          v-for="wine in displayedWines"
+          :key="wine.id"
+          class="flex flex-col rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden cursor-pointer hover:border-primary-400 dark:hover:border-primary-500 transition-colors"
+          @click="openWineBottles(wine)"
         >
-          <div class="relative aspect-[3/4] bg-gray-100 dark:bg-gray-800">
+          <div class="relative aspect-[3/4] bg-gray-100 dark:bg-gray-800 shrink-0">
             <img
-              v-if="item.wine.photoUrl"
-              :src="item.wine.photoUrl"
-              :alt="item.wine.name"
+              v-if="wine.photoUrl"
+              :src="wine.photoUrl"
+              :alt="wine.name"
               loading="lazy"
               class="absolute inset-0 w-full h-full object-cover cursor-zoom-in"
-              @click="openPhoto(item.wine.photoUrl)"
+              @click.stop="openPhoto(wine.photoUrl)"
             >
             <div v-else class="absolute inset-0 flex items-center justify-center">
-              <span class="w-8 h-8 rounded-full" :class="WINE_COLOR_DOT[item.wine.color]" />
+              <span class="w-8 h-8 rounded-full" :class="WINE_COLOR_DOT[wine.color]" />
             </div>
           </div>
-          <div class="p-2 space-y-1 flex-1 flex flex-col">
+          <div class="p-2 space-y-1 flex-1 flex flex-col min-w-0">
             <p class="text-sm font-medium truncate">
-              {{ item.wine.name }}
-              <span v-if="item.wine.vintage" class="text-gray-400">· {{ item.wine.vintage }}</span>
+              {{ wine.name }}
+              <span v-if="wine.vintage" class="text-gray-400">· {{ wine.vintage }}</span>
             </p>
             <p class="text-xs text-gray-500 truncate">
-              {{ formatBottleSize(item.bottle.size.value) }}
-              <template v-if="item.bottle.buyingPrice !== null"> · {{ formatPrice(item.bottle.buyingPrice) }}</template>
-            </p>
-            <p class="text-xs truncate">
-              <NuxtLink
-                v-if="item.bottle.placement"
-                :to="`/cave/${item.bottle.placement.cellarId}?bottle=${item.bottle.id}`"
-                class="text-primary-600 dark:text-primary-400 hover:underline"
-              >{{ placementLabel(item) }} <UIcon name="i-lucide-map-pin" class="size-3 align-middle" /></NuxtLink>
-              <span v-else class="text-amber-600">{{ placementLabel(item) }}</span>
+              {{ wine.domain || '—' }}
+              <template v-if="wine.region"> · {{ WINE_REGION_LABELS[wine.region] }}</template>
+              · {{ wine.bottleCount }} en stock
             </p>
             <div class="flex gap-1 pt-1 mt-auto">
-              <UButton
-                v-if="item.bottle.placement"
-                icon="i-lucide-package-open"
-                variant="ghost"
-                size="xs"
-                title="Renvoyer au pool à ranger"
-                @click="unassign(item.bottle.id)"
-              />
-              <UButton
-                icon="i-lucide-wine-off"
-                color="error"
-                variant="soft"
-                size="xs"
-                class="flex-1 justify-center"
-                @click="openExit(item.bottle.id)"
-              >
-                Sortir
-              </UButton>
+              <UButton icon="i-lucide-wine" variant="soft" size="xs" class="flex-1 justify-center" @click.stop="openWineBottles(wine)">Bouteilles</UButton>
+              <UButton icon="i-lucide-pencil" variant="ghost" size="xs" @click.stop="openEditWine(wine)" />
             </div>
           </div>
         </div>
@@ -650,6 +593,31 @@ function fileToBase64(file: File): Promise<string> {
     <UModal v-model:open="showPhotoModal" title="Étiquette">
       <template #body>
         <img v-if="previewPhotoUrl" :src="previewPhotoUrl" alt="Étiquette du vin" class="w-full h-auto rounded-lg">
+      </template>
+    </UModal>
+
+    <UModal
+      v-model:open="showWineBottlesModal"
+      :title="detailWine ? `Bouteilles · ${detailWine.name}` : 'Bouteilles'"
+    >
+      <template #body>
+        <div v-if="detailWine" class="space-y-4">
+          <p class="text-sm text-gray-500">
+            {{ detailWine.bottleCount }} bouteille(s) en stock
+            <template v-if="detailWine.vintage"> · millésime {{ detailWine.vintage }}</template>
+          </p>
+          <WineBottleList
+            :bottles="bottlesByWine[detailWine.id] ?? []"
+            :loading="loadingBottles"
+            @exit="(id) => openExit(id, detailWine!.id)"
+            @unassign="(id) => unassign(id, detailWine!.id)"
+          />
+          <div class="flex justify-end pt-2 border-t border-gray-200 dark:border-gray-800">
+            <UButton icon="i-lucide-plus" variant="soft" @click="openAddBottles(detailWine)">
+              Ajouter des bouteilles
+            </UButton>
+          </div>
+        </div>
       </template>
     </UModal>
 
