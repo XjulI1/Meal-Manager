@@ -10,11 +10,21 @@ import type {
 import type { StorageLocation } from '../../domain/value-objects/storage-location.vo'
 import { InventoryItemMapper } from '../mappers/inventory-item.mapper'
 
-/** mysql2 raises `ER_DUP_ENTRY` (code 1062) on any unique-constraint violation. */
+/**
+ * mysql2 raises `ER_DUP_ENTRY` (code 1062) on any unique-constraint violation.
+ * drizzle-orm >=0.44 wraps driver errors in `DrizzleQueryError`, with the
+ * original mysql2 error attached as `.cause` — check both shapes.
+ */
 function isUniqueConstraintViolation(error: unknown): boolean {
-  if (typeof error !== 'object' || error === null) return false
-  const candidate = error as { code?: string, errno?: number }
-  return candidate.code === 'ER_DUP_ENTRY' || candidate.errno === 1062
+  const matchesDupEntry = (candidate: unknown): boolean => {
+    if (typeof candidate !== 'object' || candidate === null) return false
+    const { code, errno } = candidate as { code?: string, errno?: number }
+    return code === 'ER_DUP_ENTRY' || errno === 1062
+  }
+  return (
+    matchesDupEntry(error)
+    || matchesDupEntry(typeof error === 'object' && error !== null ? (error as { cause?: unknown }).cause : undefined)
+  )
 }
 
 export class DrizzleInventoryItemRepository implements IInventoryItemRepository {
