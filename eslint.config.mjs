@@ -24,6 +24,12 @@ const DOMAIN_FORBIDDEN_PATTERNS = [
 
 export default withNuxt([
   {
+    // Worktrees créés sous .claude/worktrees/ (isolation d'agents) sont des
+    // checkouts git indépendants avec leur propre historique ; les scanner
+    // ferait échouer le lint sur le contenu d'une autre branche en cours.
+    ignores: ['.claude/worktrees/**'],
+  },
+  {
     files: ['server/contexts/*/domain/**/*.ts'],
     rules: {
       'no-restricted-imports': [
