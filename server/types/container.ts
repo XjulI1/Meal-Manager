@@ -28,10 +28,11 @@ import type { UpdateIngredientUseCase } from '../contexts/ingredients/applicatio
 import type { UpdateProductUseCase } from '../contexts/ingredients/application/use-cases/update-product.use-case'
 import type { IBarcodeResolver } from '../contexts/inventory/domain/ports/barcode-resolver'
 import type { IProductLookup } from '../contexts/inventory/domain/ports/product-lookup.port'
-import type { AssignRecipeToSlotUseCase } from '../contexts/meal-planning/application/use-cases/assign-recipe-to-slot.use-case'
+import type { AddSlotItemUseCase } from '../contexts/meal-planning/application/use-cases/add-slot-item.use-case'
 import type { ClearSlotUseCase } from '../contexts/meal-planning/application/use-cases/clear-slot.use-case'
 import type { CreateMenuUseCase } from '../contexts/meal-planning/application/use-cases/create-menu.use-case'
 import type { GetMenuByWeekUseCase } from '../contexts/meal-planning/application/use-cases/get-menu-by-week.use-case'
+import type { RemoveSlotItemUseCase } from '../contexts/meal-planning/application/use-cases/remove-slot-item.use-case'
 import type { AddInventoryItemFromProductScanUseCase } from '../contexts/inventory/application/use-cases/add-inventory-item-from-product-scan.use-case'
 import type { AddInventoryItemUseCase } from '../contexts/inventory/application/use-cases/add-inventory-item.use-case'
 import type { AdjustQuantityUseCase } from '../contexts/inventory/application/use-cases/adjust-quantity.use-case'
@@ -135,7 +136,8 @@ export interface Container {
   // meal-planning
   createMenu: CreateMenuUseCase
   getMenuByWeek: GetMenuByWeekUseCase
-  assignRecipeToSlot: AssignRecipeToSlotUseCase
+  addSlotItem: AddSlotItemUseCase
+  removeSlotItem: RemoveSlotItemUseCase
   clearSlot: ClearSlotUseCase
   // shopping
   generateShoppingList: GenerateShoppingListUseCase

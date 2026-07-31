@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { GenerateShoppingListUseCase } from '../../../server/contexts/shopping/application/use-cases/generate-shopping-list.use-case'
 import { MenuNotAvailableError } from '../../../server/contexts/shopping/domain/errors/menu-not-available.error'
-import { FakeIngredientSummaryFinder, FakeInventoryFinder, FakeMenuFinder, FakeRecipeFinder } from './in-memory/fake-finders'
+import { FakeIngredientSummaryFinder, FakeInventoryFinder, FakeMenuFinder, FakeRecipeFinder, ingredientSlot, recipeSlot } from './in-memory/fake-finders'
 import { InMemoryShoppingListRepository } from './in-memory/in-memory-shopping-list.repository'
 
 describe('GenerateShoppingListUseCase', () => {
@@ -22,6 +22,7 @@ describe('GenerateShoppingListUseCase', () => {
       .add('ing-pasta', 'Pâtes', 'grocery')
       .add('ing-butter', 'Beurre', 'dairy')
       .add('ing-salt', 'Sel', 'grocery')
+      .add('ing-bread', 'Pain', 'bakery')
     let counter = 0
     useCase = new GenerateShoppingListUseCase(
       snapshots,
@@ -38,7 +39,7 @@ describe('GenerateShoppingListUseCase', () => {
     menus.register({
       id: 'menu-1',
       householdId: 'hh-1',
-      slots: [{ recipeId: 'recipe-pasta', servings: 4 }],
+      slots: [recipeSlot('recipe-pasta', 4)],
     })
     recipes.register('recipe-pasta', 'hh-1', 2, [
       { ingredientId: 'ing-pasta', value: 200, unit: 'g' },
@@ -75,7 +76,7 @@ describe('GenerateShoppingListUseCase', () => {
     menus.register({
       id: 'menu-1',
       householdId: 'hh-1',
-      slots: [{ recipeId: 'recipe-1', servings: 2 }],
+      slots: [recipeSlot('recipe-1', 2)],
     })
     recipes.register('recipe-1', 'hh-1', 2, [{ ingredientId: 'ing-salt', value: 10, unit: 'g' }])
 
@@ -90,7 +91,7 @@ describe('GenerateShoppingListUseCase', () => {
     menus.register({
       id: 'menu-1',
       householdId: 'hh-1',
-      slots: [{ recipeId: 'recipe-1', servings: 2 }],
+      slots: [recipeSlot('recipe-1', 2)],
     })
     recipes.register('recipe-1', 'hh-1', 2, [{ ingredientId: 'ing-salt', value: 10, unit: 'g' }])
 
@@ -105,10 +106,7 @@ describe('GenerateShoppingListUseCase', () => {
     menus.register({
       id: 'menu-1',
       householdId: 'hh-1',
-      slots: [
-        { recipeId: 'r1', servings: 1 },
-        { recipeId: 'r2', servings: 1 },
-      ],
+      slots: [recipeSlot('r1', 1), recipeSlot('r2', 1)],
     })
     recipes.register('r1', 'hh-1', 1, [{ ingredientId: 'ing-butter', value: 30, unit: 'g' }])
     recipes.register('r2', 'hh-1', 1, [{ ingredientId: 'ing-butter', value: 50, unit: 'g' }])
@@ -126,7 +124,7 @@ describe('GenerateShoppingListUseCase', () => {
     menus.register({
       id: 'menu-1',
       householdId: 'hh-1',
-      slots: [{ recipeId: 'r-mixed', servings: 1 }],
+      slots: [recipeSlot('r-mixed', 1)],
     })
     summaries
       .add('ing-tomato', 'Tomate', 'produce')
@@ -139,5 +137,42 @@ describe('GenerateShoppingListUseCase', () => {
 
     const view = await useCase.execute({ householdId: 'hh-1', menuId: 'menu-1' })
     expect(view.items.map((i) => i.ingredientName)).toEqual(['Tomate', 'Fromage', 'Pâtes'])
+  })
+
+  it('a free ingredient alone contributes to the list', async () => {
+    menus.register({
+      id: 'menu-1',
+      householdId: 'hh-1',
+      slots: [ingredientSlot('ing-bread', 300, 'g')],
+    })
+
+    const view = await useCase.execute({ householdId: 'hh-1', menuId: 'menu-1' })
+    expect(view.items).toHaveLength(1)
+    expect(view.items[0]).toMatchObject({ ingredientId: 'ing-bread', ingredientName: 'Pain', quantity: { value: 300, unit: 'g' } })
+  })
+
+  it('a recipe ingredient and a free ingredient of the same kind are summed', async () => {
+    menus.register({
+      id: 'menu-1',
+      householdId: 'hh-1',
+      slots: [recipeSlot('recipe-1', 1), ingredientSlot('ing-butter', 50, 'g')],
+    })
+    recipes.register('recipe-1', 'hh-1', 1, [{ ingredientId: 'ing-butter', value: 30, unit: 'g' }])
+
+    const view = await useCase.execute({ householdId: 'hh-1', menuId: 'menu-1' })
+    expect(view.items).toHaveLength(1)
+    expect(view.items[0]).toMatchObject({ ingredientId: 'ing-butter', quantity: { value: 80, unit: 'g' } })
+  })
+
+  it('free ingredients are subtracted from inventory like recipe ingredients', async () => {
+    menus.register({
+      id: 'menu-1',
+      householdId: 'hh-1',
+      slots: [ingredientSlot('ing-bread', 300, 'g')],
+    })
+    inventory.setStock('hh-1', [{ ingredientId: 'ing-bread', value: 300, unit: 'g' }])
+
+    const view = await useCase.execute({ householdId: 'hh-1', menuId: 'menu-1' })
+    expect(view.items).toEqual([])
   })
 })

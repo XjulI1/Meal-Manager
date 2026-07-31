@@ -5,11 +5,11 @@ import {
   date,
   int,
   timestamp,
-  primaryKey,
   unique,
   index,
 } from 'drizzle-orm/mysql-core'
 import { households } from './households'
+import { ingredients } from './ingredients'
 import { recipes } from './recipes'
 
 export const menus = mysqlTable(
@@ -29,9 +29,10 @@ export const menus = mysqlTable(
   }),
 )
 
-export const menuSlots = mysqlTable(
-  'menu_slots',
+export const menuSlotItems = mysqlTable(
+  'menu_slot_items',
   {
+    id: char('id', { length: 36 }).primaryKey(),
     menuId: char('menu_id', { length: 36 })
       .notNull()
       .references(() => menus.id, { onDelete: 'cascade' }),
@@ -45,16 +46,25 @@ export const menuSlots = mysqlTable(
       'sunday',
     ]).notNull(),
     mealType: mysqlEnum('meal_type', ['breakfast', 'lunch', 'dinner']).notNull(),
+    kind: mysqlEnum('kind', ['recipe', 'ingredient']).notNull(),
     recipeId: char('recipe_id', { length: 36 })
-      .references(() => recipes.id, { onDelete: 'set null' }),
+      .references(() => recipes.id, { onDelete: 'cascade' }),
     servings: int('servings', { unsigned: true }),
+    ingredientId: char('ingredient_id', { length: 36 })
+      .references(() => ingredients.id, { onDelete: 'cascade' }),
+    quantityValue: int('quantity_value', { unsigned: true }),
+    quantityUnit: mysqlEnum('quantity_unit', ['g', 'ml', 'unit']),
   },
   (t) => ({
-    pk: primaryKey({ columns: [t.menuId, t.dayOfWeek, t.mealType] }),
+    slotIdx: index('menu_slot_items_slot_idx').on(t.menuId, t.dayOfWeek, t.mealType),
+    // Guard against duplicate free-ingredient rows within the same slot. Recipe
+    // rows carry ingredientId = NULL and MariaDB allows multiple NULLs, so this
+    // constraint never impacts recipe items.
+    uniqIngredient: unique('menu_slot_items_ingredient_uniq').on(t.menuId, t.dayOfWeek, t.mealType, t.ingredientId),
   }),
 )
 
 export type MenuRow = typeof menus.$inferSelect
 export type NewMenuRow = typeof menus.$inferInsert
-export type MenuSlotRow = typeof menuSlots.$inferSelect
-export type NewMenuSlotRow = typeof menuSlots.$inferInsert
+export type MenuSlotItemRow = typeof menuSlotItems.$inferSelect
+export type NewMenuSlotItemRow = typeof menuSlotItems.$inferInsert

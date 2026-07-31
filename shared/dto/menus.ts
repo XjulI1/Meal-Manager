@@ -23,25 +23,56 @@ export const WeekStartSchema = z
     return !Number.isNaN(d.getTime()) && d.getUTCDay() === 1
   }, 'weekStart must be a Monday')
 
-export const AssignRecipeToSlotSchema = z.object({
-  dayOfWeek: DayOfWeekSchema,
-  mealType: MealTypeSchema,
-  recipeId: z.string().uuid(),
-  servings: z.number().int().min(1).max(50),
+export const QuantityInputSchema = z.object({
+  value: z.number().positive(),
+  unit: z.string().min(1),
 })
-export type AssignRecipeToSlotDto = z.infer<typeof AssignRecipeToSlotSchema>
+
+export const AddSlotItemSchema = z.discriminatedUnion('kind', [
+  z.object({
+    dayOfWeek: DayOfWeekSchema,
+    mealType: MealTypeSchema,
+    kind: z.literal('recipe'),
+    recipeId: z.string().uuid(),
+    servings: z.number().int().min(1).max(50),
+  }),
+  z.object({
+    dayOfWeek: DayOfWeekSchema,
+    mealType: MealTypeSchema,
+    kind: z.literal('ingredient'),
+    ingredientId: z.string().uuid(),
+    quantity: QuantityInputSchema,
+  }),
+])
+export type AddSlotItemDto = z.infer<typeof AddSlotItemSchema>
 
 export const CreateMenuSchema = z.object({
   weekStart: WeekStartSchema,
 })
 export type CreateMenuDto = z.infer<typeof CreateMenuSchema>
 
+export const MenuSlotItemViewSchema = z.discriminatedUnion('kind', [
+  z.object({
+    id: z.string().uuid(),
+    kind: z.literal('recipe'),
+    recipeId: z.string().uuid(),
+    servings: z.number().int().min(1),
+  }),
+  z.object({
+    id: z.string().uuid(),
+    kind: z.literal('ingredient'),
+    ingredientId: z.string().uuid(),
+    quantity: z.object({ value: z.number(), unit: z.string() }),
+  }),
+])
+export type MenuSlotItemView = z.infer<typeof MenuSlotItemViewSchema>
+
 export const MenuSlotViewSchema = z.object({
   dayOfWeek: DayOfWeekSchema,
   mealType: MealTypeSchema,
-  recipeId: z.string().uuid().nullable(),
-  servings: z.number().int().min(1).nullable(),
+  items: z.array(MenuSlotItemViewSchema),
 })
+export type MenuSlotView = z.infer<typeof MenuSlotViewSchema>
 
 export const MenuViewSchema = z.object({
   id: z.string().uuid(),

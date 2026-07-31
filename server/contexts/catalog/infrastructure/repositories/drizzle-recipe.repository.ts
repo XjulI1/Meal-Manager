@@ -1,6 +1,5 @@
 import { and, asc, eq, like } from 'drizzle-orm'
 import type { Database } from '../../../../database/client'
-import { menuSlots } from '../../../../database/schema/menus'
 import { recipeIngredients, recipes } from '../../../../database/schema/recipes'
 import type { Recipe } from '../../domain/entities/recipe.entity'
 import type {
@@ -89,15 +88,12 @@ export class DrizzleRecipeRepository implements IRecipeRepository {
   }
 
   async delete(id: string, householdId: string): Promise<void> {
-    await this.db.transaction(async (tx) => {
-      // Schema FK uses ON DELETE SET NULL, but the meal-planning spec requires
-      // slots referencing the deleted recipe to be removed (empty slots must
-      // not be persisted). Drop them explicitly before deleting the recipe.
-      await tx.delete(menuSlots).where(eq(menuSlots.recipeId, id))
-      await tx
-        .delete(recipes)
-        .where(and(eq(recipes.id, id), eq(recipes.householdId, householdId)))
-    })
+    // menu_slot_items.recipe_id is ON DELETE CASCADE: deleting the recipe
+    // removes only the recipe item of any slot referencing it (each item is
+    // its own row), leaving that slot's free-ingredient items untouched.
+    await this.db
+      .delete(recipes)
+      .where(and(eq(recipes.id, id), eq(recipes.householdId, householdId)))
   }
 }
 

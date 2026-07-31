@@ -50,10 +50,11 @@ import { ListInventoryItemsUseCase } from '../contexts/inventory/application/use
 import { RemoveInventoryItemUseCase } from '../contexts/inventory/application/use-cases/remove-inventory-item.use-case'
 import { UpdateInventoryItemUseCase } from '../contexts/inventory/application/use-cases/update-inventory-item.use-case'
 import { DrizzleInventoryItemRepository } from '../contexts/inventory/infrastructure/repositories/drizzle-inventory-item.repository'
-import { AssignRecipeToSlotUseCase } from '../contexts/meal-planning/application/use-cases/assign-recipe-to-slot.use-case'
+import { AddSlotItemUseCase } from '../contexts/meal-planning/application/use-cases/add-slot-item.use-case'
 import { ClearSlotUseCase } from '../contexts/meal-planning/application/use-cases/clear-slot.use-case'
 import { CreateMenuUseCase } from '../contexts/meal-planning/application/use-cases/create-menu.use-case'
 import { GetMenuByWeekUseCase } from '../contexts/meal-planning/application/use-cases/get-menu-by-week.use-case'
+import { RemoveSlotItemUseCase } from '../contexts/meal-planning/application/use-cases/remove-slot-item.use-case'
 import { CatalogRecipeFinder } from '../contexts/meal-planning/infrastructure/adapters/recipe-finder.adapter'
 import { DrizzleMenuRepository } from '../contexts/meal-planning/infrastructure/repositories/drizzle-menu.repository'
 import { AuthenticatePersonalAccessTokenUseCase } from '../contexts/platform/application/use-cases/authenticate-personal-access-token.use-case'
@@ -268,7 +269,8 @@ function buildContainer(): Container {
     deleteRecipeDraft: new DeleteRecipeDraftUseCase(recipeDraftRepo),
     createMenu: new CreateMenuUseCase(menuRepo),
     getMenuByWeek: new GetMenuByWeekUseCase(menuRepo),
-    assignRecipeToSlot: new AssignRecipeToSlotUseCase(menuRepo, recipeFinder),
+    addSlotItem: new AddSlotItemUseCase(menuRepo, recipeFinder, ingredientLookup),
+    removeSlotItem: new RemoveSlotItemUseCase(menuRepo),
     clearSlot: new ClearSlotUseCase(menuRepo),
     generateShoppingList,
     regenerateShoppingList: new RegenerateShoppingListUseCase(generateShoppingList),

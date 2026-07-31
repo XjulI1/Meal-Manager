@@ -1,31 +1,30 @@
 import { MenuNotFoundError } from '../../domain/errors/menu-not-found.error'
+import { SlotItemNotFoundError } from '../../domain/errors/slot-item-not-found.error'
 import type { IMenuRepository } from '../../domain/ports/menu-repository.port'
-import { DayOfWeek } from '../../domain/value-objects/day-of-week.vo'
-import { MealType } from '../../domain/value-objects/meal-type.vo'
 
-export interface ClearSlotInput {
+export interface RemoveSlotItemInput {
   householdId: string
   menuId: string
-  dayOfWeek: string
-  mealType: string
+  itemId: string
 }
 
-export class ClearSlotUseCase {
+export class RemoveSlotItemUseCase {
   constructor(
     private readonly menus: IMenuRepository,
     private readonly clock: () => Date = () => new Date(),
   ) {}
 
-  async execute(input: ClearSlotInput): Promise<void> {
+  async execute(input: RemoveSlotItemInput): Promise<void> {
     const menu = await this.menus.findById(input.menuId, input.householdId)
     if (!menu) {
       throw new MenuNotFoundError(input.menuId)
     }
-    await this.menus.clearSlot(
-      menu.id,
-      DayOfWeek.fromString(input.dayOfWeek),
-      MealType.fromString(input.mealType),
-      this.clock(),
-    )
+
+    const item = menu.slots.flatMap((s) => s.items).find((i) => i.id === input.itemId)
+    if (!item) {
+      throw new SlotItemNotFoundError(input.itemId)
+    }
+
+    await this.menus.removeSlotItem(menu.id, input.itemId, this.clock())
   }
 }

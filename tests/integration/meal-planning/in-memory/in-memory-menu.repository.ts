@@ -1,4 +1,5 @@
-import type { MenuSlot } from '../../../../server/contexts/meal-planning/domain/entities/menu-slot.entity'
+import type { MenuSlotItem } from '../../../../server/contexts/meal-planning/domain/entities/menu-slot-item.entity'
+import { MenuSlot } from '../../../../server/contexts/meal-planning/domain/entities/menu-slot.entity'
 import { Menu } from '../../../../server/contexts/meal-planning/domain/entities/menu.entity'
 import type { IMenuRepository } from '../../../../server/contexts/meal-planning/domain/ports/menu-repository.port'
 import type { DayOfWeek } from '../../../../server/contexts/meal-planning/domain/value-objects/day-of-week.vo'
@@ -14,12 +15,8 @@ interface StoredMenu {
   updatedAt: Date
 }
 
-function slotKey(slot: MenuSlot): string {
-  return `${slot.dayOfWeek.value}|${slot.mealType.value}`
-}
-
-function buildSlotKey(day: DayOfWeek, meal: MealType): string {
-  return `${day.value}|${meal.value}`
+function slotKey(dayOfWeek: DayOfWeek, mealType: MealType): string {
+  return `${dayOfWeek.value}|${mealType.value}`
 }
 
 export class InMemoryMenuRepository implements IMenuRepository {
@@ -48,23 +45,52 @@ export class InMemoryMenuRepository implements IMenuRepository {
       id: menu.id,
       householdId: menu.householdId,
       weekStart: menu.weekStart,
-      slots: new Map(menu.slots.map((s) => [slotKey(s), s])),
+      slots: new Map(menu.slots.map((s) => [slotKey(s.dayOfWeek, s.mealType), s])),
       createdAt: menu.createdAt,
       updatedAt: menu.updatedAt,
     })
   }
 
-  async upsertSlot(menuId: string, slot: MenuSlot, updatedAt: Date): Promise<void> {
+  async replaceSlotItems(
+    menuId: string,
+    dayOfWeek: DayOfWeek,
+    mealType: MealType,
+    items: ReadonlyArray<MenuSlotItem>,
+    updatedAt: Date,
+  ): Promise<void> {
     const m = this.menus.get(menuId)
     if (!m) throw new Error(`Unknown menu: ${menuId}`)
-    m.slots.set(slotKey(slot), slot)
+    const key = slotKey(dayOfWeek, mealType)
+    if (items.length === 0) {
+      m.slots.delete(key)
+    }
+    else {
+      m.slots.set(key, MenuSlot.rehydrate({ dayOfWeek, mealType, items }))
+    }
     m.updatedAt = updatedAt
   }
 
-  async removeSlot(menuId: string, dayOfWeek: DayOfWeek, mealType: MealType, updatedAt: Date): Promise<void> {
+  async removeSlotItem(menuId: string, itemId: string, updatedAt: Date): Promise<void> {
     const m = this.menus.get(menuId)
     if (!m) throw new Error(`Unknown menu: ${menuId}`)
-    m.slots.delete(buildSlotKey(dayOfWeek, mealType))
+    for (const [key, slot] of m.slots) {
+      if (!slot.items.some((i) => i.id === itemId)) continue
+      const remaining = slot.withoutItem(itemId)
+      if (remaining.isEmpty()) {
+        m.slots.delete(key)
+      }
+      else {
+        m.slots.set(key, remaining)
+      }
+      break
+    }
+    m.updatedAt = updatedAt
+  }
+
+  async clearSlot(menuId: string, dayOfWeek: DayOfWeek, mealType: MealType, updatedAt: Date): Promise<void> {
+    const m = this.menus.get(menuId)
+    if (!m) throw new Error(`Unknown menu: ${menuId}`)
+    m.slots.delete(slotKey(dayOfWeek, mealType))
     m.updatedAt = updatedAt
   }
 

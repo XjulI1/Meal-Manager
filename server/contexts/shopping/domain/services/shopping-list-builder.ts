@@ -8,6 +8,8 @@ import type { RecipeSnapshotInfo } from '../ports/recipe-snapshot-finder.port'
 export interface AggregateInput {
   /** Slots with their resolved recipe and the number of servings to prepare. */
   slots: ReadonlyArray<{ recipe: RecipeSnapshotInfo, servings: number }>
+  /** Free-ingredient items (already in canonical unit — no scaling applies). */
+  freeIngredients?: ReadonlyArray<{ ingredientId: string, quantity: Quantity }>
   /** Items currently in stock (canonical units). */
   inventory: ReadonlyArray<InventorySnapshotItem>
   /** Denormalization source for name + category at generation time. */
@@ -24,13 +26,15 @@ interface Bucket {
 /**
  * Aggregation algorithm specified in `shopping/spec.md`:
  *   1. For each slot, scale ingredient quantities by `slot.servings / recipe.servings`.
- *   2. Aggregate entries by `(ingredientId, canonical_unit)`. Different
- *      canonical units of the same ingredient stay separate (defensive —
- *      should not occur given `canonical_unit` is fixed per ingredient).
- *   3. Subtract matching inventory items (matched by ingredientId + unit).
- *   4. Drop entries whose remaining quantity is zero or negative (clamped
+ *   2. Add free-ingredient items at their stored (already canonical) quantity — no scaling.
+ *   3. Aggregate entries by `(ingredientId, canonical_unit)` — recipe and free-ingredient
+ *      sources sharing a key are summed. Different canonical units of the same
+ *      ingredient stay separate (defensive — should not occur given
+ *      `canonical_unit` is fixed per ingredient).
+ *   4. Subtract matching inventory items (matched by ingredientId + unit).
+ *   5. Drop entries whose remaining quantity is zero or negative (clamped
  *      via Quantity.subtractClamped).
- *   5. Denormalize `name` and `category` from the provided summaries.
+ *   6. Denormalize `name` and `category` from the provided summaries.
  */
 export const ShoppingListBuilder = {
   build(input: AggregateInput): ShoppingListItem[] {
@@ -52,6 +56,14 @@ export const ShoppingListBuilder = {
           ? { ingredientId: existing.ingredientId, quantity: existing.quantity.add(scaled) }
           : { ingredientId: ingredient.ingredientId, quantity: scaled })
       }
+    }
+
+    for (const free of input.freeIngredients ?? []) {
+      const key = bucketKey(free.ingredientId, free.quantity.unit)
+      const existing = buckets.get(key)
+      buckets.set(key, existing
+        ? { ingredientId: existing.ingredientId, quantity: existing.quantity.add(free.quantity) }
+        : { ingredientId: free.ingredientId, quantity: free.quantity })
     }
 
     for (const stock of input.inventory) {
