@@ -1,3 +1,4 @@
+import type { CanonicalUnit } from '../../../../shared/units/conversions'
 import { Quantity } from '../../../../shared/units/quantity'
 import type {
   IIngredientSummaryFinder,
@@ -10,6 +11,7 @@ import type {
 import type {
   IMenuSnapshotFinder,
   MenuSnapshotInfo,
+  MenuSnapshotSlot,
 } from '../../../../server/contexts/shopping/domain/ports/menu-snapshot-finder.port'
 import type {
   IRecipeSnapshotFinder,
@@ -20,6 +22,16 @@ interface IngredientSpec {
   ingredientId: string
   value: number
   unit: string
+}
+
+/** Builds a menu slot holding a single recipe item — a convenience for tests. */
+export function recipeSlot(recipeId: string, servings: number): MenuSnapshotSlot {
+  return { items: [{ kind: 'recipe', recipeId, servings }] }
+}
+
+/** Builds a menu slot holding a single free-ingredient item — a convenience for tests. */
+export function ingredientSlot(ingredientId: string, value: number, unit: CanonicalUnit): MenuSnapshotSlot {
+  return { items: [{ kind: 'ingredient', ingredientId, quantity: { value, unit } }] }
 }
 
 export class FakeMenuFinder implements IMenuSnapshotFinder {

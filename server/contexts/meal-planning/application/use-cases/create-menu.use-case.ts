@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import type { MenuSlotItem } from '../../domain/entities/menu-slot-item.entity'
 import { Menu } from '../../domain/entities/menu.entity'
 import type { IMenuRepository } from '../../domain/ports/menu-repository.port'
 import { WeekStart } from '../../domain/value-objects/week-start.vo'
@@ -8,15 +9,32 @@ export interface CreateMenuInput {
   weekStart: string
 }
 
+export type MenuSlotItemView =
+  | { id: string, kind: 'recipe', recipeId: string, servings: number }
+  | { id: string, kind: 'ingredient', ingredientId: string, quantity: { value: number, unit: string } }
+
+export interface MenuSlotView {
+  dayOfWeek: string
+  mealType: string
+  items: MenuSlotItemView[]
+}
+
 export interface MenuView {
   id: string
   weekStart: string
-  slots: Array<{
-    dayOfWeek: string
-    mealType: string
-    recipeId: string
-    servings: number
-  }>
+  slots: MenuSlotView[]
+}
+
+function itemToView(item: MenuSlotItem): MenuSlotItemView {
+  if (item.kind === 'recipe') {
+    return { id: item.id, kind: 'recipe', recipeId: item.recipeId, servings: item.servings }
+  }
+  return {
+    id: item.id,
+    kind: 'ingredient',
+    ingredientId: item.ingredientId,
+    quantity: { value: item.quantity.value, unit: item.quantity.unit },
+  }
 }
 
 export class CreateMenuUseCase {
@@ -51,8 +69,7 @@ export function toMenuView(menu: Menu): MenuView {
     slots: menu.slots.map((s) => ({
       dayOfWeek: s.dayOfWeek.value,
       mealType: s.mealType.value,
-      recipeId: s.recipeId,
-      servings: s.servings,
+      items: s.items.map(itemToView),
     })),
   }
 }

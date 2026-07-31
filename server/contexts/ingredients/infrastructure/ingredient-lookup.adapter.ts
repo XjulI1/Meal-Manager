@@ -1,13 +1,15 @@
 import type { IIngredientLookup as CatalogLookup, IngredientSummary } from '../../catalog/domain/ports/ingredient-lookup.port'
 import type { IIngredientLookup as InventoryLookup } from '../../inventory/domain/ports/ingredient-lookup.port'
+import type { IIngredientLookup as MealPlanningLookup } from '../../meal-planning/domain/ports/ingredient-lookup.port'
 import type { IIngredientRepository } from '../domain/ports/ingredient-repository.port'
 
 /**
- * Adapter implementing both the inventory and catalog `IIngredientLookup`
- * ports by querying the ingredient catalog. Registered in the composition
- * root so cross-context callers never import from `ingredients/`.
+ * Adapter implementing the inventory, catalog and meal-planning
+ * `IIngredientLookup` ports by querying the ingredient catalog. Registered
+ * in the composition root so cross-context callers never import from
+ * `ingredients/`.
  */
-export class IngredientLookupAdapter implements InventoryLookup, CatalogLookup {
+export class IngredientLookupAdapter implements InventoryLookup, CatalogLookup, MealPlanningLookup {
   constructor(private readonly ingredients: IIngredientRepository) {}
 
   async findById(id: string, householdId: string): Promise<IngredientSummary | null> {

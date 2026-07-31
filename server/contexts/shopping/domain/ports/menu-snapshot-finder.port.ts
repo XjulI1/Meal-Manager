@@ -1,6 +1,22 @@
-export interface MenuSnapshotSlot {
+import type { CanonicalUnit } from '../../../../../shared/units/conversions'
+
+export interface MenuSnapshotRecipeItem {
+  kind: 'recipe'
   recipeId: string
   servings: number
+}
+
+export interface MenuSnapshotIngredientItem {
+  kind: 'ingredient'
+  ingredientId: string
+  /** Already in the ingredient's canonical unit — no scaling applies. */
+  quantity: { value: number, unit: CanonicalUnit }
+}
+
+export type MenuSnapshotItem = MenuSnapshotRecipeItem | MenuSnapshotIngredientItem
+
+export interface MenuSnapshotSlot {
+  items: ReadonlyArray<MenuSnapshotItem>
 }
 
 export interface MenuSnapshotInfo {

@@ -5,7 +5,7 @@ import {
   ShoppingListItemNotFoundError,
   ShoppingListNotFoundError,
 } from '../../../server/contexts/shopping/domain/errors/shopping-list-not-found.error'
-import { FakeIngredientSummaryFinder, FakeInventoryFinder, FakeMenuFinder, FakeRecipeFinder } from './in-memory/fake-finders'
+import { FakeIngredientSummaryFinder, FakeInventoryFinder, FakeMenuFinder, FakeRecipeFinder, recipeSlot } from './in-memory/fake-finders'
 import { InMemoryShoppingListRepository } from './in-memory/in-memory-shopping-list.repository'
 
 describe('ToggleShoppingListItemUseCase', () => {
@@ -19,7 +19,7 @@ describe('ToggleShoppingListItemUseCase', () => {
     const menus = new FakeMenuFinder().register({
       id: 'menu-1',
       householdId: 'hh-1',
-      slots: [{ recipeId: 'r1', servings: 2 }],
+      slots: [recipeSlot('r1', 2)],
     })
     const recipes = new FakeRecipeFinder().register('r1', 'hh-1', 2, [
       { ingredientId: 'ing-pasta', value: 200, unit: 'g' },

@@ -1,7 +1,8 @@
 import type {
-  AssignRecipeToSlotDto,
+  AddSlotItemDto,
   DayOfWeek,
   MealType,
+  MenuSlotView,
   MenuView,
 } from '../../shared/dto/menus'
 
@@ -12,10 +13,16 @@ export function useApiMenus() {
     })
   }
 
-  async function assignSlot(menuId: string, payload: AssignRecipeToSlotDto): Promise<MenuView> {
-    return $fetch<MenuView>(`/api/menus/${menuId}/slots`, {
+  async function addSlotItem(menuId: string, payload: AddSlotItemDto): Promise<MenuSlotView> {
+    return $fetch<MenuSlotView>(`/api/menus/${menuId}/slots/items`, {
       method: 'POST',
       body: payload,
+    })
+  }
+
+  async function removeSlotItem(menuId: string, itemId: string): Promise<void> {
+    await $fetch(`/api/menus/${menuId}/slots/items/${itemId}`, {
+      method: 'DELETE',
     })
   }
 
@@ -29,5 +36,5 @@ export function useApiMenus() {
     })
   }
 
-  return { getByWeek, assignSlot, clearSlot }
+  return { getByWeek, addSlotItem, removeSlotItem, clearSlot }
 }

@@ -1,4 +1,4 @@
-import type { MenuSlot } from '../entities/menu-slot.entity'
+import type { MenuSlotItem } from '../entities/menu-slot-item.entity'
 import type { Menu } from '../entities/menu.entity'
 import type { DayOfWeek } from '../value-objects/day-of-week.vo'
 import type { MealType } from '../value-objects/meal-type.vo'
@@ -15,11 +15,20 @@ export interface IMenuRepository {
   create(menu: Menu): Promise<void>
 
   /**
-   * Insert or replace a slot for the given menu. Slot uniqueness is
-   * (menuId, dayOfWeek, mealType).
+   * Replace all items of a (day, meal) slot with the given list. An empty
+   * list means the slot no longer holds any item (no row persisted).
    */
-  upsertSlot(menuId: string, slot: MenuSlot, updatedAt: Date): Promise<void>
+  replaceSlotItems(
+    menuId: string,
+    dayOfWeek: DayOfWeek,
+    mealType: MealType,
+    items: ReadonlyArray<MenuSlotItem>,
+    updatedAt: Date,
+  ): Promise<void>
 
-  /** Remove a slot if it exists; no-op otherwise. */
-  removeSlot(menuId: string, dayOfWeek: DayOfWeek, mealType: MealType, updatedAt: Date): Promise<void>
+  /** Remove a single item by id. No-op if it doesn't exist. */
+  removeSlotItem(menuId: string, itemId: string, updatedAt: Date): Promise<void>
+
+  /** Remove every item of a (day, meal) slot; no-op if it already has none. */
+  clearSlot(menuId: string, dayOfWeek: DayOfWeek, mealType: MealType, updatedAt: Date): Promise<void>
 }

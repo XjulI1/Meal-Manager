@@ -1,17 +1,18 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { AddSlotItemUseCase } from '../../../server/contexts/meal-planning/application/use-cases/add-slot-item.use-case'
-import { ClearSlotUseCase } from '../../../server/contexts/meal-planning/application/use-cases/clear-slot.use-case'
 import { GetMenuByWeekUseCase } from '../../../server/contexts/meal-planning/application/use-cases/get-menu-by-week.use-case'
 import { MenuNotFoundError } from '../../../server/contexts/meal-planning/domain/errors/menu-not-found.error'
+import { RemoveSlotItemUseCase } from '../../../server/contexts/meal-planning/application/use-cases/remove-slot-item.use-case'
+import { SlotItemNotFoundError } from '../../../server/contexts/meal-planning/domain/errors/slot-item-not-found.error'
 import { FakeIngredientLookup } from './in-memory/fake-ingredient-lookup'
 import { FakeRecipeFinder } from './in-memory/fake-recipe-finder'
 import { InMemoryMenuRepository } from './in-memory/in-memory-menu.repository'
 
-describe('ClearSlotUseCase', () => {
+describe('RemoveSlotItemUseCase', () => {
   let repo: InMemoryMenuRepository
   let get: GetMenuByWeekUseCase
   let add: AddSlotItemUseCase
-  let clear: ClearSlotUseCase
+  let remove: RemoveSlotItemUseCase
 
   beforeEach(async () => {
     repo = new InMemoryMenuRepository()
@@ -23,7 +24,7 @@ describe('ClearSlotUseCase', () => {
     get = new GetMenuByWeekUseCase(repo, () => `menu-${++counter}`, () => new Date('2026-05-15T10:00:00Z'))
     let itemCounter = 0
     add = new AddSlotItemUseCase(repo, recipes, ingredients, () => `item-${++itemCounter}`, () => new Date('2026-05-15T11:00:00Z'))
-    clear = new ClearSlotUseCase(repo, () => new Date('2026-05-15T12:00:00Z'))
+    remove = new RemoveSlotItemUseCase(repo, () => new Date('2026-05-15T12:00:00Z'))
 
     await get.execute({ householdId: 'hh-1', weekStart: '2026-05-18' })
     await add.execute({
@@ -34,22 +35,27 @@ describe('ClearSlotUseCase', () => {
     })
   })
 
-  it('clears the slot (recipe + free ingredients)', async () => {
-    await clear.execute({ householdId: 'hh-1', menuId: 'menu-1', dayOfWeek: 'monday', mealType: 'dinner' })
+  it('removes a free ingredient, keeping the recipe', async () => {
+    await remove.execute({ householdId: 'hh-1', menuId: 'menu-1', itemId: 'item-2' })
+    const menu = await get.execute({ householdId: 'hh-1', weekStart: '2026-05-18' })
+    expect(menu.slots).toHaveLength(1)
+    expect(menu.slots[0]?.items).toEqual([{ id: 'item-1', kind: 'recipe', recipeId: 'recipe-A', servings: 2 }])
+  })
+
+  it('removing the last item deletes the slot', async () => {
+    await remove.execute({ householdId: 'hh-1', menuId: 'menu-1', itemId: 'item-2' })
+    await remove.execute({ householdId: 'hh-1', menuId: 'menu-1', itemId: 'item-1' })
     const menu = await get.execute({ householdId: 'hh-1', weekStart: '2026-05-18' })
     expect(menu.slots).toHaveLength(0)
   })
 
-  it('is a no-op when the slot does not exist (idempotent)', async () => {
-    await clear.execute({ householdId: 'hh-1', menuId: 'menu-1', dayOfWeek: 'tuesday', mealType: 'lunch' })
-    const menu = await get.execute({ householdId: 'hh-1', weekStart: '2026-05-18' })
-    // Monday dinner slot is still here
-    expect(menu.slots).toHaveLength(1)
+  it('rejects removing an unknown item id', async () => {
+    await expect(remove.execute({ householdId: 'hh-1', menuId: 'menu-1', itemId: 'unknown' }))
+      .rejects.toBeInstanceOf(SlotItemNotFoundError)
   })
 
-  it('rejects clearing on a menu from another household', async () => {
-    await expect(clear.execute({
-      householdId: 'hh-2', menuId: 'menu-1', dayOfWeek: 'monday', mealType: 'dinner',
-    })).rejects.toBeInstanceOf(MenuNotFoundError)
+  it('rejects removing from a menu of another household', async () => {
+    await expect(remove.execute({ householdId: 'hh-2', menuId: 'menu-1', itemId: 'item-1' }))
+      .rejects.toBeInstanceOf(MenuNotFoundError)
   })
 })

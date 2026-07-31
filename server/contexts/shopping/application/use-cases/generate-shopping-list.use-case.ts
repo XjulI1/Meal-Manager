@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { Quantity } from '../../../../../shared/units/quantity'
 import { ShoppingListSnapshot } from '../../domain/entities/shopping-list-snapshot.entity'
 import { MenuNotAvailableError } from '../../domain/errors/menu-not-available.error'
 import type { IIngredientSummaryFinder } from '../../domain/ports/ingredient-summary-finder.port'
@@ -72,27 +73,38 @@ export class GenerateShoppingListUseCase {
       }
     }
 
-    const recipeIds = Array.from(new Set(menu.slots.map((s) => s.recipeId)))
+    const allItems = menu.slots.flatMap((s) => s.items)
+    const recipeItems = allItems.filter((i) => i.kind === 'recipe')
+    const freeIngredientItems = allItems.filter((i) => i.kind === 'ingredient')
+
+    const recipeIds = Array.from(new Set(recipeItems.map((i) => i.recipeId)))
     const recipes = await this.recipes.findManyByIds(recipeIds, input.householdId)
     const stock = await this.inventory.listForHousehold(input.householdId)
 
-    const slotsWithRecipes = menu.slots
-      .map((slot) => {
-        const recipe = recipes.get(slot.recipeId)
-        return recipe ? { recipe, servings: slot.servings } : null
+    const slotsWithRecipes = recipeItems
+      .map((item) => {
+        const recipe = recipes.get(item.recipeId)
+        return recipe ? { recipe, servings: item.servings } : null
       })
       .filter((s): s is { recipe: NonNullable<ReturnType<typeof recipes.get>>, servings: number } => s !== null)
 
-    // Collect every ingredient id we may need to denormalize (recipes + stock)
+    const freeIngredients = freeIngredientItems.map((item) => ({
+      ingredientId: item.ingredientId,
+      quantity: Quantity.fromCanonical(item.quantity.value, item.quantity.unit),
+    }))
+
+    // Collect every ingredient id we may need to denormalize (recipes + free ingredients + stock)
     const ingredientIds = new Set<string>()
     for (const { recipe } of slotsWithRecipes) {
       for (const ing of recipe.ingredients) ingredientIds.add(ing.ingredientId)
     }
+    for (const free of freeIngredients) ingredientIds.add(free.ingredientId)
     for (const s of stock) ingredientIds.add(s.ingredientId)
     const summaries = await this.summaries.findByIds(Array.from(ingredientIds), input.householdId)
 
     const items = ShoppingListBuilder.build({
       slots: slotsWithRecipes,
+      freeIngredients,
       inventory: stock,
       summaries,
       idGenerator: this.idGenerator,

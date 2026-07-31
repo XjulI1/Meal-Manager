@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm'
 import type { Database } from '../../../../database/client'
-import { menuSlots, menus } from '../../../../database/schema/menus'
-import type { MenuSlot } from '../../domain/entities/menu-slot.entity'
+import { menuSlotItems, menus } from '../../../../database/schema/menus'
+import type { MenuSlotItem } from '../../domain/entities/menu-slot-item.entity'
 import type { Menu } from '../../domain/entities/menu.entity'
 import type { IMenuRepository } from '../../domain/ports/menu-repository.port'
 import type { DayOfWeek } from '../../domain/value-objects/day-of-week.vo'
@@ -21,8 +21,8 @@ export class DrizzleMenuRepository implements IMenuRepository {
     const row = rows[0]
     if (!row) return null
 
-    const slotRows = await this.db.select().from(menuSlots).where(eq(menuSlots.menuId, row.id))
-    return MenuMapper.toDomain(row, slotRows)
+    const itemRows = await this.db.select().from(menuSlotItems).where(eq(menuSlotItems.menuId, row.id))
+    return MenuMapper.toDomain(row, itemRows)
   }
 
   async findById(id: string, householdId: string): Promise<Menu | null> {
@@ -34,38 +34,53 @@ export class DrizzleMenuRepository implements IMenuRepository {
     const row = rows[0]
     if (!row) return null
 
-    const slotRows = await this.db.select().from(menuSlots).where(eq(menuSlots.menuId, row.id))
-    return MenuMapper.toDomain(row, slotRows)
+    const itemRows = await this.db.select().from(menuSlotItems).where(eq(menuSlotItems.menuId, row.id))
+    return MenuMapper.toDomain(row, itemRows)
   }
 
   async create(menu: Menu): Promise<void> {
     await this.db.insert(menus).values(MenuMapper.toPersistence(menu))
   }
 
-  async upsertSlot(menuId: string, slot: MenuSlot, updatedAt: Date): Promise<void> {
-    const row = MenuMapper.slotToPersistence(menuId, slot)
+  async replaceSlotItems(
+    menuId: string,
+    dayOfWeek: DayOfWeek,
+    mealType: MealType,
+    items: ReadonlyArray<MenuSlotItem>,
+    updatedAt: Date,
+  ): Promise<void> {
     await this.db.transaction(async (tx) => {
       await tx
-        .insert(menuSlots)
-        .values(row)
-        .onDuplicateKeyUpdate({
-          set: {
-            recipeId: row.recipeId,
-            servings: row.servings,
-          },
-        })
+        .delete(menuSlotItems)
+        .where(and(
+          eq(menuSlotItems.menuId, menuId),
+          eq(menuSlotItems.dayOfWeek, dayOfWeek.value),
+          eq(menuSlotItems.mealType, mealType.value),
+        ))
+      if (items.length > 0) {
+        await tx.insert(menuSlotItems).values(
+          items.map((item) => MenuMapper.itemToPersistence(menuId, dayOfWeek, mealType, item)),
+        )
+      }
       await tx.update(menus).set({ updatedAt }).where(eq(menus.id, menuId))
     })
   }
 
-  async removeSlot(menuId: string, dayOfWeek: DayOfWeek, mealType: MealType, updatedAt: Date): Promise<void> {
+  async removeSlotItem(menuId: string, itemId: string, updatedAt: Date): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      await tx.delete(menuSlotItems).where(and(eq(menuSlotItems.menuId, menuId), eq(menuSlotItems.id, itemId)))
+      await tx.update(menus).set({ updatedAt }).where(eq(menus.id, menuId))
+    })
+  }
+
+  async clearSlot(menuId: string, dayOfWeek: DayOfWeek, mealType: MealType, updatedAt: Date): Promise<void> {
     await this.db.transaction(async (tx) => {
       await tx
-        .delete(menuSlots)
+        .delete(menuSlotItems)
         .where(and(
-          eq(menuSlots.menuId, menuId),
-          eq(menuSlots.dayOfWeek, dayOfWeek.value),
-          eq(menuSlots.mealType, mealType.value),
+          eq(menuSlotItems.menuId, menuId),
+          eq(menuSlotItems.dayOfWeek, dayOfWeek.value),
+          eq(menuSlotItems.mealType, mealType.value),
         ))
       await tx.update(menus).set({ updatedAt }).where(eq(menus.id, menuId))
     })
